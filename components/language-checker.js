@@ -136,11 +136,13 @@ module.exports = class LanguageChecker {
   }
 
   isEnglishText(txt) {
-    if (!txt || typeof txt !== "string") {
+    if (typeof txt !== "string") {
       return false;
     }
+    console.log(txt);
     let eng = (txt.match(/[a-zA-Z]/g) || []).length;
     let all = (txt.match(/[а-яА-Яa-zA-Z]/g) || []).length;
+    console.log(eng, all, all>0? eng/all:"n/a", this.opts.threshold);
     if (all > 0) {
       return eng/all > this.opts.threshold;
     }
@@ -148,7 +150,7 @@ module.exports = class LanguageChecker {
   }
 
   isRussianText(txt) {
-    if (!txt || typeof txt !== "string") {
+    if (typeof txt !== "string") {
       return false;
     }
     let ru = (txt.match(/[а-яА-Я]/g) || []).length;
