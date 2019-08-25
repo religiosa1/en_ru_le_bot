@@ -15,7 +15,7 @@ IMPORTANT: Language Exchange implies that you can understand most of what is wri
 ВАЖНО: языковой обмен подразумевает, что вы понимаете большую часть того, что вам пишут и можете отвечать. Вы пришли сюда общаться -- пытайтесь общаться.
 
 ======================
-DISCORD server r/russian: https://discord.gg/nQmaEr
+DISCORD server r/russian: https://discord.gg/awM49Wb
 If you want to have an audiochat with our members, write about it here, choose a chat room and don't forget to tell people there that you came from this chat ;)
   `,
 
