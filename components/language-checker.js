@@ -1,9 +1,9 @@
-const TelegramBot = require("node-telegram-bot-api");
 const moment = require("moment");
 
+const AbstractComponent = require("./abstract-component");
 const messages = require("../messages");
 
-module.exports = class LanguageChecker {
+module.exports = class LanguageChecker extends AbstractComponent {
   static get defaultOpts() {
     return {
       autolangday: true,
@@ -16,10 +16,7 @@ module.exports = class LanguageChecker {
   }
 
   constructor(bot, opts) {
-    if (!bot || !(bot instanceof TelegramBot)) {
-      throw new TypeError("TelegramBot should be parsed as the first argument to the constructor");
-    }
-    this.bot = bot;
+    super(bot);
     this.opts = {...LanguageChecker.defaultOpts, ...opts};
     this.forcedLang = null;
     this.cooldownTarget = moment();
@@ -106,7 +103,7 @@ module.exports = class LanguageChecker {
   lang_violation(msg, resp) {
     this.resetCooldown();
     this.bot.sendMessage(msg.chat.id, resp, {
-      reply_to_message_id:msg.message_id
+      reply_to_message_id: msg.message_id,
     });
   }
 

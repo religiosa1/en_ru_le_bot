@@ -1,15 +1,12 @@
-const TelegramBot = require("node-telegram-bot-api");
+const AbstractComponent = require("./abstract-component");
 
-module.exports = class AdminValidator {
+module.exports = class AdminValidator extends AbstractComponent {
   static get staticAdmins() {
     return process.env.ADMINS.split(/\s+/).map(i=>parseInt(i, 10));
   }
 
   constructor(bot) {
-    if (!bot || !(bot instanceof TelegramBot)) {
-      throw new TypeError("TelegramBot should be parsed as the first argument to the constructor");
-    }
-    this.bot = bot;
+    super(bot);
     this.admins = new Set(AdminValidator.staticAdmins);
 
     if (process.env.CHAT_ID) {

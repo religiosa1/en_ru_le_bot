@@ -4,11 +4,13 @@ require("dotenv").config();
 const TelegramBot = require("node-telegram-bot-api");
 const express = require("express");
 
-const messages = require("./messages");
 const models = require("./models");
+
 const LanguageChecker = require("./components/language-checker");
 const AdminValidator = require("./components/admin-validator");
-const info = require("./components/info");
+const HelperCommands = require("./components/helper-commands");
+
+// =============================================================================
 
 const TOKEN = process.env.TELEGRAM_TOKEN;
 const url = process.env.URL;
@@ -20,46 +22,27 @@ if (!TOKEN || !url) {
   process.exit(1);
 }
 
-// No need to pass any parameters as we will handle the updates with Express
 const bot = new TelegramBot(TOKEN);
 
 const lngchk = new LanguageChecker(bot);
 const av = new AdminValidator(bot);
+const helpers = new HelperCommands(bot, av);
 
 const app = express();
 app.use(express.json());
 
-bot.onText(/\/rules/, (msg) => {
-  bot.sendMessage(msg.chat.id, messages.rules);
-});
+// =============================================================================
 
-bot.onText(/\/cid/, av.isAdmin((msg) => {
-  bot.sendMessage(msg.chat.id, `CID: ${msg.chat.id}`);
-}));
+bot.onText(/\/rules/, helpers.rules.bind(helpers));
+bot.onText(/\/help/, helpers.help.bind(helpers));
+bot.onText(/^\/cooldown$/, lngchk.cooldownInfo.bind(lngchk));
+bot.onText(/^\/today$/, lngchk.today.bind(lngchk));
 
-/* TODO
-bot.onText(/\/me/, (msg) => {
-  bot.sendMessage(msg.chat.id, "ME");
-});
-bot.onText(/\/list/, (msg, match) => {
-  const resp = match[1];
-  bot.sendMessage(msg.chat.id, "LIST: " + resp);
-});
-bot.onText(/\/info (.+)/, (msg, match) => {
-  const userName = match[1];
-  bot.sendMessage(msg.chat.id, "INFO: " + userName);
-});
-*/
-// CID: -1001418511481
 bot.onText(/^\/autolangday$/, av.isAdmin(lngchk.autolangday.bind(lngchk)));
 bot.onText(/^\/forcelang +([a-zA-Z]*)$/, av.isAdmin(lngchk.forcelang.bind(lngchk)));
 bot.onText(/^\/set_cooldown(?: (\d+))?$/, av.isAdmin(lngchk.setCooldown.bind(lngchk)));
 bot.onText(/^\/flush$/, av.isAdmin(av.refreshAdmins.bind(av)));
-
-bot.onText(/^\/info$/, info.bind(bot));
-
-bot.onText(/^\/cooldown$/, lngchk.cooldownInfo.bind(lngchk));
-bot.onText(/^\/today$/, lngchk.today.bind(lngchk));
+bot.onText(/^\/info$/, av.isAdmin(helpers.info.bind(helpers)));
 
 bot.on("text", (msg) => {
   lngchk.check(msg);
