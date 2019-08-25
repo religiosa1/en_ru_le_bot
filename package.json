@@ -1,6 +1,6 @@
 {
   "name": "testbot32167",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "description": "Test telegram bot",
   "main": "index.js",
   "private": true,
