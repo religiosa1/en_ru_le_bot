@@ -13,6 +13,10 @@ module.exports = {
   За грубость, домогательства, троллинг и антисоциальное поведение возможен бан. Если вам кто-то докучает, пишите админам, чтобы админы могли урегулировать ситуацию.
 
   ВАЖНО: языковой обмен подразумевает, что вы понимаете большую часть того, что вам пишут и можете отвечать. Вы пришли сюда общаться -- пытайтесь общаться.
+
+  ======================
+  DISCORD server r/russian: https://discord.gg/nQmaEr
+  If you want to have an audiochat with our members, write about it here, choose a chat room and don't forget to tell people there that you came from this chat ;)
   `,
 
   langday_disabled: "English/Russia days are currently turned off.\nАнглийские/русские дни на данный момент отключены.",

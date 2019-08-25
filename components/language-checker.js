@@ -1,5 +1,5 @@
-const TelegramBot = require('node-telegram-bot-api');
-const moment = require('moment');
+const TelegramBot = require("node-telegram-bot-api");
+const moment = require("moment");
 
 const messages = require("../messages");
 
@@ -100,7 +100,7 @@ module.exports = class LanguageChecker {
   }
 
   resetCooldown() {
-    this.cooldownTarget = moment().add(this.opts.cooldown, 'minutes');
+    this.cooldownTarget = moment().add(this.opts.cooldown, "minutes");
   }
 
   lang_violation(msg, resp) {
@@ -172,7 +172,7 @@ module.exports = class LanguageChecker {
           Number.isInteger(e.length) &&
           e.offset + e.length <= msg.text.length
         ) {
-          if (['bold', 'italic'].includes(e.type)) {
+          if (["bold", "italic"].includes(e.type)) {
             text += msg.text.slice(i, e.offset+e.length);
           } else {
             text += msg.text.slice(i, e.offset);

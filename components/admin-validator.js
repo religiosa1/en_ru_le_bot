@@ -1,10 +1,8 @@
-const TelegramBot = require('node-telegram-bot-api');
+const TelegramBot = require("node-telegram-bot-api");
 
 module.exports = class AdminValidator {
   static get staticAdmins() {
-    return [
-      227039625,
-    ];
+    return process.env.ADMINS.split(/\s+/).map(i=>parseInt(i, 10));
   }
 
   constructor(bot) {
@@ -12,7 +10,8 @@ module.exports = class AdminValidator {
       throw new TypeError("TelegramBot should be parsed as the first argument to the constructor");
     }
     this.bot = bot;
-    this.admins = AdminValidator.staticAdmins;
+    this.admins = new Set(AdminValidator.staticAdmins);
+
     if (process.env.CHAT_ID) {
       this._extendChatAdmins(process.env.CHAT_ID);
     }
@@ -20,7 +19,7 @@ module.exports = class AdminValidator {
 
   validate(msg) {
     if (msg && msg.from && msg.from.id) {
-      return this.admins.includes(msg.from.id);
+      return this.admins.has(msg.from.id);
     } else {
       return false;
     }
@@ -32,19 +31,46 @@ module.exports = class AdminValidator {
       if (self.validate(msg)) {
         return func(msg, ...args);
       } else {
-        self.bot.sendMessage(msg.chat.id, 'You have to be an admin to do that.');
+        self.bot.sendMessage(msg.chat.id, "You have to be an admin to do that.");
       }
     };
   }
 
   _extendChatAdmins(chatId) {
-    if (!chatId)
+    if (!chatId) {
       throw new TypeError("Expecting to get a chat id, from which to retrieve a list of admins!");
-    let members = this.bot.getChatAdministrators(chatId);
-    if (Array.isarray(members)) {
-      for (let m of members) {
-        if (m && m.user && m.user.id) this.admin.push(m.user.id);
-      }
     }
+    return this.bot.getChatAdministrators(chatId).then(members => {
+      if (!Array.isArray(members)) {
+        throw new Error(
+          `Expecting to get an array of ChatMembers out of the getChatAdministrators api call,
+           got '${typeof members}' instead`
+        );
+      }
+      for (let m of members) {
+        if (m && m.user && m.user.id) this.admins.add(m.user.id);
+      }
+      return null;
+    }).catch(e => {
+      console.error("Error has happened on retrieving chat admins", e);
+    });
+  }
+
+  refreshAdmins() {
+    let chatId = process.env.CHAT_ID;
+    if (!chatId) {
+      console.warn("Refresh admins called, without any ChatID, ommiting.");
+      return;
+    }
+    this._extendChatAdmins(process.env.CHAT_ID).then(()=>{
+      this.bot.sendMessage(chatId,
+        `Success. There are ${this.admins.size} users with administrative access to the bot.`
+      );
+      return null;
+    }).catch(()=>{
+      this.bot.sendMessage(chatId,
+        "Something went wrong during the update of chat admins. More info in the logs."
+      );
+    });
   }
 };

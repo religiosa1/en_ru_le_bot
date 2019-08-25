@@ -1,15 +1,18 @@
-require('dotenv').config();
-const TelegramBot = require('node-telegram-bot-api');
-const express = require('express');
+#!/usr/bin/env node
+
+require("dotenv").config();
+const TelegramBot = require("node-telegram-bot-api");
+const express = require("express");
 
 const messages = require("./messages");
-const models = require('./models');
+const models = require("./models");
 const LanguageChecker = require("./components/language-checker");
 const AdminValidator = require("./components/admin-validator");
+const info = require("./components/info");
 
 const TOKEN = process.env.TELEGRAM_TOKEN;
 const url = process.env.URL;
-const ip = process.env.IP || '0.0.0.0';
+const ip = process.env.IP || "0.0.0.0";
 const port = process.env.PORT || 8085;
 
 if (!TOKEN || !url) {
@@ -50,11 +53,15 @@ bot.onText(/\/info (.+)/, (msg, match) => {
 // CID: -1001418511481
 bot.onText(/^\/autolangday$/, av.isAdmin(lngchk.autolangday.bind(lngchk)));
 bot.onText(/^\/forcelang +([a-zA-Z]*)$/, av.isAdmin(lngchk.forcelang.bind(lngchk)));
-bot.onText(/^\/cooldown$/, lngchk.cooldownInfo.bind(lngchk));
 bot.onText(/^\/set_cooldown(?: (\d+))?$/, av.isAdmin(lngchk.setCooldown.bind(lngchk)));
+bot.onText(/^\/flush$/, av.isAdmin(av.refreshAdmins.bind(av)));
+
+bot.onText(/^\/info$/, info.bind(bot));
+
+bot.onText(/^\/cooldown$/, lngchk.cooldownInfo.bind(lngchk));
 bot.onText(/^\/today$/, lngchk.today.bind(lngchk));
 
-bot.on('text', (msg) => {
+bot.on("text", (msg) => {
   lngchk.check(msg);
 });
 
@@ -65,14 +72,18 @@ app.post(`/bot${TOKEN}`, (req, res) => {
 
 // =============================================================================
 models.sequelize.sync().then(()=>{
-  app.listen(port, ip, function() {
+  app.listen(port, ip, async function() {
     console.log(`Http server is listening on ${ip}:${port}`);
     console.log(`Setting webhook on ${url}/bot${TOKEN}`);
-    bot.setWebHook(`${url}/bot${TOKEN}`).then((d)=> {
+    try {
+      let d = await bot.setWebHook(`${url}/bot${TOKEN}`);
       console.log("Webhook is set", d);
-    });
+    } catch(e) {
+      console.error("Failed to set webhooks", e);
+      throw e;
+    }
   });
-
+  return null;
 }).catch(err=>{
   console.log("Connection to db failed: ", err);
   process.exit(1);

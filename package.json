@@ -16,5 +16,9 @@
     "node-telegram-bot-api": "^0.30.0",
     "sequelize": "^5.8.6",
     "sqlite3": "^4.0.8"
+  },
+  "devDependencies": {
+    "eslint": "^6.2.2",
+    "eslint-plugin-promise": "^4.2.1"
   }
 }
