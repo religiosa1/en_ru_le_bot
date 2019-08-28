@@ -4,6 +4,7 @@ const AbstractComponent = require("./abstract-component");
 const messages = require("../messages");
 
 module.exports = class LanguageChecker extends AbstractComponent {
+
   static get defaultOpts() {
     return {
       autolangday: true,
@@ -57,6 +58,7 @@ module.exports = class LanguageChecker extends AbstractComponent {
       this.forcelangstatus(msg);
     }
   }
+
   cooldownInfo(msg) {
     if (!msg || !msg.chat) return;
     this.bot.sendMessage(
@@ -65,6 +67,7 @@ module.exports = class LanguageChecker extends AbstractComponent {
       `untill ${this.cooldownTarget.format("HH:mm:ss")}.`
     );
   }
+  
   setCooldown(msg, match) {
     if (!msg || !msg.chat) return;
     if (Array.isArray(match) && match.length > 1 && match[1]) {

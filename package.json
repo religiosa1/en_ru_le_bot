@@ -1,14 +1,18 @@
 {
-  "name": "testbot32167",
+  "name": "en_ru_le_bot",
   "version": "0.0.4",
-  "description": "Test telegram bot",
+  "description": "EN/RU language exchange telegram bot.",
   "main": "index.js",
   "private": true,
   "scripts": {
     "serv": "node index.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "author": "",
+  "repository": {
+    "type" : "git",
+    "url" : "https://github.com/religiosa1/en_ru_le_bot"
+  },
+  "author": "Vyacheslav Azarov",
   "license": "ISC",
   "dependencies": {
     "dotenv": "^8.0.0",
