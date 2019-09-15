@@ -1,6 +1,6 @@
 {
   "name": "en_ru_le_bot",
-  "version": "0.0.5",
+  "version": "0.1.0",
   "description": "EN/RU language exchange telegram bot.",
   "main": "index.js",
   "private": true,
@@ -19,8 +19,7 @@
     "express": "^4.16.4",
     "moment": "^2.24.0",
     "node-telegram-bot-api": "^0.30.0",
-    "sequelize": "^5.8.6",
-    "sqlite3": "^4.0.8"
+    "redis": "^2.8.0"
   },
   "devDependencies": {
     "eslint": "^6.2.2",

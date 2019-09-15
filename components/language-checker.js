@@ -1,41 +1,50 @@
 const moment = require("moment");
 
-const AbstractComponent = require("./abstract-component");
+const bot = require("./bot").getInstance();
+const UserViolationTracker = require("./user-violation-tracker");
+const AdminValidator = require("./admin-validator").getInstance();
 const messages = require("../messages");
 
-module.exports = class LanguageChecker extends AbstractComponent {
+function onoff(val) {
+  return val ? "on":"off";
+}
+
+class LanguageChecker {
 
   static get defaultOpts() {
     return {
       autolangday: true,
-      cooldown: 2,
+      cooldown: 2, // in minutes
       russian_days: [1,3,5],
       english_days: [2,4,6],
       threshold: 0.5,
       engCharThresh: 5, // How many english letters is permitted in a russian msg.
+      muteEnabled: true,
     };
   }
 
-  constructor(bot, opts) {
-    super(bot);
+  constructor(opts) {
     this.opts = {...LanguageChecker.defaultOpts, ...opts};
     this.forcedLang = null;
     this.cooldownTarget = moment();
   }
 
+  // ----------------------------------
+  // commannds
+
   autolangday(msg) {
     if (!msg || !msg.chat) return;
     this.opts.autolangday = !this.opts.autolangday;
-    let resp = `Autolangday is now ${this.opts.autolangday? "on":"off"}`;
-    this.bot.sendMessage(msg.chat.id, resp);
+    let resp = "Autolangday is now " + onoff(this.opts.autolangday);
+    bot.sendMessage(msg.chat.id, resp);
   }
 
   forcelangstatus(msg) {
     if (!msg || !msg.chat) return;
     if (!this.forcedLang) {
-      this.bot.sendMessage(msg.chat.id, "No language is forced.");
+      bot.sendMessage(msg.chat.id, "No language is forced.");
     } else {
-      this.bot.sendMessage(msg.chat.id, `Forced laguage is ${this.forcedLang}.`);
+      bot.sendMessage(msg.chat.id, `Forced laguage is ${this.forcedLang}.`);
     }
   }
 
@@ -50,7 +59,7 @@ module.exports = class LanguageChecker extends AbstractComponent {
       } else {
         this.forcedLang = null;
       }
-      this.bot.sendMessage(
+      bot.sendMessage(
         msg.chat.id,
         `${this.forcedLang? this.forcedLang: "No"} language is now forced.`
       );
@@ -61,26 +70,26 @@ module.exports = class LanguageChecker extends AbstractComponent {
 
   cooldownInfo(msg) {
     if (!msg || !msg.chat) return;
-    this.bot.sendMessage(
+    bot.sendMessage(
       msg.chat.id,
       `Currnet time is ${moment().format("HH:mm:ss")}. Cooldown in minutes ${this.opts.cooldown},` +
       `untill ${this.cooldownTarget.format("HH:mm:ss")}.`
     );
   }
-  
+
   setCooldown(msg, match) {
     if (!msg || !msg.chat) return;
     if (Array.isArray(match) && match.length > 1 && match[1]) {
       let cd = parseInt(match[1].trim(), 10);
       if (cd >= 1 && cd <= 150) {
         this.opts.cooldown = cd;
-        this.bot.sendMessage(msg.chat.id, `Cooldown is now ${cd} minutes.`);
+        bot.sendMessage(msg.chat.id, `Cooldown is now ${cd} minutes.`);
       } else {
-        this.bot.sendMessage(msg.chat.id, "Strange cooldown, can't do");
+        bot.sendMessage(msg.chat.id, "Strange cooldown, can't do");
       }
     } else {
       this.cooldownTarget = moment();
-      this.bot.sendMessage(msg.chat.id, "Cooldown's been reseted.");
+      bot.sendMessage(msg.chat.id, "Cooldown's been reseted.");
     }
   }
 
@@ -96,8 +105,17 @@ module.exports = class LanguageChecker extends AbstractComponent {
     } else {
       resp = messages.langday_none;
     }
-    this.bot.sendMessage(msg.chat.id, resp);
+    bot.sendMessage(msg.chat.id, resp);
   }
+
+  toggleMuteCapacity(msg) {
+    if (!msg || !msg.chat) return;
+    this.opts.muteEnabled = !this.opts.muteEnabled;
+    bot.sendMessage(msg.chat.id, "Mute capacity is now " + onoff(this.opts.muteEnabled));
+  }
+
+  // ----------------------------------
+  // methods
 
   resetCooldown() {
     this.cooldownTarget = moment().add(this.opts.cooldown, "minutes");
@@ -105,23 +123,32 @@ module.exports = class LanguageChecker extends AbstractComponent {
 
   lang_violation(msg, resp) {
     this.resetCooldown();
-    this.bot.sendMessage(msg.chat.id, resp, {
+    bot.sendMessage(msg.chat.id, resp, {
       reply_to_message_id: msg.message_id,
     });
   }
 
-  check(msg) {
+  async check(msg) {
     if (!msg || !msg.chat || !this.opts.autolangday || moment().isBefore(this.cooldownTarget)) {
       return;
     }
-    if (this.isEnglishDay()) {
-      if (!this.isEnglishText(LanguageChecker.retrieveText(msg))) {
-        this.lang_violation(msg, messages.langday_violation_english);
+
+    let txt = LanguageChecker.retrieveText(msg);
+    let violationText = null;
+
+    if (this.isEnglishDay() && !this.isEnglishText(txt)) {
+      violationText = messages.langday_violation_english;
+    } else if (this.isRussianDay() && !this.isRussianText(txt)) {
+      violationText = messages.langday_violation_russian;
+    }
+
+    if (violationText) {
+      if (this.opts.muteEnabled && msg.from && msg.from.id && !AdminValidator.isAdmin(msg.from.id)) {
+        let response = await UserViolationTracker.register(msg.chat.id, msg.from.id);
+        console.log(response, response.message);
+        violationText += "\n" + response.message;
       }
-    } else if (this.isRussianDay()){
-      if (!this.isRussianText(LanguageChecker.retrieveText(msg))) {
-        this.lang_violation(msg, messages.langday_violation_russian);
-      }
+      this.lang_violation(msg, violationText);
     }
   }
 
@@ -187,4 +214,10 @@ module.exports = class LanguageChecker extends AbstractComponent {
     }
     return msg.text;
   }
+}
+
+const LanguageCheckerInstance = new LanguageChecker();
+
+module.exports = {
+  getInstance() { return LanguageCheckerInstance; },
 };
