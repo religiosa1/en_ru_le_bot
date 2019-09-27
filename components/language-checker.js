@@ -1,8 +1,8 @@
 const moment = require("moment");
 
-const bot = require("./bot").getInstance();
+const bot = require("./bot");
 const UserViolationTracker = require("./user-violation-tracker");
-const AdminValidator = require("./admin-validator").getInstance();
+const AdminValidator = require("./admin-validator");
 const messages = require("../messages");
 
 function onoff(val) {
@@ -70,11 +70,19 @@ class LanguageChecker {
 
   cooldownInfo(msg) {
     if (!msg || !msg.chat) return;
-    bot.sendMessage(
-      msg.chat.id,
-      `Currnet time is ${moment().format("HH:mm:ss")}. Cooldown in minutes ${this.opts.cooldown},` +
-      `untill ${this.cooldownTarget.format("HH:mm:ss")}.`
-    );
+    let now = moment();
+    let text = `Cooldown in minutes: ${this.opts.cooldown}. `;
+    if (this.cooldownTarget < now) {
+      text +=  "Next violation will get a warning";
+    } else {
+      let diff = this.cooldownTarget.diff(now, "minutes");
+      if (diff === 0) {
+        text += "You have less then a minute without a warning.";
+      } else {
+        text += `You have ${diff} ${diff === 1? "minute" : "minutes"} before a further warning.`;
+      }
+    }
+    bot.sendMessage( msg.chat.id, text );
   }
 
   setCooldown(msg, match) {
@@ -171,7 +179,7 @@ class LanguageChecker {
     let all = (txt.match(/[а-яА-Яa-zA-Z]/g) || []).length;
     console.log(eng, all, all>0? eng/all:"n/a", this.opts.threshold);
     if (all > 0) {
-      return eng/all > this.opts.threshold;
+      return eng/all >= this.opts.threshold;
     }
     return true;
   }
@@ -183,7 +191,7 @@ class LanguageChecker {
     let ru = (txt.match(/[а-яА-Я]/g) || []).length;
     let all = (txt.match(/[а-яА-Яa-zA-Z]/g) || []).length;
     if (all > 0) {
-      return  ru/all > this.opts.threshold || (all - ru <= this.opts.engCharThresh);
+      return  ru/all >= this.opts.threshold || (all - ru <= this.opts.engCharThresh);
     }
     return true;
   }
@@ -218,6 +226,4 @@ class LanguageChecker {
 
 const LanguageCheckerInstance = new LanguageChecker();
 
-module.exports = {
-  getInstance() { return LanguageCheckerInstance; },
-};
+module.exports = LanguageCheckerInstance;

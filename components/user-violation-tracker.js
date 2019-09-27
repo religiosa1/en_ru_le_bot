@@ -1,7 +1,7 @@
 const redis = require("redis").createClient();
 const moment = require("moment");
 
-const bot = require("./bot").getInstance();
+const bot = require("./bot");
 
 const {promisify} = require("util");
 const getAsync = promisify(redis.get).bind(redis);

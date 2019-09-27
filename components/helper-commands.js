@@ -1,5 +1,5 @@
-const AdminValidator = require("./admin-validator").getInstance();
-const bot = require("./bot").getInstance();
+const AdminValidator = require("./admin-validator");
+const bot = require("./bot");
 const pjson = require("../package.json");
 
 const messages = require("../messages");

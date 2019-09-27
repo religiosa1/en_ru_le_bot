@@ -1,4 +1,4 @@
-const bot = require("./bot").getInstance();
+const bot = require("./bot");
 
 class AdminValidator {
   static get staticAdmins() {
@@ -78,6 +78,4 @@ class AdminValidator {
 const adminValidatorInstance = new AdminValidator();
 Object.freeze(adminValidatorInstance);
 
-module.exports = {
-  getInstance() { return adminValidatorInstance; },
-};
+module.exports = adminValidatorInstance;

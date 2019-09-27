@@ -7,12 +7,11 @@ if (!TOKEN) {
 }
 
 const bot = new TelegramBot(TOKEN);
+Object.defineProperty(bot, "token", {
+  enumerable: false,
+  configurable: false,
+  writable: false,
+  value: TOKEN,
+});
 
-module.exports = {
-  get token() {
-    return TOKEN;
-  },
-  getInstance() {
-    return bot;
-  },
-};
+module.exports = bot;

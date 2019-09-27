@@ -1,20 +1,16 @@
 #!/usr/bin/env node
-
 require("dotenv").config();
-const botSingleton = require("./components/bot");
-const bot = botSingleton.getInstance();
-const TOKEN = botSingleton.token;
-
+const bot = require("./components/bot");
+const TOKEN = bot.token;
 
 const express = require("express");
 
-const lngchk = require("./components/language-checker").getInstance();
-const av = require("./components/admin-validator").getInstance();
+const lngchk = require("./components/language-checker");
+const av = require("./components/admin-validator");
 const helpers = require("./components/helper-commands");
 const UserViolationTracker = require("./components/user-violation-tracker");
 
 // =============================================================================
-
 
 const url = process.env.URL;
 const ip = process.env.IP || "0.0.0.0";
@@ -41,7 +37,7 @@ bot.onText(/^\/set_cooldown(?: (\d+))?$/, av.adminOnly(lngchk.setCooldown.bind(l
 bot.onText(/^\/flush$/, av.adminOnly(av.refreshAdmins.bind(av)));
 bot.onText(/^\/info$/, av.adminOnly(helpers.info));
 bot.onText(/^\/version$/, av.adminOnly(helpers.version));
-bot.onText(/^\/mute$/, lngchk.toggleMuteCapacity.bind(lngchk));
+bot.onText(/^\/mute$/, av.adminOnly(lngchk.toggleMuteCapacity.bind(lngchk)));
 bot.onText(/\/pardon$/, av.adminOnly(UserViolationTracker.flush));
 bot.onText(/^\/mute_expiration(?: +(\d+))?$/, av.adminOnly(UserViolationTracker.muteExpiration));
 bot.onText(/^\/mute_duration(?: +(\d+))?$/, av.adminOnly(UserViolationTracker.muteDuration));
