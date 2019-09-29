@@ -2,7 +2,10 @@ const bot = require("./bot");
 
 class AdminValidator {
   static get staticAdmins() {
-    return process.env.ADMINS.split(/\s+/).map(i=>parseInt(i, 10));
+    if (process && process.env && typeof process.env.ADMINS === "string") {
+      return process.env.ADMINS.split(/\s+/).map(i=>parseInt(i, 10));
+    }
+    return [];
   }
 
   constructor() {

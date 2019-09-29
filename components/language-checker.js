@@ -9,6 +9,8 @@ function onoff(val) {
   return val ? "on":"off";
 }
 
+const allCharsRe = /[а-яА-Яa-zA-Z\u0370-\uDF00]/ug;
+
 class LanguageChecker {
 
   static get defaultOpts() {
@@ -174,10 +176,8 @@ class LanguageChecker {
     if (typeof txt !== "string") {
       return false;
     }
-    console.log(txt);
-    let eng = (txt.match(/[a-zA-Z]/g) || []).length;
-    let all = (txt.match(/[а-яА-Яa-zA-Z]/g) || []).length;
-    console.log(eng, all, all>0? eng/all:"n/a", this.opts.threshold);
+    let eng = (txt.match(/[a-zA-Z]/ug) || []).length;
+    let all = (txt.match(allCharsRe) || []).length;
     if (all > 0) {
       return eng/all >= this.opts.threshold;
     }
@@ -188,8 +188,8 @@ class LanguageChecker {
     if (typeof txt !== "string") {
       return false;
     }
-    let ru = (txt.match(/[а-яА-Я]/g) || []).length;
-    let all = (txt.match(/[а-яА-Яa-zA-Z]/g) || []).length;
+    let ru = (txt.match(/[а-яА-Я]/ug) || []).length;
+    let all = (txt.match(allCharsRe) || []).length;
     if (all > 0) {
       return  ru/all >= this.opts.threshold || (all - ru <= this.opts.engCharThresh);
     }
