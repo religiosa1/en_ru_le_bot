@@ -20,7 +20,7 @@ class LanguageChecker {
       russian_days: [1,3,5],
       english_days: [2,4,6],
       threshold: 0.5,
-      engCharThresh: 5, // How many english letters is permitted in a russian msg.
+      badCharThresh: 5, // How many wrong letters is permitted in a msg.
       muteEnabled: true,
     };
   }
@@ -179,7 +179,7 @@ class LanguageChecker {
     let eng = (txt.match(/[a-zA-Z]/ug) || []).length;
     let all = (txt.match(allCharsRe) || []).length;
     if (all > 0) {
-      return eng/all >= this.opts.threshold;
+      return eng/all >= this.opts.threshold || (all - eng <= this.opts.badCharThresh);
     }
     return true;
   }
@@ -191,7 +191,7 @@ class LanguageChecker {
     let ru = (txt.match(/[а-яА-Я]/ug) || []).length;
     let all = (txt.match(allCharsRe) || []).length;
     if (all > 0) {
-      return  ru/all >= this.opts.threshold || (all - ru <= this.opts.engCharThresh);
+      return  ru/all >= this.opts.threshold || (all - ru <= this.opts.badCharThresh);
     }
     return true;
   }

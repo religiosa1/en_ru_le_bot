@@ -9,6 +9,7 @@ const ENG = "The better part of valor is discretion.";
 const RUS = "Мы почитаем всех нулями, А единицами — себя.";
 const FOREIGN = "إليه بلغته، فإن الكلام سوف يدخل قلبه";
 const PUNCT = "!@#$%^&*()_+\"№;:?*-={}[]<>\\/'`";
+const SHRUG = "¯\\_(ツ)_/¯";
 
 test("Valid English", () => {
   expect(LanguageChecker.isEnglishText(ENG)).toBe(true);
@@ -40,4 +41,9 @@ test("Invalid Rus/Eng combo", () => {
 test("Valid Rus/Eng combo", () => {
   expect(LanguageChecker.isRussianText(ENG + RUS + RUS)).toBe(true);
   expect(LanguageChecker.isEnglishText(ENG + ENG + RUS)).toBe(true);
+});
+
+test("Shrug", ()=> {
+  expect(LanguageChecker.isRussianText(SHRUG)).toBe(true);
+  expect(LanguageChecker.isEnglishText(SHRUG)).toBe(true);
 });
