@@ -59,19 +59,20 @@ class AdminValidator {
     });
   }
 
-  refreshAdmins() {
+  refreshAdmins(msg) {
+    if (!msg || !msg.chat || !msg.chat.id) return;
     let chatId = process.env.CHAT_ID;
     if (!chatId) {
       console.warn("Refresh admins called, without any ChatID, ommiting.");
       return;
     }
     this._extendChatAdmins(process.env.CHAT_ID).then(()=>{
-      bot.sendMessage(chatId,
+      bot.sendMessage(msg.chat.id,
         `Success. There are ${this.admins.size} users with administrative access to the bot.`
       );
       return null;
     }).catch(()=>{
-      bot.sendMessage(chatId,
+      bot.sendMessage(msg.chat.id,
         "Something went wrong during the update of chat admins. More info in the logs."
       );
     });

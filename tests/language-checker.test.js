@@ -1,7 +1,7 @@
 jest.mock("redis", ()=>{
   return require("redis-mock");
 });
-jest.mock("./bot.js");
+jest.mock("../components/bot.js");
 
 const LanguageChecker = require("../components/language-checker");
 

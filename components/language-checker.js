@@ -84,7 +84,7 @@ class LanguageChecker {
         text += `You have ${diff} ${diff === 1? "minute" : "minutes"} before a further warning.`;
       }
     }
-    bot.sendMessage( msg.chat.id, text );
+    bot.sendMessage(msg.chat.id, text);
   }
 
   setCooldown(msg, match) {
@@ -100,6 +100,21 @@ class LanguageChecker {
     } else {
       this.cooldownTarget = moment();
       bot.sendMessage(msg.chat.id, "Cooldown's been reseted.");
+    }
+  }
+
+  threshold(msg, match) {
+    if (!msg || !msg.chat) return;
+    if (Array.isArray(match) && match.length > 1 && match[1]) {
+      let th = parseFloat(match[1]);
+      if (th < 0 || th > 1) {
+        bot.sendMessage(msg.chat.id, "Threshold must be between 0 and 1");
+        return;
+      }
+      this.opts.threshold = th;
+      bot.sendMessage(msg.chat.id, `Threshold is set to ${th}`);
+    } else {
+      bot.sendMessage(msg.chat.id, `Threshold is ${this.opts.threshold}`);
     }
   }
 

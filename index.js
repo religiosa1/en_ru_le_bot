@@ -9,6 +9,7 @@ const lngchk = require("./components/language-checker");
 const av = require("./components/admin-validator");
 const helpers = require("./components/helper-commands");
 const UserViolationTracker = require("./components/user-violation-tracker");
+const retranslate = require("./components/retranslate");
 
 // =============================================================================
 
@@ -43,6 +44,8 @@ bot.onText(/^\/mute_expiration(?: +(\d+))?$/, av.adminOnly(UserViolationTracker.
 bot.onText(/^\/mute_duration(?: +(\d+))?$/, av.adminOnly(UserViolationTracker.muteDuration));
 bot.onText(/^\/mute_warnings(?: +(\d+))?$/, av.adminOnly(UserViolationTracker.muteWarnings));
 bot.onText(/^\/mute_score$/, av.adminOnly(UserViolationTracker.muteScore));
+bot.onText(/^\/threshold(?: +([0-9.]+))?$/, av.adminOnly(lngchk.threshold.bind(lngchk)));
+bot.onText(/^\/rt /, av.adminOnly(retranslate));
 
 bot.on("text", (msg) => {
   lngchk.check(msg);
