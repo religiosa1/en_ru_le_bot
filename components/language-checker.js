@@ -17,8 +17,8 @@ class LanguageChecker {
     return {
       autolangday: true,
       cooldown: 2, // in minutes
-      russian_days: [1,3,5],
-      english_days: [2,4,6],
+      russian_days: [ 1, 5 ],
+      english_days: [ 3, 0 ],
       threshold: 0.5,
       badCharThresh: 5, // How many wrong letters is permitted in a msg.
       muteEnabled: true,
@@ -120,16 +120,25 @@ class LanguageChecker {
 
   today(msg) {
     if (!msg || !msg.chat) return;
+    let today = moment().day();
     let resp;
-    if (!this.opts.autolangday) {
-      resp = messages.langday_disabled;
-    } else if (this.isEnglishDay()) {
+
+    if (this.opts.english_days.includes(today)) {
       resp = messages.langday_english;
-    } else if (this.isRussianDay()) {
+    } else if (this.opts.russian_days.includes(today)) {
       resp = messages.langday_russian;
     } else {
       resp = messages.langday_none;
     }
+
+    if (!this.opts.autolangday) {
+      resp += "\n" + messages.langday_disabled;
+    } else if (this.forcedLang === "EN") {
+      resp += "\n" + messages.langday_forcedEn;
+    } else if (this.forcedLang === "RU") {
+      resp += "\n" + messages.langday_forcedRu;
+    }
+
     bot.sendMessage(msg.chat.id, resp);
   }
 

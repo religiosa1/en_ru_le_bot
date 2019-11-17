@@ -1,24 +1,26 @@
 module.exports = {
   rules: `This chat is made for English and Russian practice.
-On Monday, Wednesday and Friday Russian is preferred. On Tuesday, Thursday and Saturday, English is preferred. On Sundays you can speak both languages. It is expected from native speakers to correct other peoples mistakes.
+On Monday and Friday Russian is preferred. On Wednseday and Sunday English is preferred. The rest of the days you can speak any of these two languages. It is expected from native speakers to correct other peoples mistakes.
 
-A day is changed at 00:00 GMT+2.
+A day is changed at 00:00 CET (Berlin).
 
-Rudeness, harassement, trolling and antisocial behaviour may lead to a ban. Write to the admins if someone is bothering you, so the admins may settle the situation.
+Rudeness, trolling, harassement, harrasment in DM, antisocial behaviour and so on may lead to a ban. It's not a court room, but a community. It is possible to get a ban just because we don't like you -- be polite. Write to the admins if someone is bothering you, so the admins may settle the situation.
+Cursing is not forbidden, that doesn't mean you need to use it constantly.
 
-The chat's bot may temporarily mute you for a repeated violations.
+The chat bot may temporarily mute you for repeated violations of the Russian/English day rules.
 
 IMPORTANT: Language Exchange implies that you can understand most of what is written to you and can answer. You came here to talk, so try to talk.
 ======================
 Данный чат предназначен для практики английского или русского языков.
 
-В понедельник, среду и пятницу желательно говорить по-русски. Во вторник, четверг и субботу -- по-английски. В воскресенье допустимо использование любого из языков. От носителей ожидаются исправления ошибок у других людей.
+В понедельник и пятницу желательно говорить по-русски. В среду и воскресенье -- по-английски. В остальные дни допустимо использование любого из этих языков. От носителей ожидаются исправления ошибок у других людей.
 
-Смена дня происходит в 00:00 GMT+2.
+Смена дня происходит в 00:00 Центральноевропейского времени (Берлин).
 
-За грубость, домогательства, троллинг и антисоциальное поведение возможен бан. Если вам кто-то докучает, пишите админам, чтобы админы могли урегулировать ситуацию.
+За грубость, троллинг, домогательства, домогания в личке, антисоциальное поведение и т.д. возможен бан. У нас не зал суда, а сообщество. Бан возможен просто за то что вы не понравились -- будьте вежливы. Если вам кто-то докучает, пишите админам, чтобы админы могли урегулировать ситуацию.
+Использование мата не запрещено, но это не значит что нужно использовать его постоянно.
 
-Бот может вас замьютить за повторные нарушения.
+Бот может вас замьютить за повторные нарушения порядка Русских/Английских дней.
 
 ВАЖНО: языковой обмен подразумевает, что вы понимаете большую часть того, что вам пишут и можете отвечать. Вы пришли сюда общаться -- пытайтесь общаться.
 
@@ -47,10 +49,12 @@ If you want to have an audiochat with our members, write about it here, choose a
 /pardon Сбросить накопившиеся нарушения.
   `,
 
-  langday_disabled: "English/Russian days are currently turned off.\nАнглийские/русские дни на данный момент отключены.",
   langday_english: "Today is the English day.\nСегодня день английского языка.",
   langday_russian: "Today is the Russian day.\nСегодня день русского языка.",
   langday_none: "Today is a free day. You can speak any language.\nСегодня вольный день. Вы можете говорить на любом языке.",
+  langday_disabled: "English/Russian checks with bots are currently turned off.\nПроверка английских/русских дней ботом на данный момент отключена.",
+  langday_forcedEn: "Usage of English was forced by admins.\nИспользование английского было закреплено админами.",
+  langday_forcedRu: "Usage of Russian was forced by admins.\nИспользование русского было закреплено админами.",
   langday_violation_english: "Эй! Сегодня день английского языка! Постарайся говорить по-английски.",
   langday_violation_russian: "Hey! Today is a russian day! Try to speak Russian.",
 };
