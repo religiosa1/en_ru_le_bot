@@ -1,11 +1,11 @@
 module.exports = {
   rules: `This chat is made for English and Russian practice.
-On Monday and Friday Russian is preferred. On Wednseday and Sunday English is preferred. The rest of the days you can speak any of these two languages. It is expected from native speakers to correct other peoples mistakes.
+On Monday and Friday Russian is preferred. On Wednesday and Sunday English is preferred. The rest of the days you can speak any of these two languages. It is expected from native speakers to correct other people's mistakes.
 
-A day is changed at 00:00 CET (Berlin).
+The day is changed at 00:00 CET (Berlin).
 
-Rudeness, trolling, harassement, harrasment in DM, antisocial behaviour and so on may lead to a ban. It's not a court room, but a community. It is possible to get a ban just because we don't like you -- be polite. Write to the admins if someone is bothering you, so the admins may settle the situation.
-Cursing is not forbidden, that doesn't mean you need to use it constantly.
+Rudeness, trolling, harassment, harassment in DM, antisocial behaviour and so on may lead to a ban. It's not a court room, but a community. It is possible to get a ban just because we don't like you -- be polite. Write to the admins if someone is bothering you, so the admins may settle the situation.
+Cursing is not forbidden, but that doesn't mean you need to use it constantly.
 
 The chat bot may temporarily mute you for repeated violations of the Russian/English day rules.
 
@@ -23,6 +23,12 @@ IMPORTANT: Language Exchange implies that you can understand most of what is wri
 Бот может вас замьютить за повторные нарушения порядка Русских/Английских дней.
 
 ВАЖНО: языковой обмен подразумевает, что вы понимаете большую часть того, что вам пишут и можете отвечать. Вы пришли сюда общаться -- пытайтесь общаться.
+
+======================
+If you don't understand if today is an English or Russian day write /today
+Or take a look at this picture.
+
+https://i.ibb.co/TPHLyTP/days.png
 
 ======================
 DISCORD server r/russian: https://discord.gg/awM49Wb

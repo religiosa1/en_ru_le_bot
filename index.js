@@ -27,10 +27,10 @@ app.use(express.json());
 
 // =============================================================================
 
-bot.onText(/\/rules/, helpers.rules);
-bot.onText(/\/help/, helpers.help);
-bot.onText(/^\/cooldown$/, lngchk.cooldownInfo.bind(lngchk));
-bot.onText(/^\/today$/, lngchk.today.bind(lngchk));
+bot.onText(/^\/rules/, helpers.rules);
+bot.onText(/^\/help/, helpers.help);
+bot.onText(/^\/cooldown/, lngchk.cooldownInfo.bind(lngchk));
+bot.onText(/^\/today/, lngchk.today.bind(lngchk));
 
 bot.onText(/^\/autolangday$/, av.adminOnly(lngchk.autolangday.bind(lngchk)));
 bot.onText(/^\/forcelang +([a-zA-Z]*)$/, av.adminOnly(lngchk.forcelang.bind(lngchk)));
