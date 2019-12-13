@@ -45,6 +45,7 @@ bot.onText(/^\/mute_duration(?: +(\d+))?$/, av.adminOnly(UserViolationTracker.mu
 bot.onText(/^\/mute_warnings(?: +(\d+))?$/, av.adminOnly(UserViolationTracker.muteWarnings));
 bot.onText(/^\/mute_score$/, av.adminOnly(UserViolationTracker.muteScore));
 bot.onText(/^\/threshold(?: +([0-9.]+))?$/, av.adminOnly(lngchk.threshold.bind(lngchk)));
+bot.onText(/^\/badchars(?: +([0-9.]+))?$/, av.adminOnly(lngchk.badChars.bind(lngchk)));
 bot.onText(/^\/rt /, av.adminOnly(retranslate));
 
 bot.on("text", (msg) => {

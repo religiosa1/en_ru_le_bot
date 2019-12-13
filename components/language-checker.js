@@ -91,7 +91,10 @@ class LanguageChecker {
     if (!msg || !msg.chat) return;
     if (Array.isArray(match) && match.length > 1 && match[1]) {
       let cd = parseInt(match[1].trim(), 10);
-      if (cd >= 1 && cd <= 150) {
+      if (cd === 0) {
+        this.opts.cooldown = 0;
+        bot.sendMessage(msg.chat.id, "Cooldown is disabled. Every violation gets a warning.");
+      } else if (cd >= 1 && cd <= 150) {
         this.opts.cooldown = cd;
         bot.sendMessage(msg.chat.id, `Cooldown is now ${cd} minutes.`);
       } else {
@@ -115,6 +118,24 @@ class LanguageChecker {
       bot.sendMessage(msg.chat.id, `Threshold is set to ${th}`);
     } else {
       bot.sendMessage(msg.chat.id, `Threshold is ${this.opts.threshold}`);
+    }
+  }
+
+  badChars(msg, match) {
+    if (!msg || !msg.chat) return;
+    if (Array.isArray(match) && match.length > 1 && match[1]) {
+      let cd = parseInt(match[1].trim(), 10);
+      if (cd === 0) {
+        this.opts.badCharThresh = 0;
+        bot.sendMessage(msg.chat.id, "No bad chars is allowed now.");
+      } else if (cd >= 1 && cd <= 150) {
+        this.opts.badCharThresh = cd;
+        bot.sendMessage(msg.chat.id, `Allowed number of bad chars is now ${cd}.`);
+      } else {
+        bot.sendMessage(msg.chat.id, "Strange number, can't do");
+      }
+    } else {
+      bot.sendMessage(msg.chat.id, `The allowed number of bad chars in a message is ${this.opts.badCharThresh}`);
     }
   }
 
@@ -152,7 +173,9 @@ class LanguageChecker {
   // methods
 
   resetCooldown() {
-    this.cooldownTarget = moment().add(this.opts.cooldown, "minutes");
+    if (Number.isFinite(this.opts.cooldown) && this.opts.cooldown > 0) {
+      this.cooldownTarget = moment().add(this.opts.cooldown, "minutes");
+    }
   }
 
   lang_violation(msg, resp) {

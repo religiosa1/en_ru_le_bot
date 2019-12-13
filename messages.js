@@ -46,7 +46,8 @@ If you want to have an audiochat with our members, write about it here, choose a
 /autolangday Включить/выключить проверку сообщений на язык.
 /forcelang [RU | EN | OFF] Принудительно включить русский или английский день. Off чтобы выключить. Без параметра -- статус о принудительном режиме.
 /set_cooldown [MINUTES] Выставить время между предупреждениями в минутах. Без параметра -- сбросить таймер.
-/threshold [FLOAT] Выставить допустимую долю "неправильных" символов в сообщении. Без параметра -- показать текущую.
+/threshold [FLOAT] Выставить допустимую долю "неправильных" символов в сообщении. 0 -- используется только параметр badchars. Без параметра -- показать текущую.
+/badchars [N] Выставить допустимое количество "неправильных" символов в сообщении. Без параметра -- показать текущее.
 /flush Обновить информацию об админах.
 /mute Включить/выключить функцию мьюта пользователей.
 /mute_expiration [N] Задать время, за которое засчитываются повторные нарушения для мьюта. Без параметра -- показать сколько сейчас.
@@ -55,8 +56,8 @@ If you want to have an audiochat with our members, write about it here, choose a
 /pardon Сбросить накопившиеся нарушения.
   `,
 
-  langday_english: "Today is the English day.\nСегодня день английского языка.",
-  langday_russian: "Today is the Russian day.\nСегодня день русского языка.",
+  langday_english: "Today is an English day.\nСегодня день английского языка.",
+  langday_russian: "Today is a Russian day.\nСегодня день русского языка.",
   langday_none: "Today is a free day. You can speak any language.\nСегодня вольный день. Вы можете говорить на любом языке.",
   langday_disabled: "English/Russian checks with bots are currently turned off.\nПроверка английских/русских дней ботом на данный момент отключена.",
   langday_forcedEn: "Usage of English was forced by admins.\nИспользование английского было закреплено админами.",
