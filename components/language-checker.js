@@ -5,6 +5,14 @@ const UserViolationTracker = require("./user-violation-tracker");
 const AdminValidator = require("./admin-validator");
 const messages = require("../messages");
 
+const CONTROLLED_ENTITIES = [
+  "bold",
+  "italic",
+  "underline",
+  "strikethrough",
+  "code",
+];
+
 function onoff(val) {
   return val ? "on":"off";
 }
@@ -102,7 +110,7 @@ class LanguageChecker {
       }
     } else {
       this.cooldownTarget = moment();
-      bot.sendMessage(msg.chat.id, "Cooldown's been reseted.");
+      bot.sendMessage(msg.chat.id, "Cooldown's been reset.");
     }
   }
 
@@ -254,7 +262,7 @@ class LanguageChecker {
           Number.isInteger(e.length) &&
           e.offset + e.length <= msg.text.length
         ) {
-          if (["bold", "italic"].includes(e.type)) {
+          if (CONTROLLED_ENTITIES.includes(e.type)) {
             text += msg.text.slice(i, e.offset+e.length);
           } else {
             text += msg.text.slice(i, e.offset);

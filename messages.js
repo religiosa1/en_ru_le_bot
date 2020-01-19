@@ -58,7 +58,7 @@ If you want to have an audiochat with our members, write about it here, choose a
 
   langday_english: "Today is an English day.\nСегодня день английского языка.",
   langday_russian: "Today is a Russian day.\nСегодня день русского языка.",
-  langday_none: "Today is a free day. You can speak any language.\nСегодня вольный день. Вы можете говорить на любом языке.",
+  langday_none: "Today is a free day. You can speak any language.\nСегодня свободный день. Вы можете говорить на любом языке.",
   langday_disabled: "English/Russian checks with bots are currently turned off.\nПроверка английских/русских дней ботом на данный момент отключена.",
   langday_forcedEn: "Usage of English was forced by admins.\nИспользование английского было закреплено админами.",
   langday_forcedRu: "Usage of Russian was forced by admins.\nИспользование русского было закреплено админами.",
