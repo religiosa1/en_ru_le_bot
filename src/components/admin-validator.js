@@ -1,7 +1,7 @@
-const bot = require("./bot");
+const bot = require("../bot");
 
 class AdminValidator {
-  static get staticAdmins() {
+  getStaticAdmins() {
     if (process && process.env && typeof process.env.ADMINS === "string") {
       return process.env.ADMINS.split(/\s+/).map(i=>parseInt(i, 10));
     }
@@ -9,11 +9,16 @@ class AdminValidator {
   }
 
   constructor() {
-    this.admins = new Set(AdminValidator.staticAdmins);
+    this.admins = new Set(this.getStaticAdmins());
+    this.adminOnly = this.adminOnly.bind(this);
 
     if (process.env.CHAT_ID) {
       this._extendChatAdmins(process.env.CHAT_ID);
     }
+  }
+
+  get nAdmins() {
+    return this.admins.size;
   }
 
   isAdmin(userId) {
@@ -30,9 +35,10 @@ class AdminValidator {
 
   adminOnly(func) {
     let self = this;
-    return function(msg, ...args) {
+    return function(msg) {
       if (self.validate(msg)) {
-        return func(msg, ...args);
+        console.log("Админа-мана, вызываю", arguments);
+        return func.apply(this, arguments);
       } else {
         bot.sendMessage(msg.chat.id, "You have to be an admin to do that.");
       }

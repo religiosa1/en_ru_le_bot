@@ -1,9 +1,9 @@
 jest.mock("redis", ()=>{
   return require("redis-mock");
 });
-jest.mock("../components/bot.js");
+jest.mock("../src/bot.js");
 
-const LanguageChecker = require("../components/language-checker");
+const LanguageChecker = require("../src/components/language-checker");
 
 const ENG = "The better part of valor is discretion.";
 const RUS = "Мы почитаем всех нулями, А единицами — себя.";
