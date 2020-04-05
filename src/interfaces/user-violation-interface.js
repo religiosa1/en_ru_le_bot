@@ -5,7 +5,7 @@ const bot = require("../bot");
 const UserViolationStorage = require("../components/user-violation-storage");
 
 const options = {
-  nWarnings: 2,
+  nWarnings: 3,
   // In minutes. If it's less than 30 seconds or more than 266 days, telegram will ban a user forever.
   muteDuration: 3 * 60,
 };
@@ -35,7 +35,7 @@ class UserViolationStatus {
 const UserViolationTracker = {
   async register(chatId, userId) {
     let userInfo = await bot.getChatMember(chatId, userId);
-    let cv = UserViolationStorage.register(userId, userInfo.user.username);
+    let cv = await UserViolationStorage.register(userId, userInfo.user.username);
     let retval;
     if (cv >= options.nWarnings) {
       await mute(chatId, userId);

@@ -37,7 +37,6 @@ class AdminValidator {
     let self = this;
     return function(msg) {
       if (self.validate(msg)) {
-        console.log("Админа-мана, вызываю", arguments);
         return func.apply(this, arguments);
       } else {
         bot.sendMessage(msg.chat.id, "You have to be an admin to do that.");

@@ -6,7 +6,6 @@ const command = function(fn, error_preambule = "") {
     throw new TypeError("Expecting to receieve a function handler to be decorated.");
   }
   return async function(msg) {
-    console.log("command", msg);
     if (!msg || !msg.chat || !msg.chat.id) {
       console.error("Command didn't recieve a msg its argument or chat field is missing: ", msg);
       console.trace();
@@ -15,7 +14,6 @@ const command = function(fn, error_preambule = "") {
 
     let retval;
     try {
-      console.log("Сейчас должен вызывать команду верхнего уровня", arguments, fn);
       retval = await fn.apply(this, arguments);
     } catch(err) {
       console.error("ERROR: ", error_preambule, err);

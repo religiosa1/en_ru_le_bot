@@ -3,7 +3,9 @@ require("dotenv").config();
 const bot = require("./src/bot");
 const TOKEN = bot.token;
 
-const express = require("express");
+const polka = require("polka");
+const send = require("@polka/send");
+const { json } = require("body-parser");
 
 const lngchk = require("./src/interfaces/language-checker");
 const helpers = require("./src/interfaces/helper-commands");
@@ -22,8 +24,8 @@ if (!url) {
   process.exit(1);
 }
 
-const app = express();
-app.use(express.json());
+const app = polka();
+app.use(json());
 
 // =============================================================================
 
@@ -39,7 +41,7 @@ bot.onText(/^\/flush$/, adminValidator.refreshAdmins);
 bot.onText(/^\/info$/, helpers.info);
 bot.onText(/^\/version$/, helpers.version);
 bot.onText(/^\/mute$/, lngchk.toggleMuteCapacity);
-bot.onText(/\/pardon( +@.+)$/, userViolation.pardon);
+bot.onText(/\/pardon( +@.+)?$/, userViolation.pardon);
 bot.onText(/^\/mute_expiration(?: +(\d+))?$/, userViolation.muteExpiration);
 bot.onText(/^\/mute_duration(?: +(\d+))?$/, userViolation.muteDuration);
 bot.onText(/^\/mute_warnings(?: +(\d+))?$/, userViolation.muteWarnings);
@@ -49,13 +51,12 @@ bot.onText(/^\/badchars(?: +([0-9.]+))?$/, lngchk.badChars);
 bot.onText(/^\/rt /, retranslate);
 
 bot.on("text", (msg) => {
-  console.log(msg);
   lngchk.check(msg);
 });
 
 app.post(`/bot${TOKEN}`, (req, res) => {
   bot.processUpdate(req.body);
-  res.sendStatus(200);
+  send(res, 200);
 });
 
 // =============================================================================
