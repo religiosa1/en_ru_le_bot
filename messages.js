@@ -35,7 +35,7 @@ module.exports = {
   Unwanted advertisement and self-promotion may lead to a permanent ban. Please ask the members if they are interested in what you're selling first.
 
   ======================
-  Out DISCORD server: https://discord.gg/CZazt9P
+  Out DISCORD server: https://discord.gg/gUXfbv4
   If you want to have an audiochat with our members, write about it here, choose a chat room and don't forget to tell people there that you came from this chat ;)
   `,
 
