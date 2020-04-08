@@ -1,6 +1,6 @@
 {
   "name": "en_ru_le_bot",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "EN/RU language exchange telegram bot.",
   "main": "index.js",
   "private": true,
@@ -17,8 +17,10 @@
   "dependencies": {
     "@polka/send": "^0.4.0",
     "body-parser": "^1.19.0",
+    "cron": "^1.8.2",
     "dotenv": "^8.2.0",
     "moment": "^2.24.0",
+    "moment-timezone": "^0.5.28",
     "node-telegram-bot-api": "^0.40.0",
     "polka": "^0.5.2",
     "redis": "^3.0.2"

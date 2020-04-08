@@ -1,4 +1,4 @@
-const moment = require("moment");
+const moment = require("moment-timezone");
 const violation = require("./violation");
 
 // This entities are excluded from the message by the retrieveText function prior to the language check.
@@ -29,6 +29,7 @@ const defaultOptions = {
 class LanguageChecker {
   constructor(opts) {
     this.opts = {...defaultOptions, ...opts};
+    this.timezone = process.env.TIMEZONE || "Europe/Berlin";
     this.forcedLang = null;
     this.resetCooldown();
   }
@@ -60,20 +61,28 @@ class LanguageChecker {
     return violation.NONE;
   }
 
+  localTime() {
+    return moment().tz(this.timezone);
+  }
+
+  day() {
+    return this.localTime().day();
+  }
+
   isEnglishDay(ignoreForceLang = false) {
     if (ignoreForceLang) {
-      return this.opts.english_days.includes(moment().day());
+      return this.opts.english_days.includes(this.day());
     }
     if (this.forcedLang && this.forcedLang !== "EN") return false;
-    return this.forcedLang === "EN" || this.opts.english_days.includes(moment().day());
+    return this.forcedLang === "EN" || this.opts.english_days.includes(this.day());
   }
 
   isRussianDay(ignoreForceLang = false) {
     if (ignoreForceLang) {
-      return this.opts.russian_days.includes(moment().day());
+      return this.opts.russian_days.includes(this.day());
     }
     if (this.forcedLang && this.forcedLang !== "RU") return false;
-    return this.forcedLang === "RU" || this.opts.russian_days.includes(moment().day());
+    return this.forcedLang === "RU" || this.opts.russian_days.includes(this.day());
   }
 
   isEnglishText(txt) {

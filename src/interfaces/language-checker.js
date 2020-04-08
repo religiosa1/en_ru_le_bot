@@ -1,4 +1,5 @@
 const moment = require("moment");
+const { CronJob } = require("cron");
 
 const bot = require("../bot");
 const { command, adminCommand, msgHandler } = require("../command");
@@ -13,7 +14,62 @@ function onoff(val) {
   return val ? "on" : "off";
 }
 
+let notifications_enabled = true;
+const notifications = {
+  beforehand: new CronJob("0 55 23 * * *", function() {
+    if (!notifications_enabled) return;
+
+    let chatId = process.env.CHAT_ID;
+    if (!chatId) return;
+
+    bot.sendMessage( chatId, messages.notification_beforeHand);
+  }, null, true, lngchk.timezone),
+
+  main: new CronJob("0 00 00 * * *", function() {
+    if (!notifications_enabled) return;
+
+    let chatId = process.env.CHAT_ID;
+    if (!chatId) return;
+
+    let txt;
+    if (lngchk.isEnglishDay(true)) {
+      txt = messages.notification_main_en;
+    } else if (lngchk.isRussianDay(true)) {
+      txt = messages.notification_main_ru;
+    } else {
+      txt = messages.notification_main_free;
+    }
+    if (lngchk.forcedLang) {
+      txt += messages.notification_main_forced;
+    }
+    bot.sendMessage( chatId, txt );
+  }, null, true, lngchk.timezone),
+};
+
+
 module.exports = {
+  notification: adminCommand(
+    function(msg, match) {
+      if (Array.isArray(match) && match.length > 1 && match[1]) {
+        bot.sendMessage(msg.chat.id,  notifications_enabled ?
+          "Notifications enabled" : "Notifications disabled"
+        );
+      } else {
+        let act;
+        if (notifications_enabled) {
+          act = (item) => item && typeof item.stop === "function" && item.stop();
+        } else {
+          act = (item) => item && typeof item.start === "function" && item.start();
+        }
+        Object.values(notifications).forEach(act);
+        notifications_enabled = !notifications_enabled;
+        bot.sendMessage(msg.chat.id,
+          `Notifications have been ${notifications_enabled ? "enabled" : "disabled"}`
+        );
+      }
+    }
+  ),
+
   today: command(
     function(msg) {
       let resp;

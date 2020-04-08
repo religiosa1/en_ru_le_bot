@@ -49,6 +49,7 @@ bot.onText(/^\/mute_score$/, userViolation.muteScore);
 bot.onText(/^\/threshold(?: +([0-9.]+))?$/, lngchk.threshold);
 bot.onText(/^\/badchars(?: +([0-9.]+))?$/, lngchk.badChars);
 bot.onText(/^\/rt /, retranslate);
+bot.onText(/^\/alarm( +\?)?$/, lngchk.notification);
 
 bot.on("text", (msg) => {
   lngchk.check(msg);

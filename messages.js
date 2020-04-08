@@ -35,8 +35,8 @@ module.exports = {
   Unwanted advertisement and self-promotion may lead to a permanent ban. Please ask the members if they are interested in what you're selling first.
 
   ======================
-  Out DISCORD server: https://discord.gg/gUXfbv4
-  If you want to have an audiochat with our members, write about it here, choose a chat room and don't forget to tell people there that you came from this chat ;)
+  Our DISCORD server: https://discord.gg/gUXfbv4
+  If you want to have an audiochat with our members, write about it here and choose a chat room there.
   `,
 
   help: `
@@ -57,7 +57,8 @@ module.exports = {
 /mute_expiration [N] Задать время, за которое засчитываются повторные нарушения для мьюта. Без параметра -- показать сколько сейчас.
 /mute_duration [N] Задать время, на которое выдаётся мьют. Без параметра -- показать сколько сейчас.
 /mute_warnings [N] Задать количество предупреждений перед мьютом. Без параметра -- показать сколько сейчас.
-/pardon Сбросить накопившиеся нарушения.
+/pardon [@user] Сбросить накопившиеся нарушения. Если указан пользователь, то сбрасываем для него, иначе для всех.
+/alarm [?] Включение отключение оповещений о смене дня. С параметром -- вывод информации о статусе.
   `,
 
   langday_english: "Today is an English day.\nСегодня день английского языка.",
@@ -68,4 +69,10 @@ module.exports = {
   langday_forcedRu: "Usage of Russian was forced by admins.\nИспользование русского было закреплено админами.",
   langday_violation_english: "Эй! Сегодня день английского языка! Постарайся говорить по-английски.",
   langday_violation_russian: "Hey! Today is a russian day! Try to speak Russian.",
+
+  notification_beforeHand: "Day will change in 5 minutes.",
+  notification_main_en: "English day has begun.",
+  notification_main_ru: "Начался русский день.",
+  notification_main_free: "Free day has begun.\nНачался свободный день.",
+  notification_main_forced: "Order of days was changed by the administratrion",
 };

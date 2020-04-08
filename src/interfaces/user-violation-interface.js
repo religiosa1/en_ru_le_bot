@@ -1,5 +1,5 @@
 const moment = require("moment");
-const { command, adminCommand } = require("../command");
+const { adminCommand } = require("../command");
 
 const bot = require("../bot");
 const UserViolationStorage = require("../components/user-violation-storage");
@@ -54,7 +54,7 @@ const UserViolationTracker = {
     return retval;
   },
 
-  pardon: command(
+  pardon: adminCommand(
     async function(msg) {
       if (Array.isArray(msg.entities) && msg.entities.length > 1) {
         let ent  = msg.entities[1];
