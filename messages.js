@@ -4,6 +4,8 @@ module.exports = {
 
   The day is changed at 00:00 CET (Berlin).
 
+  DO NOT WRITE TO OTHER MEMBERS DIRECTLY BEFORE YOU AT LEAST KNOW THEM. Better don't write them at all until you're pretty confident you're not bugging them. This is highly discouraged and will be punished.
+
   Rudeness, trolling, harassment, harassment in DM, antisocial behaviour and so on may lead to a ban. It's not a court room, but a community. It is possible to get a ban just because we don't like you -- be polite. Write to the admins if someone is bothering you, so the admins may settle the situation.
   Cursing is not forbidden, but that doesn't mean you need to use it constantly.
 
@@ -16,6 +18,8 @@ module.exports = {
   В понедельник и пятницу желательно говорить по-русски. В среду и воскресенье -- по-английски. В остальные дни допустимо использование любого из этих языков. От носителей ожидаются исправления ошибок у других людей.
 
   Смена дня происходит в 00:00 Центральноевропейского времени (Берлин).
+
+  НЕ ПИШИТЕ ДРУГИМ УЧАСТНИКАМ В ЛИЧКУ ПОКА ВЫ С НИМИ ХОТЯ БЫ НЕ ПОЗНАКОМИТЕСЬ. Лучше вообще им не пишите, пока вы не достаточно уверены, что вы им не докучаете. Такое поведение крайне неодобряется и будет караться.
 
   За грубость, троллинг, домогательства, домогания в личке, антисоциальное поведение и т.д. возможен бан. У нас не зал суда, а сообщество. Бан возможен просто за то что вы не понравились -- будьте вежливы. Если вам кто-то докучает, пишите админам, чтобы админы могли урегулировать ситуацию.
   Использование мата не запрещено, но это не значит что нужно использовать его постоянно.
