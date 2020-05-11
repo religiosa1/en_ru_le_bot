@@ -1,6 +1,6 @@
 module.exports = {
   rules: `This chat is made for English and Russian practice.
-  On Monday and Friday Russian is spoken. On Wednesday and Sunday English is spoken. The rest of the days you can speak any of these two languages. It is expected from native speakers to correct other people's mistakes.
+  On Monday, Wednesday and Friday Russian is spoken. On Tuesday, Thursday and Saturday English is spoken. On Sunday you can speak any of these two languages. It is expected from native speakers to correct other people's mistakes.
 
   The day is changed at 00:00 CET (Berlin).
 
@@ -15,7 +15,7 @@ module.exports = {
   ======================
   Данный чат предназначен для практики английского или русского языков.
 
-  В понедельник и пятницу желательно говорить по-русски. В среду и воскресенье -- по-английски. В остальные дни допустимо использование любого из этих языков. От носителей ожидаются исправления ошибок у других людей.
+  В понедельник, среду и пятницу говорим по-русски. Во вторник, четверг и субботу -- по-английски. В воскресенье допустимо использование любого из этих языков. От носителей ожидаются исправления ошибок у других людей.
 
   Смена дня происходит в 00:00 Центральноевропейского времени (Берлин).
 
@@ -32,7 +32,7 @@ module.exports = {
   If you don't understand if today is an English or Russian day write /today
   Or take a look at this picture.
 
-  https://i.ibb.co/TPHLyTP/days.png
+  https://i.ibb.co/kK6tYNG/days-all.png
 
   =====================
 

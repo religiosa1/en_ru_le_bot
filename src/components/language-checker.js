@@ -19,8 +19,8 @@ const allCharsRe = /[а-яА-Яa-zA-Z\u0370-\uDF00]/ug;
 const defaultOptions = {
   autolangday: true,
   cooldown: 2, // in minutes
-  russian_days: [ 1, 5 ],
-  english_days: [ 3, 0 ],
+  russian_days: [ 1, 3, 5 ],
+  english_days: [ 2, 4, 6 ],
   threshold: 0.5,
   badCharThresh: 5, // How many wrong letters is permitted in a msg.
   muteEnabled: true,
