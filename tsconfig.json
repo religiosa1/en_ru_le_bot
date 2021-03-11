@@ -1,0 +1,24 @@
+{
+  "compilerOptions": {
+    "strict": true,
+    "target": "ES2016",
+    "moduleResolution": "node",
+    "module": "commonjs",
+    "preserveConstEnums": true,
+    "esModuleInterop": true,
+    "sourceMap": false,
+    "resolveJsonModule": true,
+    "baseUrl": ".",
+    "paths": {
+      "~/*": [ "./src/*" ]
+    }
+  },
+  "include": [
+    "index.ts",
+    "src",
+    "types"
+  ],
+  "exclude": [
+    "node_modules"
+  ]
+}

@@ -1,10 +1,13 @@
 "use strict";
 
-const moment = require("moment-timezone");
-const violation = require("./violation");
+import type { Message } from "node-telegram-bot-api";
+import { add, isBefore } from 'date-fns';
+import { utcToZonedTime } from 'date-fns-tz';
+
+import { LanguageEnum } from "~/enums/LanguageEnum";
 
 // This entities are excluded from the message by the retrieveText function prior to the language check.
-const PERMITTED_ENTITIES = [
+const PERMITTED_ENTITIES = new Set([
   "mention",
   "text_mention",
   "hashtag",
@@ -14,9 +17,21 @@ const PERMITTED_ENTITIES = [
   "email",
   "text_link",
   "phone_number",
-];
+]);
 
 const allCharsRe = /[а-яА-Яa-zA-Z\u0370-\uDF00]/ug;
+
+interface LanguageCheckerOpts {
+  autolangday: boolean;
+  /** cooldown in minutes */
+  cooldown: number,
+  russian_days: number[],
+  english_days: number[],
+  threshold: number,
+  /**  How many wrong letters is permitted in a msg. */
+  badCharThresh: number,
+  muteEnabled: boolean,
+}
 
 const defaultOptions = {
   autolangday: true,
@@ -29,65 +44,71 @@ const defaultOptions = {
 };
 
 class LanguageChecker {
-  constructor(opts) {
+  opts: LanguageCheckerOpts;
+  timezone: string;
+  forcedLang: LanguageEnum;
+  cooldownTarget: Date;
+
+  constructor(opts?: Partial<LanguageCheckerOpts>) {
     this.opts = {...defaultOptions, ...opts};
     this.timezone = process.env.TIMEZONE || "Europe/Berlin";
-    this.forcedLang = null;
-    this.resetCooldown();
+    this.forcedLang = LanguageEnum.NONE;
+    this.cooldownTarget = new Date();
   }
 
-  resetCooldown() {
-    this.cooldownTarget = moment();
+  resetCooldown(): void {
+    this.cooldownTarget = new Date();
   }
 
-  cooldown() {
+  cooldown(): void {
     if (Number.isFinite(this.opts.cooldown) && this.opts.cooldown > 0) {
-      this.cooldownTarget = moment().add(this.opts.cooldown, "minutes");
+      this.cooldownTarget = add(new Date(), { minutes: this.opts.cooldown});
     }
   }
 
-  check(msg) {
+  /** returns language for which violation has occured, NONE if everything is ok */
+  check(msg: Message): LanguageEnum {
     if (!msg) { throw new Error("No message to check"); }
-    if ( !this.opts.autolangday || moment().isBefore(this.cooldownTarget) ) {
-      return violation.NONE;
+    if ( !this.opts.autolangday || isBefore(new Date(), this.cooldownTarget) ) {
+      return LanguageEnum.NONE;
     }
 
     let txt = this.retrieveText(msg);
 
     if (this.isEnglishDay()) {
-      return this.isEnglishText(txt) ? violation.NONE : violation.EN;
+      return this.isEnglishText(txt) ? LanguageEnum.NONE : LanguageEnum.EN;
     }
     if (this.isRussianDay()) {
-      return this.isRussianText(txt) ? violation.NONE : violation.RU;
+      return this.isRussianText(txt) ? LanguageEnum.NONE : LanguageEnum.RU;
     }
-    return violation.NONE;
+    return LanguageEnum.NONE;
   }
 
-  localTime() {
-    return moment().tz(this.timezone);
+  localTime(): Date {
+    return utcToZonedTime(new Date(), this.timezone);
   }
 
-  day() {
-    return this.localTime().day();
+  day(): number {
+    return this.localTime().getDay();
   }
 
-  isEnglishDay(ignoreForceLang = false) {
+  isEnglishDay(ignoreForceLang = false): boolean {
     if (ignoreForceLang) {
       return this.opts.english_days.includes(this.day());
     }
-    if (this.forcedLang && this.forcedLang !== "EN") return false;
-    return this.forcedLang === "EN" || this.opts.english_days.includes(this.day());
+    if (this.forcedLang && this.forcedLang !== LanguageEnum.EN ) return false;
+    return this.forcedLang === LanguageEnum.EN || this.opts.english_days.includes(this.day());
   }
 
-  isRussianDay(ignoreForceLang = false) {
+  isRussianDay(ignoreForceLang = false): boolean {
     if (ignoreForceLang) {
       return this.opts.russian_days.includes(this.day());
     }
-    if (this.forcedLang && this.forcedLang !== "RU") return false;
-    return this.forcedLang === "RU" || this.opts.russian_days.includes(this.day());
+    if (this.forcedLang && this.forcedLang !== LanguageEnum.RU) return false;
+    return this.forcedLang === LanguageEnum.RU || this.opts.russian_days.includes(this.day());
   }
 
-  isEnglishText(txt) {
+  isEnglishText(txt: string): boolean {
     if (typeof txt !== "string") {
       return false;
     }
@@ -99,7 +120,7 @@ class LanguageChecker {
     return true;
   }
 
-  isRussianText(txt) {
+  isRussianText(txt: string): boolean {
     if (typeof txt !== "string") {
       return false;
     }
@@ -111,7 +132,7 @@ class LanguageChecker {
     return true;
   }
 
-  retrieveText(msg) {
+  retrieveText(msg: Message): string {
     if (!msg) return "";
     if (Array.isArray(msg.entities) && typeof msg.text === "string") {
       let text = "";
@@ -122,7 +143,7 @@ class LanguageChecker {
           Number.isInteger(e.length) &&
           e.offset + e.length <= msg.text.length
         ) {
-          if (PERMITTED_ENTITIES.includes(e.type)) {
+          if (PERMITTED_ENTITIES.has(e.type)) {
             // omitting
             text += msg.text.slice(i, e.offset);
           } else {
@@ -137,8 +158,8 @@ class LanguageChecker {
       }
       return text;
     }
-    return msg.text;
+    return msg.text ?? "";
   }
 }
 
-module.exports = new LanguageChecker();
+export default new LanguageChecker();

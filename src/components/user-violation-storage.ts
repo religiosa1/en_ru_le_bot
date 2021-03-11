@@ -1,46 +1,55 @@
 "use strict";
 
-const redis = require("redis").createClient();
+import redisModule from "redis";
+const redis = redisModule.createClient();
 
-const { promisify } = require("util");
+import { promisify } from "util";
+
 const getAsync = promisify(redis.get).bind(redis);
 
-const defaultOpts = {
-  redisPrefix: "violationcounter",
-  expiration: 5,
-};
-
 class UserViolationStorage {
-  constructor(opts) {
-    this.opts = {...defaultOpts, ...opts};
+  redisPrefix: string;
+  expiration: number;
+
+  constructor({
+    redisPrefix = "violationcounter",
+    expiration = 5,
+  } = {}) {
+    this.redisPrefix = redisPrefix;
+    this.expiration = expiration;
   }
 
   /** redis key for number of violations registered for the user
-  * @param {number} userId
-  * @returns {string} redis key.
+   @returns redis key
   */
-  key_nViolation(userId) { return `${this.opts.redisPrefix}:user:${userId}`; }
-  /** redis key for the usernId registered for the username
-  * @param {string} username
-  * @returns {string} redis key.
-  */
-  key_username(username) { return `${this.opts.redisPrefix}:username:${username}`; }
-
-  getExpiration() {
-    return +this.opts.expiration * 60;
+  key_nViolation(userId: number | "*"): string {
+    return `${this.redisPrefix}:user:${userId}`;
   }
 
-  /** @param {string} username Username for which query is performed.
-   * @returns {Promise<number>} userId recorded fot the username, NaN if the username wasn't recorded. */
-  async getUserIdByUsername(username) {
+  /** redis key for the usernId registered for the username
+  * @returns redis key
+  */
+  key_username(username: string): string {
+    return `${this.redisPrefix}:username:${username}`;
+  }
+
+  getExpiration(): number {
+    return this.expiration * 60;
+  }
+
+  /** @param username Username for which query is performed.
+   * @returns userId recorded fot the username, NaN if the username wasn't recorded. */
+  async getUserIdByUsername(username: string): Promise<number | undefined> {
     let userid = await getAsync(this.key_username(username));
+    if (!userid) { return; }
     return parseInt(userid, 10);
   }
 
-  /** @param {number} userId Searched userId.
-   * @returns {Promise<number>} Number of violations for the user or NaN if no such userid is present. */
-  async getViolationData(userId) {
+  /** @param userId Searched userId.
+   * @returns Number of violations for the user or NaN if no such userid is present. */
+  async getViolationData(userId: number): Promise<number | undefined> {
     let n = await getAsync(this.key_nViolation(userId));
+    if (n == null) { return; }
     return parseInt(n, 10);
   }
 
@@ -49,34 +58,37 @@ class UserViolationStorage {
    * @param {number} userId TG userId to register.
    * @param {string} username TG username to be recorded/refreshed for this user.
    * @returns {Promise<number>} Number of violations recorded for the user. */
-  async register(userId, username) {
+  async register(userId: number, username: string) {
     if (!Number.isInteger(userId)) {
       throw new TypeError("UserId of the violating user must be an integer");
     }
 
     let cv = await this.getViolationData(userId);
-    if (Number.isInteger(cv)) {
+    if (cv != null && Number.isInteger(cv)) {
       cv++;
     } else {
       cv = 1;
     }
 
-    redis.set(this.key_nViolation(userId), cv, "EX", this.getExpiration());
+    redis.set(this.key_nViolation(userId), cv.toString(), "EX", this.getExpiration());
 
     if (username && typeof username === "string") {
-      redis.set(this.key_username(username), userId, "EX", this.getExpiration());
+      redis.set(this.key_username(username), userId.toString(), "EX", this.getExpiration());
     }
 
     return cv;
   }
 
   /** Remove violation data registered for the user. */
-  async remove(userhandle) {
+  async remove(userhandle: string | number) {
     let userId;
     if (typeof userhandle === "number") {
       userId = userhandle;
     } else {
       userId = await this.getUserIdByUsername(userhandle);
+    }
+    if (userId == null) {
+      return;
     }
     redis.del(this.key_nViolation(userId));
     // username is left to expire by itself
@@ -85,7 +97,7 @@ class UserViolationStorage {
   /** Remove all the data from the db, violations and usernames.
    * @returns {Promise<Boolean>} true on success */
   flush() {
-    return new Promise(function(resolve, reject) {
+    return new Promise((resolve, reject) => {
       redis.flushdb(err => {
         if (err) {
           reject(err);
@@ -98,7 +110,7 @@ class UserViolationStorage {
 
   /** Returns data about all the violations registered */
   getAllViolations() {
-    return new Promise(function(resolve, reject) {
+    return new Promise((resolve, reject) => {
       redis.keys(this.key_nViolation("*"), function (err, keys) {
         if (err) {
           reject(err);
@@ -111,7 +123,7 @@ class UserViolationStorage {
 
   /** Returns data about all usernames registered */
   getAllUserNames() {
-    return new Promise(function(resolve, reject) {
+    return new Promise((resolve, reject) => {
       redis.keys(this.key_username("*"), function (err, keys) {
         if (err) {
           reject(err);
@@ -123,4 +135,4 @@ class UserViolationStorage {
   }
 }
 
-module.exports = new UserViolationStorage();
+export default new UserViolationStorage();

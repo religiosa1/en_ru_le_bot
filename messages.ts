@@ -1,4 +1,4 @@
-module.exports = {
+const messages: Record<string, string> = {
   rules: `This chat is made for English and Russian practice.
   On Monday, Wednesday and Friday Russian is spoken. On Tuesday, Thursday and Saturday English is spoken. On Sunday you can speak any of these two languages. It is expected from native speakers to correct other people's mistakes.
 
@@ -80,3 +80,5 @@ module.exports = {
   notification_main_free: "Free day has begun.\nНачался свободный день.",
   notification_main_forced: "Order of days was changed by the administratrion",
 };
+
+export default messages;

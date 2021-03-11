@@ -1,9 +1,10 @@
-"use strict";
-
-const bot = require("../bot");
+import bot, { MessageHandler } from "../bot";
+import type { Message } from "node-telegram-bot-api";
 
 class AdminValidator {
-  getStaticAdmins() {
+  admins: Set<number>;
+
+  getStaticAdmins(): number[] {
     if (process && process.env && typeof process.env.ADMINS === "string") {
       return process.env.ADMINS.split(/\s+/).map(i=>parseInt(i, 10));
     }
@@ -11,23 +12,23 @@ class AdminValidator {
   }
 
   constructor() {
-    this.admins = new Set(this.getStaticAdmins());
+    this.admins = new Set<number>(this.getStaticAdmins());
     this.adminOnly = this.adminOnly.bind(this);
 
     if (process.env.CHAT_ID) {
-      this._extendChatAdmins(process.env.CHAT_ID);
+      this.extendChatAdmins(process.env.CHAT_ID);
     }
   }
 
-  get nAdmins() {
+  get nAdmins(): number {
     return this.admins.size;
   }
 
-  isAdmin(userId) {
+  isAdmin(userId: number): boolean {
     return this.admins.has(userId);
   }
 
-  validate(msg) {
+  validate(msg: Message) {
     if (msg && msg.from && msg.from.id) {
       return this.isAdmin(msg.from.id);
     } else {
@@ -35,18 +36,18 @@ class AdminValidator {
     }
   }
 
-  adminOnly(func) {
+  adminOnly<T = void>(func: MessageHandler<T>): MessageHandler<T | undefined> {
     let self = this;
-    return function(msg) {
+    return async function(msg: Message, ...args: any[]) {
       if (self.validate(msg)) {
-        return func.apply(this, arguments);
+        return func(msg, ...args);
       } else {
         bot.sendMessage(msg.chat.id, "You have to be an admin to do that.");
       }
     };
   }
 
-  _extendChatAdmins(chatId) {
+  extendChatAdmins(chatId?: string | number) {
     if (!chatId) {
       throw new TypeError("Expecting to get a chat id, from which to retrieve a list of admins!");
     }
@@ -66,14 +67,14 @@ class AdminValidator {
     });
   }
 
-  refreshAdmins(msg) {
+  refreshAdmins(msg: Message) {
     if (!msg || !msg.chat || !msg.chat.id) return;
     let chatId = process.env.CHAT_ID;
     if (!chatId) {
       console.warn("Refresh admins called, without any ChatID, ommiting.");
       return;
     }
-    this._extendChatAdmins(process.env.CHAT_ID).then(()=>{
+    this.extendChatAdmins(process.env.CHAT_ID).then(()=>{
       bot.sendMessage(msg.chat.id,
         `Success. There are ${this.admins.size} users with administrative access to the bot.`
       );
@@ -89,4 +90,4 @@ class AdminValidator {
 const adminValidatorInstance = new AdminValidator();
 Object.freeze(adminValidatorInstance);
 
-module.exports = adminValidatorInstance;
+export default adminValidatorInstance;

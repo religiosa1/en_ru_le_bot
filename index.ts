@@ -1,19 +1,22 @@
-#!/usr/bin/env node
-"use strict";
+#!/usr/bin/env ts-node
 
 require("dotenv").config();
-const bot = require("./src/bot");
+
+import bot from "./src/bot";
 const TOKEN = bot.token;
 
-const polka = require("polka");
-const send = require("@polka/send");
-const { json } = require("body-parser");
+import polka from "polka";
+import type { Message } from "node-telegram-bot-api";
 
-const lngchk = require("./src/interfaces/language-checker");
-const helpers = require("./src/interfaces/helper-commands");
-const userViolation = require("./src/interfaces/user-violation-interface");
-const retranslate = require("./src/interfaces/retranslate");
-const adminValidator = require("./src/interfaces/admin-validator");
+// FIXME
+import send from "@polka/send";
+import { json } from "body-parser";
+
+import * as lngchk from "./src/interfaces/language-checker";
+import * as helpers from  "./src/interfaces/helper-commands";
+import * as userViolation from "./src/interfaces/user-violation-interface";
+import { retranslate } from "./src/interfaces/retranslate";
+import { refreshAdmins } from "./src/interfaces/admin-validator";
 
 // =============================================================================
 
@@ -39,7 +42,7 @@ bot.onText(/^\/today/, lngchk.today);
 bot.onText(/^\/autolangday$/, lngchk.autolangday);
 bot.onText(/^\/forcelang( +[a-zA-Z]+)?$/, lngchk.forcelang);
 bot.onText(/^\/set_cooldown(?: +(\d+))?$/, lngchk.setCooldown);
-bot.onText(/^\/flush$/, adminValidator.refreshAdmins);
+bot.onText(/^\/flush$/, refreshAdmins);
 bot.onText(/^\/info$/, helpers.info);
 bot.onText(/^\/version$/, helpers.version);
 bot.onText(/^\/mute$/, lngchk.toggleMuteCapacity);
@@ -53,11 +56,12 @@ bot.onText(/^\/badchars(?: +([0-9.]+))?$/, lngchk.badChars);
 bot.onText(/^\/rt /, retranslate);
 bot.onText(/^\/alarm( +\?)?$/, lngchk.notification);
 
-bot.on("text", (msg) => {
+bot.on("text", (msg: Message) => {
   lngchk.check(msg);
 });
 
 app.post(`/bot${TOKEN}`, (req, res) => {
+  const a = res;
   bot.processUpdate(req.body);
   send(res, 200);
 });
