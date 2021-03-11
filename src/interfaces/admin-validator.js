@@ -1,3 +1,5 @@
+"use strict";
+
 const bot = require("../bot");
 const AdminValidator = require("../components/admin-validator");
 const { adminCommand } = require("../command");

@@ -19,17 +19,17 @@
     "body-parser": "^1.19.0",
     "cron": "^1.8.2",
     "dotenv": "^8.2.0",
-    "moment": "^2.24.0",
-    "moment-timezone": "^0.5.28",
-    "node-telegram-bot-api": "^0.40.0",
+    "moment": "^2.29.1",
+    "moment-timezone": "^0.5.33",
+    "node-telegram-bot-api": "^0.51.0",
     "polka": "^0.5.2",
     "redis": "^3.0.2"
   },
   "devDependencies": {
-    "eslint": "^6.8.0",
-    "eslint-plugin-jest": "^23.8.2",
-    "eslint-plugin-promise": "^4.2.1",
-    "jest": "^25.2.7",
-    "redis-mock": "^0.49.0"
+    "eslint": "^7.21.0",
+    "eslint-plugin-jest": "^24.2.1",
+    "eslint-plugin-promise": "^4.3.1",
+    "jest": "^26.6.3",
+    "redis-mock": "^0.56.3"
   }
 }

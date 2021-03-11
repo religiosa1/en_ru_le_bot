@@ -1,3 +1,5 @@
+"use strict";
+
 const bot = require("../bot");
 
 class AdminValidator {

@@ -1,4 +1,6 @@
 #!/usr/bin/env node
+"use strict";
+
 require("dotenv").config();
 const bot = require("./src/bot");
 const TOKEN = bot.token;
