@@ -40,7 +40,7 @@ class UserViolationStorage {
   /** @param username Username for which query is performed.
    * @returns userId recorded fot the username, NaN if the username wasn't recorded. */
   async getUserIdByUsername(username: string): Promise<number | undefined> {
-    let userid = await getAsync(this.key_username(username));
+    const userid = await getAsync(this.key_username(username));
     if (!userid) { return; }
     return parseInt(userid, 10);
   }
@@ -48,7 +48,7 @@ class UserViolationStorage {
   /** @param userId Searched userId.
    * @returns Number of violations for the user or NaN if no such userid is present. */
   async getViolationData(userId: number): Promise<number | undefined> {
-    let n = await getAsync(this.key_nViolation(userId));
+    const n = await getAsync(this.key_nViolation(userId));
     if (n == null) { return; }
     return parseInt(n, 10);
   }

@@ -1,4 +1,4 @@
-const moment = require("moment");
+import { add } from "date-fns";
 import { adminCommand } from "~/command";
 
 import bot from "~/bot";
@@ -13,7 +13,7 @@ const options = {
 
 function mute(chatId: number, userId: number): Promise<boolean> {
   return bot.restrictChatMember(chatId, userId.toString(), {
-    until_date: moment().add(options.muteDuration, "minutes").unix(),
+    until_date: add(new Date(), { minutes: options.muteDuration }).getTime(),
     can_send_messages: false,
     can_send_media_messages: false,
     can_send_polls: false,
@@ -31,14 +31,14 @@ class UserViolationStatus {
   ) {}
 }
 
-export async function register(chatId: number, userId: number) {
-  let userInfo = await bot.getChatMember(chatId, userId.toString());
+export async function register(chatId: number, userId: number): Promise<UserViolationStatus> {
+  const userInfo = await bot.getChatMember(chatId, userId.toString());
   // TODO check this unknown stuff
-  let cv = await UserViolationStorage.register(userId, userInfo.user.username ?? "unknown");
+  const cv = await UserViolationStorage.register(userId, userInfo.user.username ?? "unknown");
   let retval;
   if (cv >= options.nWarnings) {
     await mute(chatId, userId);
-    UserViolationStorage.remove(userId);
+    void UserViolationStorage.remove(userId);
     retval = new UserViolationStatus(true, 0, "You're temporarily muted for a repeated violation.");
   } else if (cv === 1) {
     retval = new UserViolationStatus(false, 1, "This is your first warning.");
@@ -55,8 +55,8 @@ export async function register(chatId: number, userId: number) {
 
 export const pardon = adminCommand(async (msg: Message) => {
   if (Array.isArray(msg.entities) && msg.entities.length > 1) {
-    let ent  = msg.entities[1];
-    let usertext = msg.text?.slice(ent.offset + 1, ent.offset + ent.length);
+    const ent  = msg.entities[1];
+    const usertext = msg.text?.slice(ent.offset + 1, ent.offset + ent.length) ?? "";
     let handle;
     if (ent.type === "text_mention" && ent.user && ent.user.id) {
       handle = ent.user.id;
@@ -65,55 +65,54 @@ export const pardon = adminCommand(async (msg: Message) => {
     } else {
       throw new Error("Is that a user? Really strange user handle.");
     }
-    await UserViolationStorage.remove(handle!);
-    bot.sendMessage(msg.chat.id, `Violations for the user @${usertext} removed.`);
+    await UserViolationStorage.remove(handle);
+    void bot.sendMessage(msg.chat.id, `Violations for the user @${usertext} removed.`);
   } else {
     await UserViolationStorage.flush();
-    bot.sendMessage(msg.chat.id, "All violation data is removed");
+    void bot.sendMessage(msg.chat.id, "All violation data is removed");
   }
 }, "Unable to pardon: ");
 
 export const muteDuration = adminCommand((msg: Message, match: RegExpMatchArray) => {
   if (!msg || !msg.chat) return;
   if (Array.isArray(match) && match.length > 1 && match[1]) {
-    let time = parseInt(match[1], 10);
+    const time = parseInt(match[1], 10);
     if (time < 1) {
-      bot.sendMessage(msg.chat.id, "Mute duration should be 1 minute or longer.");
+      void bot.sendMessage(msg.chat.id, "Mute duration should be 1 minute or longer.");
       return;
     }
     options.muteDuration = time;
-    bot.sendMessage(msg.chat.id, `Mute duration is now ${options.muteDuration} minutes`);
+    void bot.sendMessage(msg.chat.id, `Mute duration is now ${options.muteDuration} minutes`);
   } else {
-    bot.sendMessage(msg.chat.id, `Mute duration is ${options.muteDuration} minutes.`);
+    void bot.sendMessage(msg.chat.id, `Mute duration is ${options.muteDuration} minutes.`);
   }
 });
 
 export const muteExpiration = adminCommand((msg: Message, match: RegExpMatchArray) => {
   if (Array.isArray(match) && match.length > 1 && match[1]) {
-    let time = parseInt(match[1], 10);
+    const time = parseInt(match[1], 10);
     if (time < 1) { throw new Error("Mute expiration should be 1 minute or longer."); }
     UserViolationStorage.expiration = time;
-    bot.sendMessage(msg.chat.id, `Mute expiration is now ${UserViolationStorage.expiration} minutes.`);
+    void bot.sendMessage(msg.chat.id, `Mute expiration is now ${UserViolationStorage.expiration} minutes.`);
   } else {
-    bot.sendMessage(msg.chat.id, `Mute expiration is ${UserViolationStorage.expiration} minutes.`);
+    void bot.sendMessage(msg.chat.id, `Mute expiration is ${UserViolationStorage.expiration} minutes.`);
   }
 });
 
 export const muteWarnings = adminCommand((msg, match) => {
   if (!msg || !msg.chat) return;
   if (Array.isArray(match) && match.length > 1 && match[1]) {
-    let n = parseInt(match[1], 10);
+    const n = parseInt(match[1], 10);
     if (!Number.isInteger(n) || n < 1) {
       throw new Error("Number of warnings should be an integer greater than 1.");
     }
     options.nWarnings = n;
-    bot.sendMessage(msg.chat.id, `Give ${n} warnings prior to a mute now.`);
+    void bot.sendMessage(msg.chat.id, `Give ${n} warnings prior to a mute now.`);
   } else {
-    bot.sendMessage(msg.chat.id, "Number of warnings is " + options.nWarnings);
+    void bot.sendMessage(msg.chat.id, `Number of warnings is ${options.nWarnings}`);
   }
 });
 
 export const muteScore = adminCommand(async () => {
-  let score = await UserViolationStorage.getAllViolations();
-  console.log(score);
+  console.log(await UserViolationStorage.getAllViolations());
 });

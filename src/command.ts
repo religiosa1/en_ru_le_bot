@@ -20,19 +20,19 @@ export function command<T = void>(
     let retval;
     try {
       retval = await fn(msg, ...args);
-    } catch(err) {
+    } catch(err: unknown) {
       console.error("ERROR: ", error_preambule, err);
       if (msg && msg.chat && msg.chat.id) {
-        bot.sendMessage(msg.chat.id, error_preambule + err.toString());
+        void bot.sendMessage(msg.chat.id, `${error_preambule}${err}` );
       }
     }
     return retval;
   };
-};
+}
 
 export function adminCommand<T = void>(fn: MessageHandler<T>, error_preambule = ""): MessageHandler<T | undefined> {
   return adminValidator.adminOnly(command(fn, error_preambule));
-};
+}
 
 // it's the same for now, but it's better to differentiate
 export const msgHandler = command;

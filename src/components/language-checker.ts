@@ -1,8 +1,8 @@
 "use strict";
 
 import type { Message } from "node-telegram-bot-api";
-import { add, isBefore } from 'date-fns';
-import { utcToZonedTime } from 'date-fns-tz';
+import { add, isBefore } from "date-fns";
+import { utcToZonedTime } from "date-fns-tz";
 
 import { LanguageEnum } from "~/enums/LanguageEnum";
 
@@ -73,7 +73,7 @@ class LanguageChecker {
       return LanguageEnum.NONE;
     }
 
-    let txt = this.retrieveText(msg);
+    const txt = this.retrieveText(msg);
 
     if (this.isEnglishDay()) {
       return this.isEnglishText(txt) ? LanguageEnum.NONE : LanguageEnum.EN;
@@ -112,8 +112,8 @@ class LanguageChecker {
     if (typeof txt !== "string") {
       return false;
     }
-    let eng = (txt.match(/[a-zA-Z]/ug) || []).length;
-    let all = (txt.match(allCharsRe) || []).length;
+    const eng = (txt.match(/[a-zA-Z]/ug) || []).length;
+    const all = (txt.match(allCharsRe) || []).length;
     if (all > 0) {
       return eng/all >= this.opts.threshold || (all - eng <= this.opts.badCharThresh);
     }
@@ -124,8 +124,8 @@ class LanguageChecker {
     if (typeof txt !== "string") {
       return false;
     }
-    let ru = (txt.match(/[а-яА-Я]/ug) || []).length;
-    let all = (txt.match(allCharsRe) || []).length;
+    const ru = (txt.match(/[а-яА-Я]/ug) || []).length;
+    const all = (txt.match(allCharsRe) || []).length;
     if (all > 0) {
       return  ru/all >= this.opts.threshold || (all - ru <= this.opts.badCharThresh);
     }
@@ -137,20 +137,20 @@ class LanguageChecker {
     if (Array.isArray(msg.entities) && typeof msg.text === "string") {
       let text = "";
       let i = 0;
-      for (let e of msg.entities) {
+      for (const entity of msg.entities) {
         if (
-          Number.isInteger(e.offset) &&
-          Number.isInteger(e.length) &&
-          e.offset + e.length <= msg.text.length
+          Number.isInteger(entity.offset) &&
+          Number.isInteger(entity.length) &&
+          entity.offset + entity.length <= msg.text.length
         ) {
-          if (PERMITTED_ENTITIES.has(e.type)) {
+          if (PERMITTED_ENTITIES.has(entity.type)) {
             // omitting
-            text += msg.text.slice(i, e.offset);
+            text += msg.text.slice(i, entity.offset);
           } else {
             // including for check
-            text += msg.text.slice(i, e.offset+e.length);
+            text += msg.text.slice(i, entity.offset + entity.length);
           }
-          i = e.offset+e.length;
+          i = entity.offset + entity.length;
         }
       }
       if (i < msg.text.length) {

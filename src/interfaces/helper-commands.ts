@@ -9,16 +9,16 @@ import messages from "messages";
 
 function reply(msg: Message, txt: string) {
   if (!msg || !txt) return;
-  let tid = (msg.chat && msg.chat.id) || (msg.from && msg.from.id);
+  const tid = (msg.chat && msg.chat.id) || (msg.from && msg.from.id);
   if (!tid) return;
-  bot.sendMessage(tid, txt);
-};
+  void bot.sendMessage(tid, txt);
+}
 
 export const info =  adminCommand((msg: Message) => {
   if (!msg.from) {
     throw new Error("No 'from' field in the message passed to the info function");
   }
-  bot.sendMessage(msg.from.id,`Your id is ${msg.from.id}, chat's id is ${msg.chat && msg.chat.id}`);
+  void bot.sendMessage(msg.from.id,`Your id is ${msg.from.id}, chat's id is ${msg.chat && msg.chat.id}`);
 });
 
 export const help = command((msg: Message) => {

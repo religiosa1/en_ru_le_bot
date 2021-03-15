@@ -16,7 +16,7 @@ class AdminValidator {
     this.adminOnly = this.adminOnly.bind(this);
 
     if (process.env.CHAT_ID) {
-      this.extendChatAdmins(process.env.CHAT_ID);
+      void this.extendChatAdmins(process.env.CHAT_ID);
     }
   }
 
@@ -37,12 +37,11 @@ class AdminValidator {
   }
 
   adminOnly<T = void>(func: MessageHandler<T>): MessageHandler<T | undefined> {
-    let self = this;
-    return async function(msg: Message, ...args: any[]) {
-      if (self.validate(msg)) {
+    return async (msg: Message, ...args: any[]) => {
+      if (this.validate(msg)) {
         return func(msg, ...args);
       } else {
-        bot.sendMessage(msg.chat.id, "You have to be an admin to do that.");
+        void bot.sendMessage(msg.chat.id, "You have to be an admin to do that.");
       }
     };
   }
@@ -58,7 +57,7 @@ class AdminValidator {
            got '${typeof members}' instead`
         );
       }
-      for (let m of members) {
+      for (const m of members) {
         if (m && m.user && m.user.id) this.admins.add(m.user.id);
       }
       return null;
@@ -69,18 +68,18 @@ class AdminValidator {
 
   refreshAdmins(msg: Message) {
     if (!msg || !msg.chat || !msg.chat.id) return;
-    let chatId = process.env.CHAT_ID;
+    const chatId = process.env.CHAT_ID;
     if (!chatId) {
       console.warn("Refresh admins called, without any ChatID, ommiting.");
       return;
     }
     this.extendChatAdmins(process.env.CHAT_ID).then(()=>{
-      bot.sendMessage(msg.chat.id,
+      void bot.sendMessage(msg.chat.id,
         `Success. There are ${this.admins.size} users with administrative access to the bot.`
       );
       return null;
     }).catch(()=>{
-      bot.sendMessage(msg.chat.id,
+      void bot.sendMessage(msg.chat.id,
         "Something went wrong during the update of chat admins. More info in the logs."
       );
     });

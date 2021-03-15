@@ -1,6 +1,7 @@
 #!/usr/bin/env ts-node
 
-require("dotenv").config();
+import * as dotenv from "dotenv";
+dotenv.config();
 
 import bot from "./src/bot";
 const TOKEN = bot.token;
@@ -56,12 +57,9 @@ bot.onText(/^\/badchars(?: +([0-9.]+))?$/, lngchk.badChars);
 bot.onText(/^\/rt /, retranslate);
 bot.onText(/^\/alarm( +\?)?$/, lngchk.notification);
 
-bot.on("text", (msg: Message) => {
-  lngchk.check(msg);
-});
+bot.on("text", (msg: Message) => lngchk.check(msg));
 
 app.post(`/bot${TOKEN}`, (req, res) => {
-  const a = res;
   bot.processUpdate(req.body);
   send(res, 200);
 });
@@ -71,7 +69,7 @@ app.listen(port, ip, async function() {
   console.log(`Http server is listening on ${ip}:${port}`);
   console.log(`Setting webhook on ${url}/bot${TOKEN}`);
   try {
-    let d = await bot.setWebHook(`${url}/bot${TOKEN}`);
+    const d = await bot.setWebHook(`${url}/bot${TOKEN}`) as string;
     console.log("Webhook is set", d);
   } catch(e) {
     console.error("Failed to set webhooks", e);
