@@ -20,7 +20,7 @@
     "cron": "^1.8.2",
     "dotenv": "^8.2.0",
     "moment": "^2.29.1",
-    "moment-timezone": "^0.5.33",
+    "moment-timezone": "^0.5.35",
     "node-telegram-bot-api": "^0.51.0",
     "polka": "^0.5.2",
     "redis": "^3.0.2"
