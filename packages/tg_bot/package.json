@@ -1,0 +1,16 @@
+{
+	"name": "@en_ru_le/tg_bot",
+	"version": "0.3.0",
+	"description": "En/Ru language exchange telegram bot",
+	"keywords": [],
+	"license": "MIT",
+	"author": "Viacheslav Azarov <public@religiosa.ru>",
+	"type": "module",
+	"main": "index.ts",
+	"scripts": {
+		"test": "node --test **/*.test.{js,ts}"
+	},
+	"dependencies": {
+		"@en_ru_le/language_detection": "^1.0.0"
+	}
+}

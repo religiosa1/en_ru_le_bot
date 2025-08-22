@@ -1,0 +1,13 @@
+{
+	"name": "en_ru_le",
+	"version": "0.3.0",
+	"description": "Eng/Ru language exchange moderation Telegram bot monorepo",
+	"license": "MIT",
+	"author": "Viacheslav Azarov <public@religiosa.ru>",
+	"type": "module",
+	"main": "index.ts",
+	"workspaces": [
+		"packages/language_detection",
+		"packages/tg_bot"
+	]
+}
