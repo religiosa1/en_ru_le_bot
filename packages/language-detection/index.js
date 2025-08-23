@@ -395,3 +395,4 @@ if (!nativeBinding) {
 module.exports = nativeBinding
 module.exports.detectAllLanguagesFast = nativeBinding.detectAllLanguagesFast
 module.exports.isRussianOrEnglish = nativeBinding.isRussianOrEnglish
+module.exports.loadLanguageModels = nativeBinding.loadLanguageModels

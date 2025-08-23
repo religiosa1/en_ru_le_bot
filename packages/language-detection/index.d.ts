@@ -16,6 +16,8 @@ export declare function detectAllLanguagesFast(input: string): Array<NapiDetecte
  */
 export declare function isRussianOrEnglish(input: string): Array<NapiDetectedLanguage>
 
+export declare function loadLanguageModels(): void
+
 export interface NapiDetectedLanguage {
   startIndex: number
   endIndex: number
