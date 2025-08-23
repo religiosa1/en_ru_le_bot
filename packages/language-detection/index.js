@@ -73,23 +73,23 @@ function requireNative() {
   } else if (process.platform === 'android') {
     if (process.arch === 'arm64') {
       try {
-        return require('./language_detection.android-arm64.node')
+        return require('./language-detection.android-arm64.node')
       } catch (e) {
         loadErrors.push(e)
       }
       try {
-        return require('@en_ru_le/language_detection-android-arm64')
+        return require('@en-ru-le/language-detection-android-arm64')
       } catch (e) {
         loadErrors.push(e)
       }
     } else if (process.arch === 'arm') {
       try {
-        return require('./language_detection.android-arm-eabi.node')
+        return require('./language-detection.android-arm-eabi.node')
       } catch (e) {
         loadErrors.push(e)
       }
       try {
-        return require('@en_ru_le/language_detection-android-arm-eabi')
+        return require('@en-ru-le/language-detection-android-arm-eabi')
       } catch (e) {
         loadErrors.push(e)
       }
@@ -99,34 +99,34 @@ function requireNative() {
   } else if (process.platform === 'win32') {
     if (process.arch === 'x64') {
       try {
-        return require('./language_detection.win32-x64-msvc.node')
+        return require('./language-detection.win32-x64-msvc.node')
       } catch (e) {
         loadErrors.push(e)
       }
       try {
-        return require('@en_ru_le/language_detection-win32-x64-msvc')
+        return require('@en-ru-le/language-detection-win32-x64-msvc')
       } catch (e) {
         loadErrors.push(e)
       }
     } else if (process.arch === 'ia32') {
       try {
-        return require('./language_detection.win32-ia32-msvc.node')
+        return require('./language-detection.win32-ia32-msvc.node')
       } catch (e) {
         loadErrors.push(e)
       }
       try {
-        return require('@en_ru_le/language_detection-win32-ia32-msvc')
+        return require('@en-ru-le/language-detection-win32-ia32-msvc')
       } catch (e) {
         loadErrors.push(e)
       }
     } else if (process.arch === 'arm64') {
       try {
-        return require('./language_detection.win32-arm64-msvc.node')
+        return require('./language-detection.win32-arm64-msvc.node')
       } catch (e) {
         loadErrors.push(e)
       }
       try {
-        return require('@en_ru_le/language_detection-win32-arm64-msvc')
+        return require('@en-ru-le/language-detection-win32-arm64-msvc')
       } catch (e) {
         loadErrors.push(e)
       }
@@ -135,34 +135,34 @@ function requireNative() {
     }
   } else if (process.platform === 'darwin') {
     try {
-      return require('./language_detection.darwin-universal.node')
+      return require('./language-detection.darwin-universal.node')
     } catch (e) {
       loadErrors.push(e)
     }
     try {
-      return require('@en_ru_le/language_detection-darwin-universal')
+      return require('@en-ru-le/language-detection-darwin-universal')
     } catch (e) {
       loadErrors.push(e)
     }
     if (process.arch === 'x64') {
       try {
-        return require('./language_detection.darwin-x64.node')
+        return require('./language-detection.darwin-x64.node')
       } catch (e) {
         loadErrors.push(e)
       }
       try {
-        return require('@en_ru_le/language_detection-darwin-x64')
+        return require('@en-ru-le/language-detection-darwin-x64')
       } catch (e) {
         loadErrors.push(e)
       }
     } else if (process.arch === 'arm64') {
       try {
-        return require('./language_detection.darwin-arm64.node')
+        return require('./language-detection.darwin-arm64.node')
       } catch (e) {
         loadErrors.push(e)
       }
       try {
-        return require('@en_ru_le/language_detection-darwin-arm64')
+        return require('@en-ru-le/language-detection-darwin-arm64')
       } catch (e) {
         loadErrors.push(e)
       }
@@ -172,23 +172,23 @@ function requireNative() {
   } else if (process.platform === 'freebsd') {
     if (process.arch === 'x64') {
       try {
-        return require('./language_detection.freebsd-x64.node')
+        return require('./language-detection.freebsd-x64.node')
       } catch (e) {
         loadErrors.push(e)
       }
       try {
-        return require('@en_ru_le/language_detection-freebsd-x64')
+        return require('@en-ru-le/language-detection-freebsd-x64')
       } catch (e) {
         loadErrors.push(e)
       }
     } else if (process.arch === 'arm64') {
       try {
-        return require('./language_detection.freebsd-arm64.node')
+        return require('./language-detection.freebsd-arm64.node')
       } catch (e) {
         loadErrors.push(e)
       }
       try {
-        return require('@en_ru_le/language_detection-freebsd-arm64')
+        return require('@en-ru-le/language-detection-freebsd-arm64')
       } catch (e) {
         loadErrors.push(e)
       }
@@ -199,23 +199,23 @@ function requireNative() {
     if (process.arch === 'x64') {
       if (isMusl()) {
         try {
-          return require('./language_detection.linux-x64-musl.node')
+          return require('./language-detection.linux-x64-musl.node')
         } catch (e) {
           loadErrors.push(e)
         }
         try {
-          return require('@en_ru_le/language_detection-linux-x64-musl')
+          return require('@en-ru-le/language-detection-linux-x64-musl')
         } catch (e) {
           loadErrors.push(e)
         }
       } else {
         try {
-          return require('./language_detection.linux-x64-gnu.node')
+          return require('./language-detection.linux-x64-gnu.node')
         } catch (e) {
           loadErrors.push(e)
         }
         try {
-          return require('@en_ru_le/language_detection-linux-x64-gnu')
+          return require('@en-ru-le/language-detection-linux-x64-gnu')
         } catch (e) {
           loadErrors.push(e)
         }
@@ -223,23 +223,23 @@ function requireNative() {
     } else if (process.arch === 'arm64') {
       if (isMusl()) {
         try {
-          return require('./language_detection.linux-arm64-musl.node')
+          return require('./language-detection.linux-arm64-musl.node')
         } catch (e) {
           loadErrors.push(e)
         }
         try {
-          return require('@en_ru_le/language_detection-linux-arm64-musl')
+          return require('@en-ru-le/language-detection-linux-arm64-musl')
         } catch (e) {
           loadErrors.push(e)
         }
       } else {
         try {
-          return require('./language_detection.linux-arm64-gnu.node')
+          return require('./language-detection.linux-arm64-gnu.node')
         } catch (e) {
           loadErrors.push(e)
         }
         try {
-          return require('@en_ru_le/language_detection-linux-arm64-gnu')
+          return require('@en-ru-le/language-detection-linux-arm64-gnu')
         } catch (e) {
           loadErrors.push(e)
         }
@@ -247,23 +247,23 @@ function requireNative() {
     } else if (process.arch === 'arm') {
       if (isMusl()) {
         try {
-          return require('./language_detection.linux-arm-musleabihf.node')
+          return require('./language-detection.linux-arm-musleabihf.node')
         } catch (e) {
           loadErrors.push(e)
         }
         try {
-          return require('@en_ru_le/language_detection-linux-arm-musleabihf')
+          return require('@en-ru-le/language-detection-linux-arm-musleabihf')
         } catch (e) {
           loadErrors.push(e)
         }
       } else {
         try {
-          return require('./language_detection.linux-arm-gnueabihf.node')
+          return require('./language-detection.linux-arm-gnueabihf.node')
         } catch (e) {
           loadErrors.push(e)
         }
         try {
-          return require('@en_ru_le/language_detection-linux-arm-gnueabihf')
+          return require('@en-ru-le/language-detection-linux-arm-gnueabihf')
         } catch (e) {
           loadErrors.push(e)
         }
@@ -271,46 +271,46 @@ function requireNative() {
     } else if (process.arch === 'riscv64') {
       if (isMusl()) {
         try {
-          return require('./language_detection.linux-riscv64-musl.node')
+          return require('./language-detection.linux-riscv64-musl.node')
         } catch (e) {
           loadErrors.push(e)
         }
         try {
-          return require('@en_ru_le/language_detection-linux-riscv64-musl')
+          return require('@en-ru-le/language-detection-linux-riscv64-musl')
         } catch (e) {
           loadErrors.push(e)
         }
       } else {
         try {
-          return require('./language_detection.linux-riscv64-gnu.node')
+          return require('./language-detection.linux-riscv64-gnu.node')
         } catch (e) {
           loadErrors.push(e)
         }
         try {
-          return require('@en_ru_le/language_detection-linux-riscv64-gnu')
+          return require('@en-ru-le/language-detection-linux-riscv64-gnu')
         } catch (e) {
           loadErrors.push(e)
         }
       }
     } else if (process.arch === 'ppc64') {
       try {
-        return require('./language_detection.linux-ppc64-gnu.node')
+        return require('./language-detection.linux-ppc64-gnu.node')
       } catch (e) {
         loadErrors.push(e)
       }
       try {
-        return require('@en_ru_le/language_detection-linux-ppc64-gnu')
+        return require('@en-ru-le/language-detection-linux-ppc64-gnu')
       } catch (e) {
         loadErrors.push(e)
       }
     } else if (process.arch === 's390x') {
       try {
-        return require('./language_detection.linux-s390x-gnu.node')
+        return require('./language-detection.linux-s390x-gnu.node')
       } catch (e) {
         loadErrors.push(e)
       }
       try {
-        return require('@en_ru_le/language_detection-linux-s390x-gnu')
+        return require('@en-ru-le/language-detection-linux-s390x-gnu')
       } catch (e) {
         loadErrors.push(e)
       }
@@ -320,34 +320,34 @@ function requireNative() {
   } else if (process.platform === 'openharmony') {
     if (process.arch === 'arm64') {
       try {
-        return require('./language_detection.linux-arm64-ohos.node')
+        return require('./language-detection.linux-arm64-ohos.node')
       } catch (e) {
         loadErrors.push(e)
       }
       try {
-        return require('@en_ru_le/language_detection-linux-arm64-ohos')
+        return require('@en-ru-le/language-detection-linux-arm64-ohos')
       } catch (e) {
         loadErrors.push(e)
       }
     } else if (process.arch === 'x64') {
       try {
-        return require('./language_detection.linux-x64-ohos.node')
+        return require('./language-detection.linux-x64-ohos.node')
       } catch (e) {
         loadErrors.push(e)
       }
       try {
-        return require('@en_ru_le/language_detection-linux-x64-ohos')
+        return require('@en-ru-le/language-detection-linux-x64-ohos')
       } catch (e) {
         loadErrors.push(e)
       }
     } else if (process.arch === 'arm') {
       try {
-        return require('./language_detection.linux-arm-ohos.node')
+        return require('./language-detection.linux-arm-ohos.node')
       } catch (e) {
         loadErrors.push(e)
       }
       try {
-        return require('@en_ru_le/language_detection-linux-arm-ohos')
+        return require('@en-ru-le/language-detection-linux-arm-ohos')
       } catch (e) {
         loadErrors.push(e)
       }
@@ -363,7 +363,7 @@ nativeBinding = requireNative()
 
 if (!nativeBinding || process.env.NAPI_RS_FORCE_WASI) {
   try {
-    nativeBinding = require('./language_detection.wasi.cjs')
+    nativeBinding = require('./language-detection.wasi.cjs')
   } catch (err) {
     if (process.env.NAPI_RS_FORCE_WASI) {
       loadErrors.push(err)
@@ -371,7 +371,7 @@ if (!nativeBinding || process.env.NAPI_RS_FORCE_WASI) {
   }
   if (!nativeBinding) {
     try {
-      nativeBinding = require('@en_ru_le/language_detection-wasm32-wasi')
+      nativeBinding = require('@en-ru-le/language-detection-wasm32-wasi')
     } catch (err) {
       if (process.env.NAPI_RS_FORCE_WASI) {
         loadErrors.push(err)
@@ -393,4 +393,5 @@ if (!nativeBinding) {
 }
 
 module.exports = nativeBinding
-module.exports.plus100 = nativeBinding.plus100
+module.exports.detectAllLanguagesFast = nativeBinding.detectAllLanguagesFast
+module.exports.isRussianOrEnglish = nativeBinding.isRussianOrEnglish

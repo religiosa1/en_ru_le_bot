@@ -1,5 +1,5 @@
 {
-	"name": "en_ru_le",
+	"name": "en-ru-le",
 	"version": "0.3.0",
 	"description": "Eng/Ru language exchange moderation Telegram bot monorepo",
 	"license": "MIT",
@@ -7,7 +7,7 @@
 	"type": "module",
 	"main": "index.ts",
 	"workspaces": [
-		"packages/language_detection",
-		"packages/tg_bot"
+		"packages/language-detection",
+		"packages/tg-bot"
 	]
 }

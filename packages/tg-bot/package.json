@@ -1,5 +1,5 @@
 {
-	"name": "@en_ru_le/tg_bot",
+	"name": "@en-ru-le/tg-bot",
 	"version": "0.3.0",
 	"description": "En/Ru language exchange telegram bot",
 	"keywords": [],
@@ -11,6 +11,6 @@
 		"test": "node --test **/*.test.{js,ts}"
 	},
 	"dependencies": {
-		"@en_ru_le/language_detection": "^1.0.0"
+		"@en-ru-le/language-detection": "^1.0.0"
 	}
 }

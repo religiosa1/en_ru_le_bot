@@ -33,9 +33,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@en_ru_le/language_detection@workspace:.":
+"@en-ru-le/language-detection@workspace:.":
   version: 0.0.0-use.local
-  resolution: "@en_ru_le/language_detection@workspace:."
+  resolution: "@en-ru-le/language-detection@workspace:."
   dependencies:
     "@emnapi/core": "npm:^1.4.5"
     "@emnapi/runtime": "npm:^1.4.5"
