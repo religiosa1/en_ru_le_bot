@@ -5,7 +5,19 @@
  * supported language, besides explicitly filtered out because of higher amount
  * of false positives.
  */
-export declare function detectAllLanguagesFast(input: string): Promise<Array<NapiDetectedLanguage>>
+export declare function detectAllLanguagesFast(input: string): Promise<Array<DetectedLanguage>>
+
+/** Language detection result */
+export interface DetectedLanguage {
+  /** Start index in characters */
+  startIndex: number
+  /** End index in characters */
+  endIndex: number
+  /** Count of words in this language */
+  wordCount: number
+  /** ISO 639-1 language code, e.g. "en", "ru" */
+  language: string
+}
 
 /**
  * High accuracy detections, but only detects Russian or English.
@@ -14,7 +26,7 @@ export declare function detectAllLanguagesFast(input: string): Promise<Array<Nap
  * outside of those two.
  * Confidence isn't calculated here, because it's meaningless.
  */
-export declare function isRussianOrEnglish(input: string): Promise<Array<NapiDetectedLanguage>>
+export declare function isRussianOrEnglish(input: string): Promise<Array<DetectedLanguage>>
 
 /**
  * Preload language models.
@@ -23,15 +35,3 @@ export declare function isRussianOrEnglish(input: string): Promise<Array<NapiDet
  * Dramatically increasing first detection call latency.
  */
 export declare function loadLanguageModels(): void
-
-/** Language detection result */
-export interface NapiDetectedLanguage {
-  /** Start index in bytes */
-  startIndex: number
-  /** End index in bytes */
-  endIndex: number
-  /** Count of words in this language */
-  wordCount: number
-  /** ISO 639-1 language code, e.g. "en", "ru" */
-  language: string
-}

@@ -1,6 +1,6 @@
 
 [package]
-authors = ["LongYinan <lynweklm@gmail.com>"]
+authors = ["Viacheslav Azarov <public@religiosa.ru>"]
 edition = "2021"
 name    = "language_detection"
 version = "0.1.0"
@@ -12,6 +12,7 @@ crate-type = ["cdylib"]
 lingua      = "1.7.2"
 napi        = { version = "3.0.0", features = ["async"] }
 napi-derive = "3.0.0"
+tokio       = { version = "1", features = ["macros", "rt"] }
 
 [build-dependencies]
 napi-build = "2"
