@@ -6,11 +6,21 @@
 	"license": "MIT",
 	"author": "Viacheslav Azarov <public@religiosa.ru>",
 	"type": "module",
-	"main": "index.ts",
+	"main": "src/index.ts",
 	"scripts": {
+		"start": "node --env-file-if-exists .env src/index.ts",
 		"test": "node --test **/*.test.{js,ts}"
 	},
 	"dependencies": {
-		"@en-ru-le/language-detection": "^1.0.0"
+		"@en-ru-le/language-detection": "^1.0.0",
+		"@grammyjs/commands": "^1.2.0",
+		"grammy": "^1.38.1",
+		"pino": "^9.9.0",
+		"ts-pattern": "^5.8.0"
+	},
+	"devDependencies": {
+		"@biomejs/biome": "^2.2.2",
+		"@types/node": "^24.3.0",
+		"typescript": "^5.9.2"
 	}
 }

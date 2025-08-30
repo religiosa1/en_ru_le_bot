@@ -8,12 +8,9 @@ langDetection.loadLanguageModels();
 const loadedTs = performance.now();
 console.log("Loaded in ", loadedTs - init);
 
-console.log("isRussianOrEnglish", langDetection.isRussianOrEnglish(message));
+console.log("isRussianOrEnglish", await langDetection.isRussianOrEnglish(message));
 const ts2 = performance.now();
 console.log("Detected in ", ts2 - loadedTs);
 
-console.log(
-	"detectAllLanguagesFast",
-	langDetection.detectAllLanguagesFast(message),
-);
+console.log("detectAllLanguagesFast", await langDetection.detectAllLanguagesFast(message));
 console.log("Detected in ", performance.now() - ts2);
