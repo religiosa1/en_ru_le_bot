@@ -1,0 +1,6 @@
+{
+	"nodejs-testing.env": {
+		"TOKEN": "123456789:TESTTOKEN_TESTTOKEN",
+		"CHAT_ID": "-1001234556789"
+	}
+}

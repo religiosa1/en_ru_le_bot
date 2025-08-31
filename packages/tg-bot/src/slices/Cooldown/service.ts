@@ -31,6 +31,10 @@ class CooldownService {
 		this.#activeUntilTs = Date.now() + this.#coolDownMs;
 	}
 
+	getCooldownValue(): number {
+		return this.#coolDownMs;
+	}
+
 	setCooldownValue(value: number): void {
 		if (!Number.isInteger(value) || value < 0) {
 			throw new TypeError(`Cooldown value must be a non-negative integer, got ${value} instead`);
@@ -44,6 +48,12 @@ class CooldownService {
 			this.#activeUntilTs = newActiveUntilTs;
 		}
 		this.#coolDownMs = value;
+	}
+
+	/** Clear current cooldown, as well as set cooldown value to default */
+	reset() {
+		this.#activeUntilTs = undefined;
+		this.#coolDownMs = this.defaultCooldown;
 	}
 }
 

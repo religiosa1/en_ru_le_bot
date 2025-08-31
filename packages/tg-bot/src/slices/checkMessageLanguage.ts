@@ -1,45 +1,54 @@
 import * as langDetection from "@en-ru-le/language-detection";
-import type { Context } from "grammy";
 import { match } from "ts-pattern";
+import type { BotContext } from "../BotContext.ts";
 import { LanguageEnum } from "../enums/Language.ts";
-import { logger as baseLogger } from "../logger.ts";
-import { getConfig } from "../models/config.ts";
+import { Time } from "../enums/Time.ts";
 import { assertNever } from "../utils/assertNever.ts";
 import { cooldownService } from "./Cooldown/service.ts";
 import { langDayService } from "./LangDay/service.ts";
 
-const MIN_MSG_LENGTH = 50;
+const MIN_MSG_LENGTH = 15;
 
-export async function checkMessageLanguage(ctx: Context) {
-	const logger = baseLogger.child({ messageId: ctx.message?.message_id });
-	logger.trace(
+/**
+ * As telegram can sent a lot of messages that we missed in updates, we don't want to be triggered on old messages.
+ * This const determines how long ago a message should be sent, so we're checking for it.
+ */
+const MESSAGE_AGE_THRESHOLD = 5 * Time.Minutes;
+
+export async function checkMessageLanguage(ctx: BotContext) {
+	const { logger } = ctx;
+	logger.debug(
 		{
 			chatId: ctx.message?.chat.id,
-			from: ctx.message?.from.username,
+			from: ctx.message?.from?.username,
 			text: ctx.message?.text,
 		},
 		"Message received",
 	);
-	if (ctx.message?.chat.id !== getConfig().chatId) {
+	if (ctx.message?.chat.id !== ctx.targetChatId) {
 		logger.info(
-			{ chatId: ctx.message?.chat.id, configChatId: getConfig().chatId },
+			{ chatId: ctx.message?.chat.id, targetChatId: ctx.targetChatId, text: ctx.message?.text },
 			"mismatched chat id, ignoring the message",
 		);
 		return;
 	}
+	if (ctx.message.date && Date.now() - ctx.message.date > MESSAGE_AGE_THRESHOLD) {
+		logger.info({ date: ctx.message.date }, "Message is two old, we don't check old messages");
+		return;
+	}
 	if (!ctx.message?.text || ctx.message.text.length < MIN_MSG_LENGTH) {
-		logger.trace({ msgLength: ctx.message?.text?.length }, "The message is too short for a check, ignoring");
+		logger.debug({ msgLength: ctx.message?.text?.length }, "The message is too short for a check, ignoring");
 		return;
 	}
 
 	const language = langDayService.getDaySettings()?.value;
 	if (!language) {
-		logger.trace({ language }, "No specific language is selected, aborting");
+		logger.debug({ language }, "No specific language is selected, aborting");
 		return;
 	}
 
 	const msgLanguages = await langDetection.isRussianOrEnglish(ctx.message.text);
-	logger.trace({ msgLanguages }, "Language detection result");
+	logger.debug({ msgLanguages }, "Language detection result");
 
 	const msgLang = determineMainLanguage(msgLanguages);
 
@@ -47,7 +56,7 @@ export async function checkMessageLanguage(ctx: Context) {
 		logger.info({ msgLanguages }, "Seems to be a mixed language message, not issuing a warning");
 		return;
 	} else if (msgLang === language) {
-		logger.trace({ language }, "Correct language, nothing to do here");
+		logger.debug({ language }, "Correct language, nothing to do here");
 		return;
 	} else {
 		logger.info({ msgLang, language }, "Language mismatch, proceeding with a warning or a general notice");
@@ -65,12 +74,13 @@ export async function checkMessageLanguage(ctx: Context) {
 		);
 		return;
 	} else {
-		logger.info("Sending ");
+		logger.info("Sending a general note on language usage");
+		cooldownService.activateCooldown();
 		await ctx.reply(getWarningMessage(language));
 	}
 }
 
-function getWarningMessage(language: LanguageEnum): string {
+export function getWarningMessage(language: LanguageEnum): string {
 	switch (language) {
 		case LanguageEnum.English:
 			return `Hey, today is a Russian day. Try to speak Russian!`;
@@ -82,7 +92,7 @@ function getWarningMessage(language: LanguageEnum): string {
 }
 
 /** Rate of one language over the other, when we start considering "it's written in language A"! */
-const REQUIRED_LANGUAGE_RATE = 2.0;
+const REQUIRED_LANGUAGE_RATE = 1.7;
 
 function determineMainLanguage(languages: langDetection.DetectedLanguage[]): LanguageEnum | undefined {
 	const fragsByLang = Object.groupBy(languages, (i) => {
@@ -97,7 +107,7 @@ function determineMainLanguage(languages: langDetection.DetectedLanguage[]): Lan
 	if (nLangs === 0) return undefined;
 	if (nLangs === 1) return Object.keys(fragsByLang)[0] as LanguageEnum;
 
-	// If we have both languages in the message, there must be twice as much of one lang over the other
+	// If we have both languages in the message, there must be more of one lang over the other
 	// for us to say "it's in the language foo"! Otherwise, we should consider it a text written in
 	// both languages, and we shouldn't give a warning for a text like that.
 

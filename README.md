@@ -1,9 +1,9 @@
 # EnRuLeBot monorepo
 
 Consists of two packages:
-- language detection module ([napi-rs](https://napi.rs/) wrapper around 
+- [language detection](./packages/language-detection/README.md) module ([napi-rs](https://napi.rs/) wrapper around 
   [lingua-rs](https://github.com/pemistahl/lingua-rs))
-- the actual telegram bot, written in nodejs
+- the actual [telegram bot](./packages//tg-bot/README.md), written in nodejs
 
 More details in the corresponding repos.
 
@@ -18,14 +18,11 @@ More details in the corresponding repos.
 
 ### Admin-Only Commands
 
-  - /info - Get user and chat IDs
-  - /version - Show bot version
   - /flush - Refresh admin list from chat
-  - /autolangday - Toggle automatic language day scheduling
-  - /forcelang [EN|RU] - Force specific language or check current forced language
-  - /set_cooldown [minutes] - Set violation cooldown (0-150 minutes) or reset cooldown
-  - /threshold [0-1] - Set or view language detection threshold
-  - /badchars [number] - Set or view allowed bad character count (0-150)
+  - /langchecks - Toggle automatic language day scheduling
+  - /forcelang [en|ru] - Force specific language or check current forced language
+  - /cooldown [minutes] - Set violation cooldown (0-150 minutes) or reset cooldown
+  TODO:
   - /mute - Toggle mute capacity on/off
   - /alarm [?] - Toggle daily notifications or check status
   - /pardon [@user] - Remove violations for specific user or all users
@@ -35,7 +32,7 @@ More details in the corresponding repos.
   - /mute_score - Display all user violation scores (console output)
   - /rt <text> - Retranslate text to chat
 
-### Violation Process:
+### TODO: Violation Process:
   1. When a user violates language rules (posts in wrong language on language-specific days), they get warnings
   2. Default: 3 warnings before mute (configurable with /mute_warnings)
   3. After reaching warning limit, user gets temporarily muted
@@ -59,6 +56,9 @@ More details in the corresponding repos.
 
 ### Storage:
 
+Previous version of the bot stored data in a redis storage. This one stores everything in memory, because I'm lazy.
+
+<!-- 
 Storage Types in This Bot
 
   1. Redis Database
@@ -95,3 +95,5 @@ Storage Types in This Bot
   Configuration storage
   - Bot settings (TOKEN, CHAT_ID, ADMINS, TIMEZONE, URL, etc.)
   - No persistent file storage - all data is either in Redis or memory
+
+-->
