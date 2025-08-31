@@ -14,8 +14,10 @@
 	},
 	"dependencies": {
 		"@en-ru-le/language-detection": "^1.0.0",
+		"@valkey/valkey-glide": "^2.0.1",
 		"grammy": "^1.38.1",
 		"pino": "^9.9.0",
+		"ts-dedent": "^2.2.0",
 		"ts-pattern": "^5.8.0"
 	},
 	"devDependencies": {

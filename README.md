@@ -3,7 +3,7 @@
 Consists of two packages:
 - [language detection](./packages/language-detection/README.md) module ([napi-rs](https://napi.rs/) wrapper around 
   [lingua-rs](https://github.com/pemistahl/lingua-rs))
-- the actual [telegram bot](./packages//tg-bot/README.md), written in nodejs
+- the actual [telegram bot](./packages//tg-bot/README.md), written in nodejs. Requires node v24 or higher.
 
 More details in the corresponding repos.
 
@@ -11,89 +11,60 @@ More details in the corresponding repos.
 
 ###  Public Commands (Available to all users)
 
-  - /rules - Display chat rules
-  - /help - Show help message (extended for admins)
   - /today - Check current language day status
-  - /cooldown - Show cooldown information and remaining time
+- ~~/rules - Display chat rules~~ removed, as it's now handled by shieldy.
+    TODO:
+  - /help - Show help message
 
 ### Admin-Only Commands
 
   - /flush - Refresh admin list from chat
   - /langchecks - Toggle automatic language day scheduling
   - /forcelang [en|ru] - Force specific language or check current forced language
-  - /cooldown [minutes] - Set violation cooldown (0-150 minutes) or reset cooldown
-  TODO:
-  - /mute - Toggle mute capacity on/off
-  - /alarm [?] - Toggle daily notifications or check status
+  - /cooldown [duration] - Set violation cooldown (0-150 minutes) or reset cooldown
+  - /mute - Toggle mute system on/off
   - /pardon [@user] - Remove violations for specific user or all users
-  - /mute_duration [minutes] - Set or view mute duration
-  - /mute_expiration [minutes] - Set or view mute expiration time
-  - /mute_warnings [number] - Set or view number of warnings before mute
-  - /mute_score - Display all user violation scores (console output)
+  - /mute_duration [duration] - Set or view mute duration
+  - /warnings_expiry [duration] - Set or view warnings expiration time
+  - /warnings_number [int] - Set or view number of warnings before mute
+
+    TODO:
+  - /alarm [?] - Toggle daily notifications or check status
   - /rt <text> - Retranslate text to chat
 
-### TODO: Violation Process:
+### Violation Process:
   1. When a user violates language rules (posts in wrong language on language-specific days), they get warnings
-  2. Default: 3 warnings before mute (configurable with /mute_warnings)
+  2. Default: 3 warnings before mute (configurable with `/warnings_number`)
   3. After reaching warning limit, user gets temporarily muted
 
   Mute Details:
-  - Duration: 180 minutes (3 hours) by default, configurable with /mute_duration
+  - Duration: 180 minutes (3 hours) by default, configurable with `/mute_duration`
   - Restrictions: Can't send messages, media, polls, or other content (but can invite users)
-  - Expiration: Violations expire after a set time (configurable with /mute_expiration)
-
-  Admin Controls:
-  - /mute - Toggle mute system on/off
-  - /pardon [@user] - Remove violations for specific user or all users
-  - /mute_score - View all user violation counts
-
-  Code Implementation:
-  - Violations stored in UserViolationStorage (src/components/user-violation-storage.js)
-  - Muting handled via Telegram's restrictChatMember API (src/interfaces/user-violation-interface.js:15-27)
-  - Automatic cleanup removes violation history after muting
+  - Expiration: Violations expire after a set time (configurable with `/mute_duration`)
 
   The system only affects non-admin users and requires the mute capacity to be enabled.
 
 ### Storage:
 
-Previous version of the bot stored data in a redis storage. This one stores everything in memory, because I'm lazy.
+The bot uses a hybrid storage approach with different data stored in memory vs Valkey (Redis):
 
-<!-- 
-Storage Types in This Bot
+#### In Memory:
+- **Chat Admin Cache** (`ChatAdminRepo`): Admin user IDs with 3-hour TTL, refreshed automatically when expired
+- **Language Detection Models**: Loaded once at startup for performance
 
-  1. Redis Database
+#### In Valkey/Redis:
+- **User Violations**: Violation counters per user with configurable TTL
+  - Key pattern: `enrule:violations:counter:{userId}` 
+  - Username mapping: `enrule:violations:username:{username}` → userId
+  - Reverse mapping: `enrule:violations:userid:{userId}` → username
+  - Bidirectional mapping needed because Telegram's API doesn't allow username→userId lookup, but admins use `@username` in commands. Reverse mapping for technical cleanup operations only.
+- **Bot Settings**: Persistent configuration with defaults
+  - Mute enabled/disabled: `enrule:violation_settings:mute_enabled` (default: true)
+  - Max violations before mute: `enrule:violation_settings:max_violations` (default: 3)
+  - Mute duration: `enrule:violation_settings:mute_duration` (default: 5 minutes)
+  - Warnings expiry: `enrule:violation_settings:warnings_expiry` (default: 3 hours)
 
-  Primary storage for user violations (src/components/user-violation-storage.js:3)
-  - Purpose: Track user language violations and warnings
-  - Data stored:
-    - User violation counts (violationcounter:user:{userId})
-    - Username-to-userId mappings (violationcounter:username:{username})
-  - Features:
-    - Automatic expiration (default: 5 minutes, configurable)
-    - Key-based storage with prefixes
-    - Async operations with promisified Redis client
+**Key Prefix**: All Redis keys use `enrule:` prefix for namespace isolation.
 
-  2. In-Memory Storage
+**Client**: Uses Valkey Glide client with configurable host/port via environment variables (`VALKEY_HOST`, `VALKEY_PORT`).
 
-  Admin list (src/components/admin-validator.js:14)
-  - Purpose: Cache admin user IDs for permission checking
-  - Data stored: Set of admin user IDs
-  - Sources:
-    - Environment variable ADMINS (static admins)
-    - Telegram chat administrators (dynamic, refreshed via /flush)
-
-  Language checker state (src/components/language-checker.js:32-36)
-  - Purpose: Runtime configuration and state
-  - Data stored:
-    - Language detection options (threshold, cooldown, etc.)
-    - Forced language setting
-    - Cooldown timestamps
-    - Day-of-week language rules
-
-  3. Environment Variables
-
-  Configuration storage
-  - Bot settings (TOKEN, CHAT_ID, ADMINS, TIMEZONE, URL, etc.)
-  - No persistent file storage - all data is either in Redis or memory
-
--->
