@@ -21,7 +21,6 @@ export class Command {
 	toBotCommand(): BotCommand {
 		return { command: this.command, description: this.description };
 	}
-
 }
 
 export class AdminOnlyCommand extends Command {

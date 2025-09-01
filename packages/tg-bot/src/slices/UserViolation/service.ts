@@ -1,14 +1,18 @@
 import type { ViolationCounterRepository, ViolationSettingsRepository, ViolationStats } from "./models.ts";
-import { violationCounterRepository } from "./ViolationCounterRepositoryValkey.ts";
-import { violationSettingsRepository } from "./ViolationSettingsRepositoryValkey.ts";
 
 export class UserViolationService {
 	readonly #repository: ViolationCounterRepository;
 	readonly #settings: ViolationSettingsRepository;
 
-	constructor(repository: ViolationCounterRepository, settings: ViolationSettingsRepository) {
-		this.#repository = repository;
-		this.#settings = settings;
+	constructor({
+		violationCounterRepository,
+		violationSettingsRepository,
+	}: {
+		violationCounterRepository: ViolationCounterRepository;
+		violationSettingsRepository: ViolationSettingsRepository;
+	}) {
+		this.#repository = violationCounterRepository;
+		this.#settings = violationSettingsRepository;
 	}
 
 	async pardon(userIdOrHandle: number | string): Promise<boolean> {
@@ -57,5 +61,3 @@ export class UserViolationService {
 		await this.#settings.setMaxViolationNumber(num);
 	}
 }
-
-export const userViolationService = new UserViolationService(violationCounterRepository, violationSettingsRepository);

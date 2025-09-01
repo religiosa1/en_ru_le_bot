@@ -56,7 +56,7 @@ export function parseDuration(str: string, defaultGranularity?: DurationPrefix):
 	}
 
 	// Check if the entire string was consumed by matches -- aka we don't have some extra invalid crap
-	if (matches.map(m => m[0]).join("") !== workingStr) {
+	if (matches.map((m) => m[0]).join("") !== workingStr) {
 		return NaN;
 	}
 

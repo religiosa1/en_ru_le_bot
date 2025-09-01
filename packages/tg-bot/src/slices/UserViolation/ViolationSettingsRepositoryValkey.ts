@@ -1,7 +1,7 @@
 import type { GlideClient } from "@valkey/valkey-glide";
+import { COMMON_KEY_PREFIX } from "../../constants.ts";
 import { Time } from "../../enums/Time.ts";
 import { toNumber } from "../../utils/toNumber.ts";
-import { COMMON_KEY_PREFIX, client } from "../../valkeyClient.ts";
 import type { ViolationSettingsRepository } from "./models.ts";
 
 const SETTINGS_KEY_PREFIX = COMMON_KEY_PREFIX + "violation_settings:";
@@ -21,8 +21,8 @@ const WARNINGS_EXPIRY_KEY = SETTINGS_KEY_PREFIX + "warnings_expiry";
 export class ViolationSettingsRepositoryValkey implements ViolationSettingsRepository {
 	#client: GlideClient;
 
-	constructor(client: GlideClient) {
-		this.#client = client;
+	constructor({ valkeyClient }: { valkeyClient: GlideClient }) {
+		this.#client = valkeyClient;
 	}
 
 	async getMuteEnabled(): Promise<boolean> {
@@ -72,5 +72,3 @@ export class ViolationSettingsRepositoryValkey implements ViolationSettingsRepos
 		await this.#client.set(WARNINGS_EXPIRY_KEY, val.toString());
 	}
 }
-
-export const violationSettingsRepository = new ViolationSettingsRepositoryValkey(client);

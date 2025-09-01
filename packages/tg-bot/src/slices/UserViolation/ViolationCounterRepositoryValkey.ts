@@ -1,9 +1,9 @@
 import assert from "node:assert/strict";
 import { Batch, type GlideClient, Script, TimeUnit } from "@valkey/valkey-glide";
 import { dedent as d } from "ts-dedent";
+import { COMMON_KEY_PREFIX } from "../../constants.ts";
 import { logger } from "../../logger.ts";
 import { toNumber } from "../../utils/toNumber.ts";
-import { COMMON_KEY_PREFIX, client } from "../../valkeyClient.ts";
 import type { ViolationCounterRepository } from "./models.ts";
 
 const VIOLATIONS_PREFIX = COMMON_KEY_PREFIX + "violations:";
@@ -29,8 +29,8 @@ const userIdKey = (userId: number) => `${VIOLATIONS_PREFIX}userid:${userId}`;
 export class ViolationCounterRepositoryValkey implements ViolationCounterRepository {
 	#client: GlideClient;
 
-	constructor(client: GlideClient) {
-		this.#client = client;
+	constructor({ valkeyClient }: { valkeyClient: GlideClient }) {
+		this.#client = valkeyClient;
 	}
 
 	async getViolationCount(userIdOrHandle: string | number): Promise<number | undefined> {
@@ -134,5 +134,3 @@ export class ViolationCounterRepositoryValkey implements ViolationCounterReposit
 		
 		return total`);
 }
-
-export const violationCounterRepository = new ViolationCounterRepositoryValkey(client);

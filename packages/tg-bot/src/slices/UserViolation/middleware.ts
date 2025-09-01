@@ -5,7 +5,6 @@ import { LanguageEnum } from "../../enums/Language.ts";
 import { Time } from "../../enums/Time.ts";
 import { isBotContextWithMsgLanguage } from "../../models/BotContextWithMsgLanguage.ts";
 import { getWarningMessage } from "../../utils/getWarningMessage.ts";
-import { userViolationService } from "./service.ts";
 
 /**
  * Middleware that kicks in, when there's a language violation.
@@ -20,6 +19,7 @@ export async function userViolationMiddleware(ctx: BotContext, next?: NextFuncti
 	if (!ctx.message) {
 		throw new Error("Message is not present in the context");
 	}
+	const userViolationService = ctx.container.userViolationService;
 	if (!(await userViolationService.getMuteEnabled())) {
 		return await next?.();
 	}

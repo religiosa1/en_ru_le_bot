@@ -13,9 +13,7 @@ export function getConfig(): IConfig {
 }
 
 function parseConfigFromEnv(env = process.env): IConfig {
-	const token =
-		env.TOKEN ||
-		raise("Bot token is required to be passed through ENV variables");
+	const token = env.TOKEN || raise("Bot token is required to be passed through ENV variables");
 	const chatId = parseInt(env.CHAT_ID || "", 10);
 	const admins = parseAdmins(env.ADMINS);
 

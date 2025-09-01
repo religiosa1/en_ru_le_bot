@@ -26,7 +26,7 @@ describe("ViolationSettingsRepositoryValkey", () => {
 
 	describe("register and get", () => {
 		it("allows to register a violation for user", async (t) => {
-			const repo = new ViolationCounterRepositoryValkey(client);
+			const repo = new ViolationCounterRepositoryValkey({ valkeyClient: client });
 
 			let counter = await repo.registerViolation(123, "john", 5 * Time.Minutes);
 			t.assert.equal(counter, 1, "initial count is 1");
@@ -35,7 +35,7 @@ describe("ViolationSettingsRepositoryValkey", () => {
 		});
 
 		it("allows to retrieve the amount of violations", async (t) => {
-			const repo = new ViolationCounterRepositoryValkey(client);
+			const repo = new ViolationCounterRepositoryValkey({ valkeyClient: client });
 
 			await repo.registerViolation(123, "john", 5 * Time.Minutes);
 
@@ -46,7 +46,7 @@ describe("ViolationSettingsRepositoryValkey", () => {
 		});
 
 		it("returns undefined on search for non-existing users", async (t) => {
-			const repo = new ViolationCounterRepositoryValkey(client);
+			const repo = new ViolationCounterRepositoryValkey({ valkeyClient: client });
 
 			const searchById = await repo.getViolationCount(123);
 			t.assert.equal(searchById, undefined, "by id");
@@ -57,7 +57,7 @@ describe("ViolationSettingsRepositoryValkey", () => {
 
 	describe("pardon a user", () => {
 		it("allows to pardon a user by userId", async (t) => {
-			const repo = new ViolationCounterRepositoryValkey(client);
+			const repo = new ViolationCounterRepositoryValkey({ valkeyClient: client });
 
 			await repo.registerViolation(123, "john", 5 * Time.Minutes);
 			t.assert.equal(await repo.getViolationCount(123), 1, "before");
@@ -66,7 +66,7 @@ describe("ViolationSettingsRepositoryValkey", () => {
 		});
 
 		it("allows to pardon a user by username", async (t) => {
-			const repo = new ViolationCounterRepositoryValkey(client);
+			const repo = new ViolationCounterRepositoryValkey({ valkeyClient: client });
 
 			await repo.registerViolation(123, "john", 5 * Time.Minutes);
 			t.assert.equal(await repo.getViolationCount(123), 1, "before");
@@ -75,7 +75,7 @@ describe("ViolationSettingsRepositoryValkey", () => {
 		});
 
 		it("does nothing on pardoning a non-existing entry", async () => {
-			const repo = new ViolationCounterRepositoryValkey(client);
+			const repo = new ViolationCounterRepositoryValkey({ valkeyClient: client });
 
 			await repo.removeViolation("john");
 		});
@@ -83,7 +83,7 @@ describe("ViolationSettingsRepositoryValkey", () => {
 
 	describe("pardon everyone", () => {
 		it("allows to pardon all users", async (t) => {
-			const repo = new ViolationCounterRepositoryValkey(client);
+			const repo = new ViolationCounterRepositoryValkey({ valkeyClient: client });
 
 			await repo.registerViolation(123, "john", 5 * Time.Minutes);
 			await repo.registerViolation(321, "doe", 5 * Time.Minutes);
@@ -94,7 +94,7 @@ describe("ViolationSettingsRepositoryValkey", () => {
 		});
 
 		it("does nothing if there's no violations", async () => {
-			const repo = new ViolationCounterRepositoryValkey(client);
+			const repo = new ViolationCounterRepositoryValkey({ valkeyClient: client });
 			await repo.removeAllViolations();
 		});
 	});

@@ -30,7 +30,7 @@ describe("ViolationSettingsRepositoryValkey", () => {
 	});
 
 	it("returns default values on empty valkey storage", async (t) => {
-		const repo = new ViolationSettingsRepositoryValkey(client);
+		const repo = new ViolationSettingsRepositoryValkey({ valkeyClient: client });
 
 		t.assert.equal(await repo.getMuteEnabled(), DEFAULT_MUTE_ENABLED, "mute enabled");
 		t.assert.equal(await repo.getMaxViolationNumber(), DEFAULT_MAX_VIOLATION, "max violation");
@@ -39,7 +39,7 @@ describe("ViolationSettingsRepositoryValkey", () => {
 	});
 
 	it("sets value and allows to get them in the same session", async (t) => {
-		const repo = new ViolationSettingsRepositoryValkey(client);
+		const repo = new ViolationSettingsRepositoryValkey({ valkeyClient: client });
 
 		await repo.setMuteEnabled(!DEFAULT_MUTE_ENABLED);
 		await repo.setMaxViolationNumber(DEFAULT_MAX_VIOLATION * 2);
@@ -54,7 +54,7 @@ describe("ViolationSettingsRepositoryValkey", () => {
 
 	it("data persists for different clients", async (t) => {
 		{
-			const repo = new ViolationSettingsRepositoryValkey(client);
+			const repo = new ViolationSettingsRepositoryValkey({ valkeyClient: client });
 
 			await repo.setMuteEnabled(!DEFAULT_MUTE_ENABLED);
 			await repo.setMaxViolationNumber(DEFAULT_MAX_VIOLATION * 2);
@@ -62,7 +62,7 @@ describe("ViolationSettingsRepositoryValkey", () => {
 			await repo.setWarningsExpiry(DEFAULT_WARNINGS_EXPIRY * 2);
 		}
 		{
-			const repo = new ViolationSettingsRepositoryValkey(client);
+			const repo = new ViolationSettingsRepositoryValkey({ valkeyClient: client });
 
 			t.assert.equal(await repo.getMuteEnabled(), !DEFAULT_MUTE_ENABLED, "mute enabled");
 			t.assert.equal(await repo.getMaxViolationNumber(), DEFAULT_MAX_VIOLATION * 2, "max violation");

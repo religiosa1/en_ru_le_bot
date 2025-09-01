@@ -1,18 +1,19 @@
 import { CommandGroup } from "../../models/CommandGroup.ts";
 import { formatDuration, parseDuration } from "../../utils/duration.ts";
 import { toNumber } from "../../utils/toNumber.ts";
-import { userViolationService } from "./service.ts";
 
 export const userViolationCommands = new CommandGroup()
 	.addAdminCommand("mute", "Toggle mutes on language violations on/off", async (ctx) => {
 		const { logger } = ctx;
-		const newValue = !userViolationService.getMuteEnabled();
+		const userViolationService = ctx.container.userViolationService;
+		const newValue = !(await userViolationService.getMuteEnabled());
 		await userViolationService.setMuteEnabled(newValue);
 		logger.info(`Mute capacity modified ${newValue}`);
 		await ctx.reply(`Mute on language violations is now ${newValue ? "on" : "off"}`);
 	})
 	.addAdminCommand("pardon", "[@user] - Remove violations for specific user or all users", async (ctx) => {
 		const { logger } = ctx;
+		const userViolationService = ctx.container.userViolationService;
 		let userName = ctx.match?.toString().trim();
 
 		if (!userName) {
@@ -36,6 +37,7 @@ export const userViolationCommands = new CommandGroup()
 		}
 	})
 	.addAdminCommand("mute_duration", "[duration] - Set or view mute duration", async (ctx) => {
+		const userViolationService = ctx.container.userViolationService;
 		const durationStr = ctx.match?.toString().trim();
 		if (!durationStr) {
 			const duration = await userViolationService.getMuteDuration();
@@ -53,6 +55,7 @@ export const userViolationCommands = new CommandGroup()
 		await ctx.reply(`Mute duration is now ${formatDuration(duration)}`);
 	})
 	.addAdminCommand("warnings_expiry", "[duration] - Set or view warnings expiration time", async (ctx) => {
+		const userViolationService = ctx.container.userViolationService;
 		const durationStr = ctx.match?.toString().trim();
 		if (!durationStr) {
 			const duration = await userViolationService.getWarningsExpiry();
@@ -70,6 +73,7 @@ export const userViolationCommands = new CommandGroup()
 		await ctx.reply(`Warning expiry is now ${formatDuration(duration)}`);
 	})
 	.addAdminCommand("warnings_number", "[int] - Set or view number of warnings before mute", async (ctx) => {
+		const userViolationService = ctx.container.userViolationService;
 		const numStr = ctx.match?.toString().trim();
 		if (!numStr) {
 			const value = await userViolationService.getMaxViolationNumber();

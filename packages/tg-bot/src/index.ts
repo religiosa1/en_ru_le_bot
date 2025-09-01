@@ -2,15 +2,16 @@ import * as langDetection from "@en-ru-le/language-detection";
 import { Bot } from "grammy";
 import { adminScope } from "./adminScope.ts";
 import { BotContext } from "./BotContext.ts";
+import { configureDefaultContainer } from "./container.ts";
 import { logger } from "./logger.ts";
 import { AdminOnlyCommand } from "./models/Command.ts";
 import { getConfig } from "./models/config.ts";
 import { allCommands } from "./slices/allCommands.ts";
 import { adminOnly } from "./slices/ChatAdmins/middleware.ts";
-import { checkMessageLanguage } from "./slices/LangDay/middleware.ts";
-import { withPerfMeasure } from "./utils/withPerfMeasure.ts";
-import { userViolationMiddleware } from "./slices/UserViolation/middleware.ts";
 import { cooldownWarningMiddleware } from "./slices/CooldownWarning/middleware.ts";
+import { checkMessageLanguage } from "./slices/LangDay/middleware.ts";
+import { userViolationMiddleware } from "./slices/UserViolation/middleware.ts";
+import { withPerfMeasure } from "./utils/withPerfMeasure.ts";
 
 const config = getConfig();
 const chatId = config.chatId;
@@ -18,8 +19,14 @@ if (!chatId) {
 	logger.warn("ChatID isn't set through the ENV, bot language detection isn't possible");
 }
 
+const container = await configureDefaultContainer();
+
 const bot = new Bot(config.token, {
 	ContextConstructor: BotContext,
+});
+bot.use((ctx, next) => {
+	ctx.container = container.cradle;
+	return next();
 });
 
 for (const command of allCommands) {
