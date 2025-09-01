@@ -36,7 +36,7 @@ export async function checkMessageLanguage(ctx: BotContext, next?: NextFunction)
 		);
 		return;
 	}
-	if (ctx.message.date && Date.now() - ctx.message.date > MESSAGE_AGE_THRESHOLD) {
+	if (ctx.message.date && Date.now() - ctx.message.date * Time.Seconds > MESSAGE_AGE_THRESHOLD) {
 		logger.info({ date: ctx.message.date }, "Message is two old, we don't check old messages");
 		return;
 	}

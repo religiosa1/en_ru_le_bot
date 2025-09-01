@@ -1,16 +1,15 @@
 import { GlideClient } from "@valkey/valkey-glide";
-import { asClass, asValue, createContainer, Lifetime } from "awilix";
-import type { ViolationCounterRepository, ViolationSettingsRepository } from "./slices/UserViolation/models.ts";
-import { UserViolationService } from "./slices/UserViolation/service.ts";
-import { ViolationCounterRepositoryValkey } from "./slices/UserViolation/ViolationCounterRepositoryValkey.ts";
-import { ViolationSettingsRepositoryValkey } from "./slices/UserViolation/ViolationSettingsRepositoryValkey.ts";
+import { type AwilixContainer, asFunction, asValue, createContainer, Lifetime } from "awilix";
+import { userViolationServiceFactory } from "./slices/UserViolation/factory.ts";
+import type { UserViolationService } from "./slices/UserViolation/service.ts";
 
-export interface DIContainer {
+/** Internal container with all the deps for modules */
+interface DIContainerInternal {
 	valkeyClient: GlideClient;
-	violationSettingsRepository: ViolationSettingsRepository;
-	violationCounterRepository: ViolationCounterRepository;
 	userViolationService: UserViolationService;
 }
+/** The exposed part of the container, this is what available in commands */
+export type DIContainer = Pick<DIContainerInternal, "userViolationService">;
 
 const createValkeyClient = async (): Promise<GlideClient> => {
 	const addresses = [
@@ -26,20 +25,14 @@ const createValkeyClient = async (): Promise<GlideClient> => {
 	});
 };
 
-export async function configureDefaultContainer() {
+export async function configureDefaultContainer(): Promise<AwilixContainer<DIContainer>> {
 	const client = await createValkeyClient();
-	const container = createContainer<DIContainer>({
+	const container = createContainer<DIContainerInternal>({
 		injectionMode: "PROXY",
 	});
 	container.register({
 		valkeyClient: asValue(client),
-		violationSettingsRepository: asClass(ViolationSettingsRepositoryValkey, {
-			lifetime: Lifetime.SINGLETON,
-		}),
-		violationCounterRepository: asClass(ViolationCounterRepositoryValkey, {
-			lifetime: Lifetime.SINGLETON,
-		}),
-		userViolationService: asClass(UserViolationService, {
+		userViolationService: asFunction(userViolationServiceFactory, {
 			lifetime: Lifetime.SINGLETON,
 		}),
 	});

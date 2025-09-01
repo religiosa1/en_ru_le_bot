@@ -21,7 +21,14 @@ export async function cooldownWarningMiddleware(ctx: BotContext, next?: NextFunc
 	} else {
 		logger.info("Sending a general note on language usage");
 		cooldownWarningService.activateCooldown();
-		await ctx.reply(getWarningMessage(language));
+		const params = ctx.message
+			? {
+					reply_parameters: {
+						message_id: ctx.message.message_id,
+					},
+				}
+			: undefined;
+		await ctx.reply(getWarningMessage(language), params);
 	}
 	await next?.();
 }

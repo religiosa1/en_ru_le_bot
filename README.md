@@ -93,5 +93,5 @@ npm i
 
 It requires a valkey instance, you can start one in docker:
 ```sh
-docker run --name enrule_valkey -d valkey/valkey valkey-server --save 60 1 --loglevel warning
+docker run --name enrule_valkey -p 6379:6379 -d valkey/valkey valkey-server --save 60 1 --loglevel warning
 ```

@@ -34,6 +34,11 @@ export async function userViolationMiddleware(ctx: BotContext, next?: NextFuncti
 			[getWarningMessage(language), geViolationWarningMessage(language, violationStats.value, warningsLeft)].join(
 				"\n\n",
 			),
+			{
+				reply_parameters: {
+					message_id: ctx.message.message_id,
+				},
+			},
 		);
 		return;
 	}
@@ -70,10 +75,10 @@ export async function userViolationMiddleware(ctx: BotContext, next?: NextFuncti
 function geViolationWarningMessage(language: LanguageEnum, nWarnings: number, warningsLeft: number): string {
 	return match(language)
 		.with(LanguageEnum.English, () =>
-			warningsLeft === 1 ? `This is your last warning` : `This is your ${ordinalEn(nWarnings)} warning`,
+			warningsLeft === 1 ? `Это последнее предупреждение` : `Это ${nWarnings}-e предупреждение.`,
 		)
 		.with(LanguageEnum.Russian, () =>
-			warningsLeft === 1 ? `Это последнее предупреждение` : `Это ${nWarnings}-e предупреждение.`,
+			warningsLeft === 1 ? `This is your last warning` : `This is your ${ordinalEn(nWarnings)} warning`,
 		)
 		.exhaustive();
 }
