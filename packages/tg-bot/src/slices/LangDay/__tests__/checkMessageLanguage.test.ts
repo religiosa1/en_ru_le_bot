@@ -6,7 +6,6 @@ import { LanguageEnum } from "../../../enums/Language.ts";
 import { logger } from "../../../logger.ts";
 import type { BotContextWithMsgLanguage } from "../../../models/BotContextWithMsgLanguage.ts";
 import type { ChatAdminRepo } from "../../ChatAdmins/service.ts";
-import { cooldownWarningService } from "../../CooldownWarning/service.ts";
 import { checkMessageLanguage } from "../middleware.ts";
 import { langDayService } from "../service.ts";
 
@@ -42,7 +41,6 @@ describe("checkMessageLanguage", () => {
 
 	beforeEach(() => {
 		nextFn.mock.resetCalls();
-		cooldownWarningService.reset();
 	});
 
 	it("passes call to next middleware on lang mismatch", async (t) => {

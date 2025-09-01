@@ -4,13 +4,19 @@ import type { BotContext } from "../../BotContext.ts";
 import { LanguageEnum } from "../../enums/Language.ts";
 import { Time } from "../../enums/Time.ts";
 import { isBotContextWithMsgLanguage } from "../../models/BotContextWithMsgLanguage.ts";
-import { getWarningMessage } from "../../utils/getWarningMessage.ts";
+import { assertNever } from "../../utils/assertNever.ts";
 
 /**
  * Middleware that kicks in, when there's a language violation.
  * It either gives user a warning, or mutes him, if he has too much warnings already.
  *
- * It doesn't pass the execution down the middleware chain, unless it's disabled.
+ * If mute functionality is disabled, we still give user a warning, but don't increase
+ * the violation counter (so it can expire away on its own, or be back in action, when
+ * mute is turned back on).
+ *
+ * - Why are warnings language in reverse? In Russian on English day and vice versa.
+ * - Failsafe if a user can't understand the other language. For example, they write
+ *   in English, they get a warning in English as well, in case they can't read Russian at all.
  */
 export async function userViolationMiddleware(ctx: BotContext, next?: NextFunction) {
 	if (!isBotContextWithMsgLanguage(ctx)) {
@@ -20,25 +26,29 @@ export async function userViolationMiddleware(ctx: BotContext, next?: NextFuncti
 		throw new Error("Message is not present in the context");
 	}
 	const userViolationService = ctx.container.userViolationService;
-	if (!(await userViolationService.getMuteEnabled())) {
-		return await next?.();
-	}
-
 	const { logger, language } = ctx;
 	const userId = ctx.message.from.id;
-	const violationStats = await userViolationService.registerViolation(userId, ctx.message.from.username);
 
+	const replyParams = {
+		reply_parameters: {
+			message_id: ctx.message.message_id,
+		},
+	};
+
+	if (!(await userViolationService.getMuteEnabled())) {
+		await ctx.reply(getWarningMessage(language), replyParams);
+		return;
+	}
+
+	const violationStats = await userViolationService.registerViolation(userId, ctx.message.from.username);
 	const warningsLeft = violationStats.maxViolations - violationStats.value;
+
 	if (warningsLeft > 0) {
 		await ctx.reply(
 			[getWarningMessage(language), geViolationWarningMessage(language, violationStats.value, warningsLeft)].join(
 				"\n\n",
 			),
-			{
-				reply_parameters: {
-					message_id: ctx.message.message_id,
-				},
-			},
+			replyParams,
 		);
 		return;
 	}
@@ -62,13 +72,32 @@ export async function userViolationMiddleware(ctx: BotContext, next?: NextFuncti
 				until_date: (Date.now() + muteDuration) / Time.Seconds,
 			},
 		);
+		await ctx.reply(
+			language === LanguageEnum.English
+				? "Ты временно замьючен за неоднократные нарушения"
+				: "You're temporarily muted for a repeated violation.",
+			replyParams,
+		);
 	} catch (err) {
 		logger.error({ err, userId }, "Error while restricting a member");
 		ctx.reply(
 			language === LanguageEnum.English
-				? "You're in luck, pal. I'll get to you next time"
-				: "Ничего, в следующий раз тебя ещё достану",
+				? "Ничего, в следующий раз тебя ещё достану"
+				: "You're in luck, pal. I'll get to you next time",
+			replyParams,
 		);
+	}
+	await next?.();
+}
+
+export function getWarningMessage(language: LanguageEnum): string {
+	switch (language) {
+		case LanguageEnum.English:
+			return `Эй, сегодня день английского. Пытайся говорить на английском!`;
+		case LanguageEnum.Russian:
+			return `Hey, today is a Russian day. Try to speak Russian!`;
+		default:
+			assertNever(language, `Unsupported language code value: ${language}`);
 	}
 }
 

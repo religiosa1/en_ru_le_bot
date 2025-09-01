@@ -8,7 +8,7 @@ import { AdminOnlyCommand } from "./models/Command.ts";
 import { getConfig } from "./models/config.ts";
 import { allCommands } from "./slices/allCommands.ts";
 import { adminOnly } from "./slices/ChatAdmins/middleware.ts";
-import { cooldownWarningMiddleware } from "./slices/CooldownWarning/middleware.ts";
+import { cooldownMiddleware } from "./slices/Cooldown/middleware.ts";
 import { checkMessageLanguage } from "./slices/LangDay/middleware.ts";
 import { userViolationMiddleware } from "./slices/UserViolation/middleware.ts";
 import { withPerfMeasure } from "./utils/withPerfMeasure.ts";
@@ -39,7 +39,7 @@ if (chatId) {
 	bot.api.setMyCommands(allCommands.getAllUserCommandGroup().toBotCommands());
 	bot.api.setMyCommands(allCommands.getAllAdminCommandGroup().toBotCommands(), { scope: adminScope });
 }
-bot.on("msg:text", checkMessageLanguage, userViolationMiddleware, cooldownWarningMiddleware);
+bot.on("msg:text", checkMessageLanguage, cooldownMiddleware, userViolationMiddleware);
 
 bot.catch((err) => {
 	logger.error({ err }, `"An error has occurred: ${err}`);
