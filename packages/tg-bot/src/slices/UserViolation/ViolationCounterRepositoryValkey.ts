@@ -8,7 +8,7 @@ import type { ViolationCounterRepository } from "./models.ts";
 
 const VIOLATIONS_PREFIX = COMMON_KEY_PREFIX + "violations:";
 
-const userViolationKey = (userId: number | "*") => `${VIOLATIONS_PREFIX}counter:${userId}`;
+const userViolationKey = (userId: number) => `${VIOLATIONS_PREFIX}counter:${userId}`;
 /**
  * Storing username to userId map here.
  *
@@ -24,13 +24,22 @@ const userHandleKey = (username: string) => `${VIOLATIONS_PREFIX}username:${user
  *
  * Reverse map of userHandleKey.
  */
-const userIdKey = (userId: number | "*") => `${VIOLATIONS_PREFIX}userid:${userId}`;
+const userIdKey = (userId: number) => `${VIOLATIONS_PREFIX}userid:${userId}`;
 
 export class ViolationCounterRepositoryValkey implements ViolationCounterRepository {
 	#client: GlideClient;
 
 	constructor(client: GlideClient) {
 		this.#client = client;
+	}
+
+	async getViolationCount(userIdOrHandle: string | number): Promise<number | undefined> {
+		const { userId } = (await this.#searchUser(userIdOrHandle)) ?? {};
+		if (userId == null) {
+			return undefined;
+		}
+		const count = await this.#client.get(userViolationKey(userId));
+		return toNumber(count);
 	}
 
 	async registerViolation(userId: number, username: string | undefined, ttlMs: number): Promise<number> {

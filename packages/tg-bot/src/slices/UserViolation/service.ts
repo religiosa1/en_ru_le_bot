@@ -1,6 +1,6 @@
 import type { ViolationCounterRepository, ViolationSettingsRepository, ViolationStats } from "./models.ts";
-import { violationSettingsRepository } from "./violationSettingsRepository.ts";
-import { violationCounterRepository } from "./violationsCounterRepository.ts";
+import { violationCounterRepository } from "./ViolationCounterRepositoryValkey.ts";
+import { violationSettingsRepository } from "./ViolationSettingsRepositoryValkey.ts";
 
 export class UserViolationService {
 	readonly #repository: ViolationCounterRepository;

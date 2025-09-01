@@ -22,7 +22,9 @@
 	},
 	"devDependencies": {
 		"@biomejs/biome": "^2.2.2",
+		"@testcontainers/valkey": "^11.5.1",
 		"@types/node": "^24.3.0",
+		"testcontainers": "^11.5.1",
 		"typescript": "^5.9.2"
 	}
 }

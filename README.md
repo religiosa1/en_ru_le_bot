@@ -50,13 +50,13 @@ Consists of two packages:
 
 ### Storage:
 
-The bot uses a hybrid storage approach with different data stored in memory vs Valkey (Redis):
+The bot uses a hybrid storage approach with different data stored in memory vs Valkey:
 
 #### In Memory:
 - **Chat Admin Cache** (`ChatAdminRepo`): Admin user IDs with 3-hour TTL, refreshed automatically when expired
 - **Language Detection Models**: Loaded once at startup for performance
 
-#### In Valkey/Redis:
+#### In Valkey
 - **User Violations**: Violation counters per user with configurable TTL
   - Key pattern: `enrule:violations:counter:{userId}` 
   - Username mapping: `enrule:violations:username:{username}` → userId
@@ -68,7 +68,7 @@ The bot uses a hybrid storage approach with different data stored in memory vs V
   - Mute duration: `enrule:violation_settings:mute_duration` (default: 5 minutes)
   - Warnings expiry: `enrule:violation_settings:warnings_expiry` (default: 3 hours)
 
-**Key Prefix**: All Redis keys use `enrule:` prefix for namespace isolation.
+**Key Prefix**: All Valkey keys use `enrule:` prefix for namespace isolation.
 
 **Client**: Uses Valkey Glide client with configurable host/port via environment variables (`VALKEY_HOST`, `VALKEY_PORT`).
 
@@ -76,11 +76,12 @@ The bot uses a hybrid storage approach with different data stored in memory vs V
 
 Requires both rust and nodejs toolchains.
 
-First, build language-detection:
+First, build language-detection (napi-rs requires yarn instead of npm):
 
 ```sh
 cd packages/language-detection
-npm run build
+yarn install
+yarn run build
 ```
 
 Now you can install dependencies and launch the bot:

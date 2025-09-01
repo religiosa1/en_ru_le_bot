@@ -6,19 +6,19 @@ import type { ViolationSettingsRepository } from "./models.ts";
 
 const SETTINGS_KEY_PREFIX = COMMON_KEY_PREFIX + "violation_settings:";
 
-const DEFAULT_MUTE_ENABLED = true;
+export const DEFAULT_MUTE_ENABLED = true;
 const MUTE_ENABLED_KEY = SETTINGS_KEY_PREFIX + "mute_enabled";
 
-const DEFAULT_MAX_VIOLATION = 3;
+export const DEFAULT_MAX_VIOLATION = 3;
 const MAX_VIOLATIONS_KEY = SETTINGS_KEY_PREFIX + "max_violations";
 
-const DEFAULT_MUTE_DURATION = 5 * Time.Minutes;
+export const DEFAULT_MUTE_DURATION = 5 * Time.Minutes;
 const MUTE_DURATION_KEY = SETTINGS_KEY_PREFIX + "mute_duration";
 
-const DEFAULT_WARNINGS_EXPIRY = 3 * Time.Hours;
+export const DEFAULT_WARNINGS_EXPIRY = 3 * Time.Hours;
 const WARNINGS_EXPIRY_KEY = SETTINGS_KEY_PREFIX + "warnings_expiry";
 
-export class ViolationSettingsRepositoryRedis implements ViolationSettingsRepository {
+export class ViolationSettingsRepositoryValkey implements ViolationSettingsRepository {
 	#client: GlideClient;
 
 	constructor(client: GlideClient) {
@@ -73,4 +73,4 @@ export class ViolationSettingsRepositoryRedis implements ViolationSettingsReposi
 	}
 }
 
-export const violationSettingsRepository = new ViolationSettingsRepositoryRedis(client);
+export const violationSettingsRepository = new ViolationSettingsRepositoryValkey(client);
