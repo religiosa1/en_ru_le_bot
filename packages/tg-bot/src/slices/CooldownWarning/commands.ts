@@ -1,12 +1,12 @@
 import { CommandGroup } from "../../models/CommandGroup.ts";
 import { formatDuration, parseDuration } from "../../utils/duration.ts";
-import { cooldownService } from "./service.ts";
+import { cooldownWarningService } from "./service.ts";
 
 /**
  * Cooldown slice manages interval between wrong language warnings, so bot
  * doesn't spam with repeated warnings on every message.
  */
-export const cooldownCommands = new CommandGroup().addAdminCommand(
+export const cooldownWarningCommands = new CommandGroup().addAdminCommand(
 	"cooldown",
 	"[duration] Set cooldown value for wrong language warnings",
 	async (ctx) => {
@@ -14,8 +14,10 @@ export const cooldownCommands = new CommandGroup().addAdminCommand(
 		const durationStr = ctx.match?.toString();
 		if (!durationStr) {
 			logger.info("cooldown reset to default values");
-			cooldownService.setCooldownValue(cooldownService.defaultCooldown);
-			await ctx.reply(`Setting cooldown to the default value of ${formatDuration(cooldownService.defaultCooldown)}`);
+			cooldownWarningService.setCooldownValue(cooldownWarningService.defaultCooldown);
+			await ctx.reply(
+				`Setting cooldown to the default value of ${formatDuration(cooldownWarningService.defaultCooldown)}`,
+			);
 			return;
 		}
 
@@ -24,12 +26,12 @@ export const cooldownCommands = new CommandGroup().addAdminCommand(
 			await ctx.reply(`Wrong cooldown duration value: "${durationStr}". Try something like "3", "10m", "1m30s", etc.`);
 			return;
 		}
-		if (cooldown < 0 || cooldown > cooldownService.maxCooldown) {
-			await ctx.reply(`Cooldown must be in range between 0 and ${formatDuration(cooldownService.maxCooldown)}`);
+		if (cooldown < 0 || cooldown > cooldownWarningService.maxCooldown) {
+			await ctx.reply(`Cooldown must be in range between 0 and ${formatDuration(cooldownWarningService.maxCooldown)}`);
 			return;
 		}
 		logger.info({ cooldown }, `cooldown modified to be ${formatDuration(cooldown)}`);
-		cooldownService.setCooldownValue(cooldown);
+		cooldownWarningService.setCooldownValue(cooldown);
 		await ctx.reply(`Cooldown between warnings is now ${formatDuration(cooldown)}`);
 	},
 );

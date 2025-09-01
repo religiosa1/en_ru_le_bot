@@ -1,11 +1,11 @@
 import * as langDetection from "@en-ru-le/language-detection";
+import type { NextFunction } from "grammy";
 import { match } from "ts-pattern";
-import type { BotContext } from "../BotContext.ts";
-import { LanguageEnum } from "../enums/Language.ts";
-import { Time } from "../enums/Time.ts";
-import { assertNever } from "../utils/assertNever.ts";
-import { cooldownService } from "./Cooldown/service.ts";
-import { langDayService } from "./LangDay/service.ts";
+import type { BotContext } from "../../BotContext.ts";
+import { LanguageEnum } from "../../enums/Language.ts";
+import { Time } from "../../enums/Time.ts";
+import type { BotContextWithMsgLanguage } from "../../models/BotContextWithMsgLanguage.ts";
+import { langDayService } from "./service.ts";
 
 const MIN_MSG_LENGTH = 15;
 
@@ -15,7 +15,11 @@ const MIN_MSG_LENGTH = 15;
  */
 const MESSAGE_AGE_THRESHOLD = 5 * Time.Minutes;
 
-export async function checkMessageLanguage(ctx: BotContext) {
+/**
+ * This is the main method of the bot -- the one that checks users messages for a language mismatch.
+ * If a mismatch encountered, it routes request to the next middleware, otherwise it aborts the chain.
+ */
+export async function checkMessageLanguage(ctx: BotContext, next?: NextFunction) {
 	const { logger } = ctx;
 	logger.debug(
 		{
@@ -40,10 +44,15 @@ export async function checkMessageLanguage(ctx: BotContext) {
 		logger.debug({ msgLength: ctx.message?.text?.length }, "The message is too short for a check, ignoring");
 		return;
 	}
+	const admins = await ctx.chatAdminRepo.getAdminsIds();
+	if (admins.includes(ctx.message.from.id)) {
+		logger.debug("User is an admin, aborting");
+		return;
+	}
 
 	const language = langDayService.getDaySettings()?.value;
 	if (!language) {
-		logger.debug({ language }, "No specific language is selected, aborting");
+		logger.debug({ language }, "No specific language is set, aborting");
 		return;
 	}
 
@@ -62,33 +71,10 @@ export async function checkMessageLanguage(ctx: BotContext) {
 		logger.info({ msgLang, language }, "Language mismatch, proceeding with a warning or a general notice");
 	}
 
-	// TODO warn and ban functionality per user.
-	// This must be in a else branch, if mute functionality is disabled, so we're in toothless mode.
+	(ctx as BotContextWithMsgLanguage).language = language;
+	(ctx as BotContextWithMsgLanguage).msgLanguage = msgLang;
 
-	if (cooldownService.isCoolingDown()) {
-		logger.info(
-			{
-				cooldownUntil: cooldownService.getCooldownEndTime(),
-			},
-			"Don't send a general note on mismatched language, as we're still cooling down",
-		);
-		return;
-	} else {
-		logger.info("Sending a general note on language usage");
-		cooldownService.activateCooldown();
-		await ctx.reply(getWarningMessage(language));
-	}
-}
-
-export function getWarningMessage(language: LanguageEnum): string {
-	switch (language) {
-		case LanguageEnum.English:
-			return `Hey, today is a Russian day. Try to speak Russian!`;
-		case LanguageEnum.Russian:
-			return `Эй, сегодня день английского. Пытайся говорить на английском!`;
-		default:
-			assertNever(language, `Unsupported language code value: ${language}`);
-	}
+	await next?.();
 }
 
 /** Rate of one language over the other, when we start considering "it's written in language A"! */

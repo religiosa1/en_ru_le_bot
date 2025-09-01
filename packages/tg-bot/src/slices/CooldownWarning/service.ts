@@ -4,7 +4,7 @@ import { formatDuration } from "../../utils/duration.ts";
 const MAX_COOLDOWN = 3 * Time.Hours;
 const DEFAULT_COOLDOWN = 2 * Time.Minutes;
 
-class CooldownService {
+class CooldownWarningService {
 	#activeUntilTs: number | undefined;
 	#coolDownMs: number = DEFAULT_COOLDOWN;
 
@@ -57,4 +57,4 @@ class CooldownService {
 	}
 }
 
-export const cooldownService = new CooldownService();
+export const cooldownWarningService = new CooldownWarningService();

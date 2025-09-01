@@ -4,9 +4,10 @@ import { before, beforeEach, describe, it, mock } from "node:test";
 import type { BotContext } from "../src/BotContext.ts";
 import { Time } from "../src/enums/Time.ts";
 import { logger } from "../src/logger.ts";
-import { cooldownService } from "../src/slices/Cooldown/service.ts";
-import { checkMessageLanguage, getWarningMessage } from "../src/slices/checkMessageLanguage.ts";
+import { cooldownWarningService } from "../src/slices/CooldownWarning/service.ts";
+import { checkMessageLanguage } from "../src/slices/LangDay/middleware.ts";
 import { langDayService } from "../src/slices/LangDay/service.ts";
+import { getWarningMessage } from "../src/utils/getWarningMessage.ts";
 
 const reply = mock.fn();
 
@@ -41,7 +42,7 @@ describe("checkMessageLanguage", () => {
 
 	beforeEach(() => {
 		reply.mock.resetCalls();
-		cooldownService.reset();
+		cooldownWarningService.reset();
 	});
 
 	it("issues a warning on a language mismatch", async (t) => {
@@ -79,7 +80,7 @@ describe("checkMessageLanguage", () => {
 		await checkMessageLanguage(makeMockContext(EN_TEXT));
 		t.assert.equal(reply.mock.callCount(), 1, "No new warnings, as we're cooling down");
 
-		mock.timers.tick(cooldownService.getCooldownValue());
+		mock.timers.tick(cooldownWarningService.getCooldownValue());
 		await checkMessageLanguage(makeMockContext(EN_TEXT));
 		t.assert.equal(reply.mock.callCount(), 2, "After the cooldown we can issue warnings again");
 	});

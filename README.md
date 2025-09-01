@@ -1,11 +1,15 @@
 # EnRuLeBot monorepo
 
-Consists of two packages:
-- [language detection](./packages/language-detection/README.md) module ([napi-rs](https://napi.rs/) wrapper around 
-  [lingua-rs](https://github.com/pemistahl/lingua-rs))
-- the actual [telegram bot](./packages//tg-bot/README.md), written in nodejs. Requires node v24 or higher.
+Telegram bot for a en-ru language exchange group chat.
 
-More details in the corresponding repos.
+Enforces the usage of one of those two languages on different days of the week.
+
+Consists of two packages:
+- [language detection](./packages/language-detection/) ([napi-rs](https://napi.rs/) 
+  rust wrapper around [lingua-rs](https://github.com/pemistahl/lingua-rs))
+- the actual [telegram bot](./packages/tg-bot/), written in nodejs using
+  [grammy](https://grammy.dev/). Requires node v24 or higher, as well as 
+  [valkey](https://valkey.io/) instance for storage.
 
 ## List of commands available to bot.
 
@@ -68,3 +72,25 @@ The bot uses a hybrid storage approach with different data stored in memory vs V
 
 **Client**: Uses Valkey Glide client with configurable host/port via environment variables (`VALKEY_HOST`, `VALKEY_PORT`).
 
+## Build process.
+
+Requires both rust and nodejs toolchains.
+
+First, build language-detection:
+
+```sh
+cd packages/language-detection
+npm run build
+```
+
+Now you can install dependencies and launch the bot:
+
+```sh
+cd ../../packages/tg-bot
+npm i
+```
+
+It requires a valkey instance, you can start one in docker:
+```sh
+docker run --name enrule_valkey -d valkey/valkey valkey-server --save 60 1 --loglevel warning
+```
