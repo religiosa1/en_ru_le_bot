@@ -1,5 +1,5 @@
 import type { BotCommand } from "grammy/types";
-import { AdminOnlyCommand, Command, type CommandHandler } from "./Command.ts";
+import { AdminOnlyCommand, Command, type CommandHandler, HiddenAdminCommand } from "./Command.ts";
 
 export class CommandGroup {
 	static merge(...groups: CommandGroup[]): CommandGroup {
@@ -26,12 +26,19 @@ export class CommandGroup {
 		return this;
 	}
 
-	getAllUserCommandGroup(): CommandGroup {
+	getMembersCommandGroup(): CommandGroup {
 		return new CommandGroup(this.#commands.filter((i) => !(i instanceof AdminOnlyCommand)));
 	}
 
-	getAllAdminCommandGroup(): CommandGroup {
-		return new CommandGroup(this.#commands.filter((i) => i instanceof AdminOnlyCommand));
+	getAdminsCommandGroup(): CommandGroup {
+		return new CommandGroup(
+			this.#commands.filter((i) => i instanceof AdminOnlyCommand && !(i instanceof HiddenAdminCommand)),
+		);
+	}
+
+	addHiddenAdminCommand(name: string, handler: CommandHandler): CommandGroup {
+		this.#commands.push(new HiddenAdminCommand(name, handler));
+		return this;
 	}
 
 	toBotCommands(): BotCommand[] {

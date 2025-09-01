@@ -76,16 +76,16 @@ export async function userViolationMiddleware(ctx: BotContext, next?: NextFuncti
 		);
 		await ctx.reply(
 			language === LanguageEnum.English
-				? "Ты временно замьючен за неоднократные нарушения"
-				: "You're temporarily muted for a repeated violation.",
+				? "Ты временно замьючен за неоднократные нарушения."
+				: "You're temporarily muted for repeated violations.",
 			replyParams,
 		);
 	} catch (err) {
 		logger.error({ err, userId }, "Error while restricting a member");
 		ctx.reply(
 			language === LanguageEnum.English
-				? "Ничего, в следующий раз тебя ещё достану"
-				: "You're in luck, pal. I'll get to you next time",
+				? "Ничего, в следующий раз тебя ещё достану."
+				: "You're in luck, pal. I'll get to you next time.",
 			replyParams,
 		);
 	}
@@ -97,7 +97,7 @@ export function getWarningMessage(language: LanguageEnum): string {
 		case LanguageEnum.English:
 			return `Эй, сегодня день английского. Пытайся говорить на английском!`;
 		case LanguageEnum.Russian:
-			return `Hey, today is a Russian day. Try to speak Russian!`;
+			return `Hey, today is Russian Day. Try to speak Russian!`;
 		default:
 			assertNever(language, `Unsupported language code value: ${language}`);
 	}
@@ -109,7 +109,7 @@ function geViolationWarningMessage(language: LanguageEnum, nWarnings: number, wa
 			warningsLeft === 1 ? `Это последнее предупреждение` : `Это ${nWarnings}-e предупреждение.`,
 		)
 		.with(LanguageEnum.Russian, () =>
-			warningsLeft === 1 ? `This is your last warning` : `This is your ${ordinalEn(nWarnings)} warning`,
+			warningsLeft === 1 ? `This is your last warning.` : `This is your ${ordinalEn(nWarnings)} warning.`,
 		)
 		.exhaustive();
 }

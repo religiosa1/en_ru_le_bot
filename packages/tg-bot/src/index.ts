@@ -1,11 +1,11 @@
 import * as langDetection from "@en-ru-le/language-detection";
 import { Bot } from "grammy";
-import { adminScope } from "./adminScope.ts";
 import { BotContext } from "./BotContext.ts";
 import { configureDefaultContainer } from "./container.ts";
 import { logger } from "./logger.ts";
 import { AdminOnlyCommand } from "./models/Command.ts";
 import { getConfig } from "./models/config.ts";
+import * as scopes from "./scopes.ts";
 import { allCommands } from "./slices/allCommands.ts";
 import { adminOnly } from "./slices/ChatAdmins/middleware.ts";
 import { cooldownMiddleware } from "./slices/Cooldown/middleware.ts";
@@ -36,9 +36,10 @@ for (const command of allCommands) {
 	const middleware = command instanceof AdminOnlyCommand ? [adminOnly, command.handler] : [command.handler];
 	bot.command(command.command, ...middleware);
 }
+
 if (chatId) {
-	bot.api.setMyCommands(allCommands.getAllUserCommandGroup().toBotCommands());
-	bot.api.setMyCommands(allCommands.getAllAdminCommandGroup().toBotCommands(), { scope: adminScope });
+	bot.api.setMyCommands(allCommands.getMembersCommandGroup().toBotCommands(), { scope: scopes.members });
+	bot.api.setMyCommands(allCommands.getAdminsCommandGroup().toBotCommands(), { scope: scopes.admins });
 }
 bot.on("msg:text", checkMessageLanguage, cooldownMiddleware, userViolationMiddleware);
 

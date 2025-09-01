@@ -32,8 +32,7 @@ Consists of two packages:
   - /warnings_expiry [duration] - Set or view warnings expiration time
   - /warnings_number [int] - Set or view number of warnings before mute
   - /alarm - Toggle notifications about day change on/off
-    TODO:
-  - /rt <text> - Retranslate text to chat
+  - /rt <text> - Retranslate text to chat (for fun and comedic purposes -- like the bot says it).
 
 ### Violation Process:
   1. When a user violates language rules (posts in wrong language on language-specific days), they get warnings
