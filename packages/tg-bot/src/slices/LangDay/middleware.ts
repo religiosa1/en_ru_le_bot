@@ -5,7 +5,6 @@ import type { BotContext } from "../../BotContext.ts";
 import { LanguageEnum } from "../../enums/Language.ts";
 import { Time } from "../../enums/Time.ts";
 import type { BotContextWithMsgLanguage } from "../../models/BotContextWithMsgLanguage.ts";
-import { langDayService } from "./service.ts";
 
 const MIN_MSG_LENGTH = 15;
 
@@ -29,9 +28,10 @@ export async function checkMessageLanguage(ctx: BotContext, next?: NextFunction)
 		},
 		"Message received",
 	);
-	if (ctx.message?.chat.id !== ctx.targetChatId) {
+	const { chatId, chatAdminRepo, langDayService } = ctx.container;
+	if (ctx.message?.chat.id !== chatId) {
 		logger.info(
-			{ chatId: ctx.message?.chat.id, targetChatId: ctx.targetChatId, text: ctx.message?.text },
+			{ chatId: ctx.message?.chat.id, targetChatId: chatId, text: ctx.message?.text },
 			"mismatched chat id, ignoring the message",
 		);
 		return;
@@ -44,7 +44,7 @@ export async function checkMessageLanguage(ctx: BotContext, next?: NextFunction)
 		logger.debug({ msgLength: ctx.message?.text?.length }, "The message is too short for a check, ignoring");
 		return;
 	}
-	const admins = await ctx.chatAdminRepo.getAdminsIds();
+	const admins = await chatAdminRepo.getAdminsIds();
 	if (admins.includes(ctx.message.from.id)) {
 		logger.debug("User is an admin, aborting");
 		return;

@@ -19,13 +19,14 @@ if (!chatId) {
 	logger.warn("ChatID isn't set through the ENV, bot language detection isn't possible");
 }
 
-logger.info("Initializing DI container and connecting to Valkey");
-const container = await configureDefaultContainer();
-logger.info("Container initialized");
-
 const bot = new Bot(config.token, {
 	ContextConstructor: BotContext,
 });
+
+logger.info("Initializing DI container and connecting to Valkey");
+const container = await configureDefaultContainer(bot.api, chatId);
+logger.info("Container initialized");
+
 bot.use((ctx, next) => {
 	ctx.container = container.cradle;
 	return next();

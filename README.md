@@ -31,9 +31,8 @@ Consists of two packages:
   - /mute_duration [duration] - Set or view mute duration
   - /warnings_expiry [duration] - Set or view warnings expiration time
   - /warnings_number [int] - Set or view number of warnings before mute
-
+  - /alarm - Toggle notifications about day change on/off
     TODO:
-  - /alarm [?] - Toggle daily notifications or check status
   - /rt <text> - Retranslate text to chat
 
 ### Violation Process:

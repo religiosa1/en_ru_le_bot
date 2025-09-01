@@ -1,19 +1,20 @@
 import type { Api } from "grammy";
+import type { DIContainerInternal } from "../../container.ts";
 import { Time } from "../../enums/Time.ts";
 import { logger } from "../../logger.ts";
 
+type ChatAdminRepoParams = Pick<DIContainerInternal, "api" | "chatId">;
 export class ChatAdminRepo {
-	readonly #getChatAdministrators: Api["getChatAdministrators"];
+	readonly #api: Api;
 	readonly #chatId: number;
 	readonly #admins = new Set<number>();
 
 	#refreshedAt: number | undefined;
 	#ttl = 3 * Time.Hours;
 
-	// getChatAdministrators of api must be bound, as it's a method, not a function
-	constructor(chatId: number, getChatAdministrators: Api["getChatAdministrators"]) {
+	constructor({ chatId, api }: ChatAdminRepoParams) {
 		this.#chatId = chatId;
-		this.#getChatAdministrators = getChatAdministrators;
+		this.#api = api;
 	}
 
 	getValidUntil(): Date {
@@ -38,7 +39,7 @@ export class ChatAdminRepo {
 	}
 
 	async refreshAdminsList(signal?: AbortSignal) {
-		const admins = await this.#getChatAdministrators(this.#chatId, signal);
+		const admins = await this.#api.getChatAdministrators(this.#chatId, signal);
 		logger.trace({ admins }, "Admins list fetched");
 		this.#admins.clear();
 		for (const admin of admins) {

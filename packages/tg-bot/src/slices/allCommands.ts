@@ -1,11 +1,13 @@
 import { CommandGroup } from "../models/CommandGroup.ts";
 
+import { alarmCommands } from "./Alarm/commands.ts";
 import { chatAdminCommands } from "./ChatAdmins/commands.ts";
 import { cooldownCommands } from "./Cooldown/commands.ts";
 import { langDayCommands } from "./LangDay/commands.ts";
 import { userViolationCommands } from "./UserViolation/commands.ts";
 
 export const allCommands = CommandGroup.merge(
+	alarmCommands,
 	chatAdminCommands,
 	langDayCommands,
 	userViolationCommands,

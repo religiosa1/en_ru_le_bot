@@ -7,7 +7,7 @@ import { logger } from "../../../logger.ts";
 import type { BotContextWithMsgLanguage } from "../../../models/BotContextWithMsgLanguage.ts";
 import type { ChatAdminRepo } from "../../ChatAdmins/service.ts";
 import { checkMessageLanguage } from "../middleware.ts";
-import { langDayService } from "../service.ts";
+import { LangDayService } from "../service.ts";
 
 const RU_TEXT = "что-то на русском тут написано";
 const EN_TEXT = "something in english here";
@@ -89,21 +89,19 @@ describe("checkMessageLanguage", () => {
 	});
 
 	it("respects forced language", async (t) => {
-		langDayService.setForcedLanguage("en");
-		await checkMessageLanguage(makeMockContext(EN_TEXT), nextFn);
+		const ctx = makeMockContext(EN_TEXT, { forcedLanguage: "en" });
+		await checkMessageLanguage(ctx, nextFn);
 		t.assert.equal(nextFn.mock.callCount(), 0, "No next as the language is forced");
 
-		langDayService.setForcedLanguage(undefined);
 		await checkMessageLanguage(makeMockContext(EN_TEXT), nextFn);
 		t.assert.equal(nextFn.mock.callCount(), 1, "Forced language removed -- next called");
 	});
 
 	it("respects disabled lang day checks", async (t) => {
-		langDayService.setLangDayDisabled(true);
-		await checkMessageLanguage(makeMockContext(EN_TEXT), nextFn);
+		const ctx = makeMockContext(EN_TEXT, { langDayDisabled: true });
+		await checkMessageLanguage(ctx, nextFn);
 		t.assert.equal(nextFn.mock.callCount(), 0, "No next as the lang checks are disabled");
 
-		langDayService.setLangDayDisabled(false);
 		await checkMessageLanguage(makeMockContext(EN_TEXT), nextFn);
 		t.assert.equal(nextFn.mock.callCount(), 1, "Lang checks enabled again -- next called");
 	});
@@ -128,21 +126,33 @@ interface MakeMockContextOpts {
 	chatId?: number;
 	date?: number;
 	adminsIds?: number[];
+	forcedLanguage?: LanguageEnum;
+	langDayDisabled?: boolean;
 }
 
 // Mock context, only the bare minimum of fields is provided here
 function makeMockContext(
 	text: string,
-	{ chatId = +process.env.CHAT_ID!, date = Date.now(), adminsIds = [] }: MakeMockContextOpts = {},
+	{
+		chatId = +process.env.CHAT_ID!,
+		date = Date.now(),
+		adminsIds = [],
+		forcedLanguage,
+		langDayDisabled,
+	}: MakeMockContextOpts = {},
 ): BotContext & Partial<BotContextWithMsgLanguage> {
 	const mockAdminRepo = {
 		getAdminsIds: () => adminsIds,
 	} as unknown as ChatAdminRepo;
-
+	const langDayService = new LangDayService();
+	if (langDayDisabled) langDayService.setLangDayDisabled(true);
+	if (forcedLanguage) langDayService.setForcedLanguage(forcedLanguage);
 	return {
 		logger,
-		chatAdminRepo: mockAdminRepo,
-		targetChatId: +process.env.CHAT_ID!,
+		container: {
+			chatAdminRepo: mockAdminRepo,
+			langDayService,
+		},
 		message: {
 			date,
 			text,

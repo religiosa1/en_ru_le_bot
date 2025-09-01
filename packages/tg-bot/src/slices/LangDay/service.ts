@@ -68,5 +68,3 @@ export class LangDayService {
 		this.#forcedLanguage = value;
 	}
 }
-
-export const langDayService = new LangDayService();

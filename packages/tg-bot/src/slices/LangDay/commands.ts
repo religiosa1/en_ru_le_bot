@@ -1,7 +1,6 @@
 import { match } from "ts-pattern";
 import { LanguageEnum } from "../../enums/Language.ts";
 import { CommandGroup } from "../../models/CommandGroup.ts";
-import { langDayService } from "./service.ts";
 
 /**
  * Enabling/disabling language checks, or forcing a specific language for admins.
@@ -19,6 +18,8 @@ const freeDayMsg = `Today is a free day. You can speak Russian or English langua
 export const langDayCommands = new CommandGroup()
 	.addCommand("today", "check current day language settings", async (ctx) => {
 		const { logger } = ctx;
+		const { langDayService } = ctx.container;
+
 		logger.info("Today command called");
 		const day = langDayService.getDaySettings();
 		const msg = match(day)
@@ -42,6 +43,8 @@ export const langDayCommands = new CommandGroup()
 	})
 	.addAdminCommand("langchecks", "Toggle language checks on/off", async (ctx) => {
 		const { logger } = ctx;
+		const { langDayService } = ctx.container;
+
 		const disabled = !langDayService.isLangDayDisabled();
 		langDayService.setLangDayDisabled(disabled);
 		logger.info(`Language checks disabled status changed: ${disabled}`);
@@ -49,6 +52,8 @@ export const langDayCommands = new CommandGroup()
 	})
 	.addAdminCommand("forcelang", "[en|ru] Force specific language", async (ctx) => {
 		const { logger } = ctx;
+		const { langDayService } = ctx.container;
+
 		const langStr = ctx.match?.toString();
 		if (!langStr) {
 			logger.info(`Forced language day disabled`);

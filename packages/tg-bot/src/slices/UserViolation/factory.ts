@@ -3,6 +3,8 @@ import { UserViolationService } from "./service.ts";
 import { ViolationCounterRepositoryValkey } from "./ViolationCounterRepositoryValkey.ts";
 import { ViolationSettingsRepositoryValkey } from "./ViolationSettingsRepositoryValkey.ts";
 
+export { UserViolationService };
+
 export function userViolationServiceFactory({ valkeyClient }: { valkeyClient: GlideClient }): UserViolationService {
 	const violationSettingsRepository = new ViolationSettingsRepositoryValkey({ valkeyClient });
 	const violationCounterRepository = new ViolationCounterRepositoryValkey({ valkeyClient });

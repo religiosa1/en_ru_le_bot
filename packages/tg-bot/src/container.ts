@@ -1,15 +1,25 @@
 import { GlideClient } from "@valkey/valkey-glide";
-import { type AwilixContainer, asFunction, asValue, createContainer, Lifetime } from "awilix";
-import { userViolationServiceFactory } from "./slices/UserViolation/factory.ts";
-import type { UserViolationService } from "./slices/UserViolation/service.ts";
+import { type AwilixContainer, asClass, asFunction, asValue, createContainer, Lifetime } from "awilix";
+import type { Api } from "grammy";
+import { AlarmService } from "./slices/Alarm/service.ts";
+import { ChatAdminRepo } from "./slices/ChatAdmins/service.ts";
+import { LangDayService } from "./slices/LangDay/service.ts";
+import { type UserViolationService, userViolationServiceFactory } from "./slices/UserViolation/factory.ts";
+
+/** The exposed part of the container, this is what available in ctx*/
+export interface DIContainer {
+	chatId: number;
+	chatAdminRepo: ChatAdminRepo;
+	langDayService: LangDayService;
+	userViolationService: UserViolationService;
+	alarmService: AlarmService;
+}
 
 /** Internal container with all the deps for modules */
-interface DIContainerInternal {
+export interface DIContainerInternal extends DIContainer {
+	api: Api;
 	valkeyClient: GlideClient;
-	userViolationService: UserViolationService;
 }
-/** The exposed part of the container, this is what available in commands */
-export type DIContainer = Pick<DIContainerInternal, "userViolationService">;
 
 const createValkeyClient = async (): Promise<GlideClient> => {
 	const addresses = [
@@ -25,16 +35,32 @@ const createValkeyClient = async (): Promise<GlideClient> => {
 	});
 };
 
-export async function configureDefaultContainer(): Promise<AwilixContainer<DIContainer>> {
+export async function configureDefaultContainer(api: Api, chatId: number): Promise<AwilixContainer<DIContainer>> {
 	const client = await createValkeyClient();
 	const container = createContainer<DIContainerInternal>({
 		injectionMode: "PROXY",
 	});
 	container.register({
+		chatId: asValue(chatId),
+		api: asValue(api),
 		valkeyClient: asValue(client),
+		chatAdminRepo: asClass(ChatAdminRepo, {
+			lifetime: Lifetime.SCOPED,
+		}),
+		langDayService: asClass(LangDayService, {
+			lifetime: Lifetime.SCOPED,
+		}),
 		userViolationService: asFunction(userViolationServiceFactory, {
+			lifetime: Lifetime.SCOPED,
+		}),
+		alarmService: asClass(AlarmService, {
 			lifetime: Lifetime.SINGLETON,
+			dispose: (v) => v[Symbol.dispose](),
 		}),
 	});
+
+	// Eager initialization for alarm service, so it arms its cron jobs
+	container.resolve("alarmService");
+
 	return container;
 }

@@ -27,6 +27,8 @@ export async function userViolationMiddleware(ctx: BotContext, next?: NextFuncti
 	}
 	const userViolationService = ctx.container.userViolationService;
 	const { logger, language } = ctx;
+	const { chatId } = ctx.container;
+
 	const userId = ctx.message.from.id;
 
 	const replyParams = {
@@ -55,7 +57,7 @@ export async function userViolationMiddleware(ctx: BotContext, next?: NextFuncti
 	try {
 		const muteDuration = await userViolationService.getMuteDuration();
 		await ctx.api.restrictChatMember(
-			ctx.targetChatId,
+			chatId,
 			userId,
 			{
 				can_send_messages: false,
