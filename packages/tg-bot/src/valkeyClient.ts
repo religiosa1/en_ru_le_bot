@@ -9,6 +9,8 @@ const addresses = [
 
 export const COMMON_KEY_PREFIX = "enrule:";
 
+// FIXME: this results in hanging tests, move it to DI container.
+
 // Check `GlideClientConfiguration/GlideClusterClientConfiguration` for additional options.
 export const client = await GlideClient.createClient({
 	addresses: addresses,

@@ -1,4 +1,4 @@
-import { before, beforeEach, describe, it } from "node:test";
+import { after, before, beforeEach, describe, it } from "node:test";
 import { type StartedValkeyContainer, ValkeyContainer } from "@testcontainers/valkey";
 import { GlideClient } from "@valkey/valkey-glide";
 import { Time } from "../../../enums/Time.ts";
@@ -8,18 +8,16 @@ describe("ViolationSettingsRepositoryValkey", () => {
 	let container: StartedValkeyContainer;
 	let client: GlideClient;
 
-	before(async (t) => {
+	before(async () => {
 		container = await new ValkeyContainer("valkey/valkey:8.0").start();
 		client = await GlideClient.createClient({
 			addresses: [{ host: container.getHost(), port: container.getPort() }],
 		});
+	});
 
-		if ("after" in t) {
-			t.after(async () => {
-				client.close();
-				await container.stop();
-			});
-		}
+	after(async () => {
+		client.close();
+		await container.stop({ timeout: 5000 });
 	});
 
 	beforeEach(async () => {
