@@ -1,6 +1,6 @@
 # EnRuLeBot monorepo
 
-Telegram bot for a en-ru language exchange group chat.
+Telegram bot for an en-ru language exchange group chat.
 
 Enforces the usage of one of those two languages on different days of the week.
 
@@ -13,37 +13,131 @@ Consists of two packages:
 
 ## List of commands available to bot.
 
+Commands are just messages in the chat, starting with a `/` character.
+A command must be first part of the message and may be followed by bot user 
+handle (e.g. `/help@en_ru_le_bot`) and/or arguments  (e.g. `/help members`).
+
+List of commands is also accessible in the bot menu (by going to direct 
+messages with the bot and clicking on "Menu" button). Menu for regular users
+displays common commands, while for chat admins it will display admin commands
+as well.
+
+All of the commands can be sent in the chat or in DM with the bot (if you don't 
+want other users to see them being executed).
+
+The bot logs who executed which command internally, so this information is 
+available in the logs.
+
+Some commands expect duration as their argument. Duration can be supplied as an
+integer number (e.g. `20`) in this case it will be interpreted in minutes, or 
+with a unit suffix. For example:
+- `30s` -- 30 seconds 
+- `5m30s` -- 5 minutes 30 seconds
+- `1h` -- one hour 
+- `1.5d` -- 1.5 days (aka 36 hours)
+
 ###  Public Commands (Available to all users)
 
-  - /today - Check current language day status
-  - /rules - Display chat rules
-  - /help - Show help message
+- /today check current day: whether it's English, Russian, or Free
+  It accounts for forced days as well.
+- /rules display the group's rules
+- /help ["members"] display help on bot commands
+  For admins it will also display admin-only commands, unless "members" argument
+  is supplied.
 
 ### Admin-Only Commands
+- /alarm Toggle notifications about day change on/off
 
-  - /flush - Refresh admin list from chat
-  - /langchecks - Toggle automatic language day scheduling
-  - /forcelang [en|ru] - Force specific language or check current forced language
-  - /cooldown [duration] - Set violation cooldown (0-150 minutes) or reset cooldown
-  - /mute - Toggle mute system on/off
-  - /pardon [@user] - Remove violations for specific user or all users
-  - /mute_duration [duration] - Set or view mute duration
-  - /warnings_expiry [duration] - Set or view warnings expiration time
-  - /warnings_number [int] - Set or view number of warnings before mute
-  - /alarm - Toggle notifications about day change on/off
-  - /rt <text> - Retranslate text to chat (for fun and comedic purposes -- like the bot says it).
+ With alarm on, bot will notify about English/Russian day changes.
+- /langchecks Toggle language checks on/off
+
+If langchecks are disabled, bot won't check message language, or send 
+notifications about day changes. This basically disables the bot, outside of
+settings commands, or displaying rules.
+
+- /forcelang ["en"|"ru"] Force a specific language
+
+  Used to override the standard schedule. Without arguments removes forced 
+  language. With an argument, allows to set the forced language, e.g. 
+  `/forcelang ru`
+- /mute Toggle mutes on language violations on/off
+
+  With mutes off, bot will give warnings to users, but will never restrict their
+  permissions (posting messages,photos, etc.) or count the amount of warnings.
+- /pardon [@user] - Clears violations counter for a specific user or all users.
+
+  Without arguments removes all counters for all users. Can receive username 
+  mention as argument, to clear restrictions for a specific user, e.g. 
+  `/pardon @john`.
+  
+- /mute_duration [duration] - Set or view mute duration
+  
+  Without arguments displays the current mute duration value -- for how long 
+  users' permissions will be restricted so they can't post, after repeated 
+  violations. With the argument sets this value.
+
+- /warnings_expiry [duration] - Set or view warnings expiration time
+
+  Warnings automatically expire after predefined amount of time (3 hours 
+  by default) -- meaning if a user hasn't performed any more violations in this
+  time their transgressions are absolved. Without an argument it shows the 
+  current expiry duration, with an argument -- sets it.
+
+- /warnings_number [int] - Set or view number of warnings before mute
+
+  The amount of warnings user must receive before his permissions are 
+  temporarily restricted. If set to 0, they will be muted immediately on the 
+  first violation. Without arguments shows the current settings value, with
+  an argument -- sets it.
+
+- /cooldown [duration] Set cooldown value for wrong language warnings
+
+  If a bot issued a warning, it won't do so for some time. This time is common 
+  for all users, meaning if user A got a warning, and user B started to write in 
+  a wrong language he still won't receive a warning until this cooldown time will
+  pass.
+  
+  Our goal isn't to ban everyone or spam with warnings and threats, but to 
+  stimulate the language exchange.
+
+  Without an argument displays the current cooldown value, with a value sets it. 
+  
+
+### Hidden admin commands
+
+These commands are not displayed in the menu or help text. Know what you're doing
+if you're using them.
+
+- /flush_admins Invalidate admins cache. Admin list is cached for 3 hours. In 
+  case you just added or removed an admin, and don't want to wait for his 
+  permissions to be updated, you can force cache invalidation with this 
+  command.
+
+- /rt <text> - Retranslate text to chat (for fun and comedic purposes -- like 
+  the bot says it).
 
 ### Violation Process:
-  1. When a user violates language rules (posts in wrong language on language-specific days), they get warnings
-  2. Default: 3 warnings before mute (configurable with `/warnings_number`)
-  3. After reaching warning limit, user gets temporarily muted
 
-  Mute Details:
-  - Duration: 180 minutes (3 hours) by default, configurable with `/mute_duration`
-  - Restrictions: Can't send messages, media, polls, or other content (but can invite users)
-  - Expiration: Violations expire after a set time (configurable with `/mute_duration`)
+1. When a user violates language rules (posts in wrong language on 
+  language-specific days), they get warnings
+2. Each warning triggers a cooldown process -- for the cooldown duration time 
+  no one will receive a new warning. (configurable with `/cooldown`)
+3. Default: 3 warnings before mute (configurable with `/warnings_number`)
+4. After reaching warning limit, user gets temporarily muted
 
-  The system only affects non-admin users and requires the mute capacity to be enabled.
+Mute Details:
+- Duration: 15 minutes by default, configurable with `/mute_duration`
+- Restrictions: Can't send messages, media, polls, or other content (but can 
+  invite users)
+- Expiration: Violations expire after a set time -- 3 hours by default, 
+  configurable with `/warnings_expiry`
+
+The system only affects non-admin users and requires the mute capacity to be 
+enabled.
+
+Given a cooldown time common for all violations, and 3 warnings, bot shouldn't
+really mute anyone all that often, it's more of a scare-tactic to show it has
+teeth (otherwise users just ignore the bot).
 
 ### Storage:
 
@@ -52,22 +146,31 @@ The bot uses a hybrid storage approach with different data stored in memory vs V
 #### In Memory:
 - **Chat Admin Cache** (`ChatAdminRepo`): Admin user IDs with 3-hour TTL, refreshed automatically when expired
 - **Language Detection Models**: Loaded once at startup for performance
+- **Forced language and disabled langday setting**
+
+Data in memory doesn't survive bot re-deployments or start-stop cycles of 
+course, it is ephemeral.
 
 #### In Valkey
 - **User Violations**: Violation counters per user with configurable TTL
   - Key pattern: `enrule:violations:counter:{userId}` 
   - Username mapping: `enrule:violations:username:{username}` → userId
   - Reverse mapping: `enrule:violations:userid:{userId}` → username
-  - Bidirectional mapping needed because Telegram's API doesn't allow username→userId lookup, but admins use `@username` in commands. Reverse mapping for technical cleanup operations only.
+  
+  Bidirectional mapping needed because Telegram's API doesn't allow 
+  username→userId lookup, but admins use `@username` in commands. 
+  Reverse mapping for technical cleanup operations only.
+
 - **Bot Settings**: Persistent configuration with defaults
   - Mute enabled/disabled: `enrule:violation_settings:mute_enabled` (default: true)
   - Max violations before mute: `enrule:violation_settings:max_violations` (default: 3)
-  - Mute duration: `enrule:violation_settings:mute_duration` (default: 5 minutes)
+  - Mute duration: `enrule:violation_settings:mute_duration` (default: 15 minutes)
   - Warnings expiry: `enrule:violation_settings:warnings_expiry` (default: 3 hours)
 
 **Key Prefix**: All Valkey keys use `enrule:` prefix for namespace isolation.
 
-**Client**: Uses Valkey Glide client with configurable host/port via environment variables (`VALKEY_HOST`, `VALKEY_PORT`).
+**Client**: Uses Valkey Glide client with configurable host/port via environment
+ variables (`VALKEY_HOST`, `VALKEY_PORT`).
 
 ## Build process.
 
@@ -81,14 +184,38 @@ yarn install
 yarn run build
 ```
 
-Now you can install dependencies and launch the bot:
+Now you can install dependencies 
 
 ```sh
 cd ../../packages/tg-bot
 npm i
 ```
 
+and launch the bot:
+```sh
+npm run start
+# or for hot reload and extra logs (with pretty print with pino-pretty):
+# npm install -g pino-pretty # you need to install it once
+npm run dev | pino-pretty
+```
+
 It requires a valkey instance, you can start one in docker:
 ```sh
 docker run --name enrule_valkey -p 6379:6379 -d valkey/valkey valkey-server --save 60 1 --loglevel warning
 ```
+
+## Configuration.
+
+Bot can be configured through the environment variables, which can also be 
+supplied through `.env` file.
+
+At the very least, you must supply to variables:
+- TOKEN Containing a bot token, as supplied by the [BotFather](https://t.me/BotFather)
+- CHAT_ID Id of your chat/supergroup
+
+Please refer to [env.d.ts](./packages/tg-bot/types/env.d.ts) file definitions 
+for the full list of available options.
+
+## License
+
+EnRuLeBot is MIT Licensed.

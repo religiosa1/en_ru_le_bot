@@ -14,7 +14,7 @@ const MUTE_ENABLED_KEY = SETTINGS_KEY_PREFIX + "mute_enabled";
 export const DEFAULT_MAX_VIOLATION = 3;
 const MAX_VIOLATIONS_KEY = SETTINGS_KEY_PREFIX + "max_violations";
 
-export const DEFAULT_MUTE_DURATION = 5 * Time.Minutes;
+export const DEFAULT_MUTE_DURATION = 15 * Time.Minutes;
 const MUTE_DURATION_KEY = SETTINGS_KEY_PREFIX + "mute_duration";
 
 export const DEFAULT_WARNINGS_EXPIRY = 3 * Time.Hours;

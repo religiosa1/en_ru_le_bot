@@ -2,7 +2,7 @@ import { Time } from "../../enums/Time.ts";
 import { formatDuration } from "../../utils/duration.ts";
 
 const MAX_COOLDOWN = 3 * Time.Hours;
-const DEFAULT_COOLDOWN = 10 * Time.Minutes;
+const DEFAULT_COOLDOWN = 2 * Time.Minutes;
 
 class CooldownService {
 	#activeUntilTs: number | undefined;
