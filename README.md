@@ -16,8 +16,7 @@ Consists of two packages:
 ###  Public Commands (Available to all users)
 
   - /today - Check current language day status
-- ~~/rules - Display chat rules~~ removed, as it's now handled by shieldy.
-    TODO:
+  - /rules - Display chat rules
   - /help - Show help message
 
 ### Admin-Only Commands

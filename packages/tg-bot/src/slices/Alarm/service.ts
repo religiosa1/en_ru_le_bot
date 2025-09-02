@@ -65,9 +65,9 @@ export class AlarmService implements Disposable {
 				return;
 			}
 			const msg: string = match(day.value)
-				.with(LanguageEnum.English, () => "English Day has started.")
+				.with(LanguageEnum.English, () => "English Day has begun.")
 				.with(LanguageEnum.Russian, () => "Начался русский день.")
-				.with(undefined, () => "Free Day has started.\nНачался свободный день.")
+				.with(undefined, () => "Free Day has begun.\nНачался свободный день.")
 				.exhaustive();
 			await this.#api.sendMessage(this.#chatId, msg);
 		} catch (error) {
