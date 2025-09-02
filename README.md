@@ -51,7 +51,7 @@ with a unit suffix. For example:
 - /alarm Toggle notifications about day change on/off
 
   With alarm on, bot will notify about English/Russian day changes.
-  
+
 - /langchecks Toggle language checks on/off
 
   If langchecks are disabled, bot won't check message language, or send 
@@ -119,6 +119,60 @@ if you're using them.
 - /rt <text> - Retranslate text to chat (for fun and comedic purposes -- like 
   the bot says it).
 
+## Language detection
+
+The bot uses a two-tier language detection system built on the 
+[lingua-rs](https://github.com/pemistahl/lingua-rs) library through 
+a custom Rust/NAPI wrapper:
+
+### Detection Methods
+
+1. **Russian/English Detection** (`isRussianOrEnglish`)
+  - Primary method for language policy enforcement
+  - Only detects Russian and English languages (basically, anything 
+    non-cyrillic will be treated as English)
+  - Optimized for detecting direct policy violations
+  - Used to determine if users are writing in the wrong language on 
+    language-specific days
+
+2. **Fast Multi-Language Detection** (`detectAllLanguagesFast`) 
+  - Lower accuracy but supports all languages available in lingua-rs
+  - Excludes languages with high false-positive rates on short messages 
+    (Tagalog, Sotho, Latin)
+  - Uses low-accuracy mode for faster processing
+  - Currently not used in main bot logic but available for extensions
+  - The idea behind it -- to warn users writing outside of 2 target languages
+
+### Multi-Language Message Handling
+
+When messages contain both Russian and English text, the bot uses a 
+**rate-based approach** to determine the primary language -- based on the amount
+of characters in each language in a message.
+
+- **Language Rate Threshold**: 1.7x ratio required (`REQUIRED_LANGUAGE_RATE`)
+- **Mixed Language Logic**: If neither language dominates by the required rate, 
+  the message is considered "mixed language" and **no violation is triggered**
+- **Calculation**: Based on character length of each language fragment in the message
+
+**Examples**:
+- Russian text 3x longer than English → Classified as Russian
+- English text 2x longer than Russian → Classified as English  
+- Russian and English roughly equal length → Mixed language (no violation)
+
+The idea behind it -- if someone explains/translates something in both languages
+simultaneously, we shouldn't give them a warning.
+
+### Message Processing Rules
+
+- **Only the target chat is checked**, i.e. if someone adds the bot to other 
+  chats it won't actually do anything there, DMs aren't verified either
+- **Minimum Length**: Messages must be at least 15 characters to trigger 
+  language detection
+- **Admin Immunity**: Chat administrators are exempt from language checks 
+  (this includes admin-bots as well)
+- **Age Filter**: Messages older than 5 minutes are ignored (handles missed 
+  updates, if bot was down for some reason)
+
 ### Violation Process:
 
 1. When a user violates language rules (posts in wrong language on 
@@ -142,11 +196,11 @@ Given a cooldown time common for all violations, and 3 warnings, bot shouldn't
 really mute anyone all that often, it's more of a scare-tactic to show it has
 teeth (otherwise users just ignore the bot).
 
-### Storage:
+## Storage:
 
 The bot uses a hybrid storage approach with different data stored in memory vs Valkey:
 
-#### In Memory:
+### In Memory:
 - **Chat Admin Cache** (`ChatAdminRepo`): Admin user IDs with 3-hour TTL, refreshed automatically when expired
 - **Language Detection Models**: Loaded once at startup for performance
 - **Forced language and disabled langday setting**
@@ -154,7 +208,7 @@ The bot uses a hybrid storage approach with different data stored in memory vs V
 Data in memory doesn't survive bot re-deployments or start-stop cycles of 
 course, it is ephemeral.
 
-#### In Valkey
+### In Valkey
 - **User Violations**: Violation counters per user with configurable TTL
   - Key pattern: `enrule:violations:counter:{userId}` 
   - Username mapping: `enrule:violations:username:{username}` → userId
