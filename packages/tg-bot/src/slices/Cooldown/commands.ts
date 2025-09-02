@@ -1,6 +1,5 @@
 import { CommandGroup } from "../../models/CommandGroup.ts";
 import { formatDuration, parseDuration } from "../../utils/duration.ts";
-import { cooldownService } from "./service.ts";
 
 /**
  * Cooldown slice throttles how often next middleware will run.
@@ -10,6 +9,7 @@ export const cooldownCommands = new CommandGroup().addAdminCommand(
 	"[duration] Set cooldown value for wrong language warnings",
 	async (ctx) => {
 		const { logger } = ctx;
+		const { cooldownService } = ctx.container;
 		const durationStr = ctx.match?.toString();
 		if (!durationStr) {
 			logger.info("cooldown reset to default values");

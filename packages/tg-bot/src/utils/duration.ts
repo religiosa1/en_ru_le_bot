@@ -9,17 +9,34 @@ const durationComponentMap = {
 } as const;
 type DurationPrefix = keyof typeof durationComponentMap;
 
-export function formatDuration(durationInMs: number, maxComponents = 3): string {
+interface FormatDurationOpts {
+	maxComponents?: number;
+	smallestUnit?: DurationPrefix;
+}
+export function formatDuration(
+	durationInMs: number,
+	{ maxComponents = 3, smallestUnit }: FormatDurationOpts = {},
+): string {
 	if (!Number.isFinite(durationInMs)) {
-		throw new Error(`bad duration value ${durationInMs}`);
+		throw new TypeError(`bad duration value ${durationInMs}`);
+	}
+	if (!Number.isInteger(maxComponents) || maxComponents <= 0) {
+		throw new RangeError(`bad duration value ${durationInMs}`);
+	}
+	if (!durationInMs) {
+		return "0";
 	}
 	let result = durationInMs < 0 ? "-" : "";
 	let nComponents = 0;
 	let absDuration = Math.abs(durationInMs);
 	for (const [suffix, value] of Object.entries(durationComponentMap)) {
 		if (absDuration < value) {
+			if (suffix === smallestUnit) {
+				break;
+			}
 			continue;
 		}
+
 		if (++nComponents > maxComponents) {
 			break;
 		}
@@ -28,6 +45,12 @@ export function formatDuration(durationInMs: number, maxComponents = 3): string 
 			result += unitValue + suffix;
 		}
 		absDuration = absDuration % value;
+		if (suffix === smallestUnit) {
+			break;
+		}
+	}
+	if (!result) {
+		result += "0" + (smallestUnit ?? "");
 	}
 	return result;
 }

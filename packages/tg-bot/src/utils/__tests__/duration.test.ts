@@ -29,13 +29,36 @@ describe("formatDuration", () => {
 		t.assert.equal(formatDuration(1 * Time.Minutes + 3), "1m3ms", "minutes");
 	});
 
-	it("doesn't provide more granularity, then 3 components", (t) => {
+	it("doesn't provide more granularity, then 3 components by default", (t) => {
+		const dur = 1 * Time.Days + 2 * Time.Hours + 3 * Time.Minutes + 4 * Time.Seconds + 5;
+		t.assert.equal(formatDuration(dur), "1d2h3m", "days");
+	});
+
+	it("allows to control the amount of components to output", (t) => {
+		const dur = 1 * Time.Days + 2 * Time.Hours + 3 * Time.Minutes + 4 * Time.Seconds + 5;
+		t.assert.equal(formatDuration(dur, { maxComponents: 4 }), "1d2h3m4s", "4");
+		t.assert.equal(formatDuration(dur, { maxComponents: 5 }), "1d2h3m4s5ms", "5");
+	});
+
+	it("allows to specify the smallest unit", (t) => {
+		const dur = 1 * Time.Days + 2 * Time.Hours + 3 * Time.Minutes + 4 * Time.Seconds + 5;
+		t.assert.equal(formatDuration(dur, { smallestUnit: "h" }), "1d2h", "up to hours");
+		t.assert.equal(formatDuration(20 * Time.Seconds, { smallestUnit: "m" }), "0m", "don't go bellow -- adds suffix");
+		t.assert.equal(formatDuration(20 * Time.Seconds, { smallestUnit: "s" }), "20s");
+		t.assert.equal(formatDuration(20 * Time.Seconds + 100, { smallestUnit: "s" }), "20s");
+		t.assert.equal(formatDuration(0, { smallestUnit: "m" }), "0", "the real zero duration is just zero");
+	});
+
+	it("amount of components to output takes precedence over the smallest unit", (t) => {
+		const dur = 1 * Time.Days + 2 * Time.Hours + 3 * Time.Minutes + 4 * Time.Seconds + 5;
+		t.assert.equal(formatDuration(dur, { smallestUnit: "s" }), "1d2h3m", "default 3 components");
+		t.assert.equal(formatDuration(dur, { maxComponents: 2, smallestUnit: "s" }), "1d2h", "2 components");
 		t.assert.equal(
-			formatDuration(1 * Time.Days + 2 * Time.Hours + 3 * Time.Minutes + 4 * Time.Seconds),
-			"1d2h3m",
-			"days",
+			formatDuration(20 * Time.Seconds + 100, { maxComponents: 2, smallestUnit: "s" }),
+			"20s",
+			"2 components",
 		);
-		t.assert.equal(formatDuration(1 * Time.Hours + 2 * Time.Minutes + 3 * Time.Seconds + 4), "1h2m3s", "hours");
+		t.assert.equal(formatDuration(20 * Time.Seconds + 100, { maxComponents: 2 }), "20s100ms", "2 components");
 	});
 });
 

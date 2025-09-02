@@ -46,14 +46,17 @@ with a unit suffix. For example:
   is supplied.
 
 ### Admin-Only Commands
+- /settings display current bot settings
+
 - /alarm Toggle notifications about day change on/off
 
- With alarm on, bot will notify about English/Russian day changes.
+  With alarm on, bot will notify about English/Russian day changes.
+  
 - /langchecks Toggle language checks on/off
 
-If langchecks are disabled, bot won't check message language, or send 
-notifications about day changes. This basically disables the bot, outside of
-settings commands, or displaying rules.
+  If langchecks are disabled, bot won't check message language, or send 
+  notifications about day changes. This basically disables the bot, outside of
+  settings commands, or displaying rules.
 
 - /forcelang ["en"|"ru"] Force a specific language
 
@@ -76,19 +79,19 @@ settings commands, or displaying rules.
   users' permissions will be restricted so they can't post, after repeated 
   violations. With the argument sets this value.
 
-- /warnings_expiry [duration] - Set or view warnings expiration time
-
-  Warnings automatically expire after predefined amount of time (3 hours 
-  by default) -- meaning if a user hasn't performed any more violations in this
-  time their transgressions are absolved. Without an argument it shows the 
-  current expiry duration, with an argument -- sets it.
-
 - /warnings_number [int] - Set or view number of warnings before mute
 
   The amount of warnings user must receive before his permissions are 
   temporarily restricted. If set to 0, they will be muted immediately on the 
   first violation. Without arguments shows the current settings value, with
   an argument -- sets it.
+
+- /warnings_expiry [duration] - Set or view warnings expiration time
+
+  Warnings automatically expire after predefined amount of time (3 hours 
+  by default) -- meaning if a user hasn't performed any more violations in this
+  time their transgressions are absolved. Without an argument it shows the 
+  current expiry duration, with an argument -- sets it.
 
 - /cooldown [duration] Set cooldown value for wrong language warnings
 

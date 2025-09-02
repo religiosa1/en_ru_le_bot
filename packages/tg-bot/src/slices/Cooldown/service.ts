@@ -4,7 +4,7 @@ import { formatDuration } from "../../utils/duration.ts";
 const MAX_COOLDOWN = 3 * Time.Hours;
 const DEFAULT_COOLDOWN = 2 * Time.Minutes;
 
-class CooldownService {
+export class CooldownService {
 	#activeUntilTs: number | undefined;
 	#coolDownMs: number = DEFAULT_COOLDOWN;
 
@@ -20,11 +20,8 @@ class CooldownService {
 		return this.#activeUntilTs != null && this.#activeUntilTs > Date.now();
 	}
 
-	getCooldownEndTime(): Date | undefined {
-		if (!this.#activeUntilTs) {
-			return undefined;
-		}
-		return new Date(this.#activeUntilTs);
+	getCooldownEndTs(): number | undefined {
+		return this.#activeUntilTs;
 	}
 
 	activateCooldown(): void {
@@ -56,6 +53,3 @@ class CooldownService {
 		this.#coolDownMs = this.defaultCooldown;
 	}
 }
-
-// Singleton by default
-export const cooldownService = new CooldownService();
