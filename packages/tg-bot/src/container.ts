@@ -2,6 +2,7 @@ import { GlideClient } from "@valkey/valkey-glide";
 import { type AwilixContainer, asClass, asFunction, asValue, createContainer, Lifetime } from "awilix";
 import type { Api } from "grammy";
 import { AlarmService } from "./slices/Alarm/service.ts";
+import { type CaptchaService, captchaServiceFactory } from "./slices/Captcha/factory.ts";
 import { ChatAdminRepo } from "./slices/ChatAdmins/service.ts";
 import { type CooldownService, cooldownServiceFactory } from "./slices/Cooldown/factory.ts";
 import { LangDayService } from "./slices/LangDay/service.ts";
@@ -14,6 +15,7 @@ export interface DIContainer {
 	cooldownService: CooldownService;
 	langDayService: LangDayService;
 	userViolationService: UserViolationService;
+	captchaService: CaptchaService;
 	alarmService: AlarmService;
 }
 
@@ -58,14 +60,19 @@ export async function configureDefaultContainer(api: Api, chatId: number): Promi
 		cooldownService: asFunction(cooldownServiceFactory, {
 			lifetime: Lifetime.SCOPED,
 		}),
+		captchaService: asFunction(captchaServiceFactory, {
+			lifetime: Lifetime.SINGLETON,
+			dispose: (v) => v[Symbol.dispose](),
+		}),
 		alarmService: asClass(AlarmService, {
 			lifetime: Lifetime.SINGLETON,
 			dispose: (v) => v[Symbol.dispose](),
 		}),
 	});
 
-	// Eager initialization for alarm service, so it arms its cron jobs
+	// Eager initialization for service that need to arm their internals
 	container.resolve("alarmService");
+	container.resolve("captchaService");
 
 	return container;
 }

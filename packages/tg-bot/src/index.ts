@@ -7,6 +7,7 @@ import { AdminOnlyCommand } from "./models/Command.ts";
 import { getConfig } from "./models/config.ts";
 import * as scopes from "./scopes.ts";
 import { allCommands } from "./slices/allCommands.ts";
+// import { captchaMiddleware, onMemberJoinHandler } from "./slices/Captcha/middleware.ts";
 import { adminOnly } from "./slices/ChatAdmins/middleware.ts";
 import { cooldownMiddleware } from "./slices/Cooldown/middleware.ts";
 import { checkMessageLanguage } from "./slices/LangDay/middleware.ts";
@@ -41,6 +42,14 @@ if (chatId) {
 	bot.api.setMyCommands(allCommands.getMembersCommandGroup().toBotCommands(), { scope: scopes.members });
 	bot.api.setMyCommands(allCommands.getAdminsCommandGroup().toBotCommands(), { scope: scopes.admins });
 }
+
+// TODO Commented out, until we debug the event update
+// bot.on("message:new_chat_members", onMemberJoinHandler);
+bot.on("message:new_chat_members", (ctx) => {
+	logger.info({ ctx }, "!!!!!!!!!New chat member!!!!!!!!!");
+});
+
+// TODO captcha check, once on:new_chat_members is working
 bot.on("msg:text", checkMessageLanguage, cooldownMiddleware, userViolationMiddleware);
 
 bot.catch((err) => {
@@ -51,6 +60,7 @@ logger.info("Preloading language models...");
 const duration = await withPerfMeasure(() => langDetection.loadLanguageModels());
 logger.info({ duration }, `Models loaded in ${duration.toFixed(2)}ms. Starting the bot now`);
 bot.start({
+	allowed_updates: ["message", "chat_member", "my_chat_member"],
 	onStart(getMeInfo) {
 		logger.info({ info: getMeInfo }, "Bot started");
 	},

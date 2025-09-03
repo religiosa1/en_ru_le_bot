@@ -1,7 +1,7 @@
 import type { GlideClient } from "@valkey/valkey-glide";
 import { COMMON_KEY_PREFIX } from "../../constants.ts";
 import { Time } from "../../enums/Time.ts";
-import { toNumber } from "../../utils/toNumber.ts";
+import { toBool, toNumber } from "../../utils/glideParsers.ts";
 import type { ViolationSettingsRepository } from "./models.ts";
 
 const SETTINGS_KEY_PREFIX = COMMON_KEY_PREFIX + "violation_settings:";
@@ -27,11 +27,9 @@ export class ViolationSettingsRepositoryValkey implements ViolationSettingsRepos
 
 	async getMuteEnabled(): Promise<boolean> {
 		const val = await this.#client.get(MUTE_ENABLED_KEY);
-		if (val == null) {
-			return DEFAULT_MUTE_ENABLED;
-		}
-		return val === "true";
+		return toBool(val) ?? DEFAULT_MUTE_ENABLED;
 	}
+
 	async setMuteEnabled(val: boolean): Promise<void> {
 		await this.#client.set(MUTE_ENABLED_KEY, val.toString());
 	}

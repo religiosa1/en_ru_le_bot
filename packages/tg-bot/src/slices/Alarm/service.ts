@@ -23,6 +23,10 @@ export class AlarmService implements Disposable {
 		this.#chatId = chatId;
 	}
 
+	[Symbol.dispose](): void {
+		this.setEnabled(false);
+	}
+
 	get isEnabled(): boolean {
 		return this.#dayChangeJob.isActive;
 	}
@@ -35,10 +39,6 @@ export class AlarmService implements Disposable {
 			// if (this.#beforeHandJob.isActive) this.#beforeHandJob.stop();
 			if (this.#dayChangeJob.isActive) this.#dayChangeJob.stop();
 		}
-	}
-
-	[Symbol.dispose](): void {
-		this.setEnabled(false);
 	}
 
 	// async #handleBeforeHand(): Promise<void> {

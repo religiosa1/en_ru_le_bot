@@ -3,7 +3,7 @@ import { Batch, type GlideClient, Script, TimeUnit } from "@valkey/valkey-glide"
 import { dedent as d } from "ts-dedent";
 import { COMMON_KEY_PREFIX } from "../../constants.ts";
 import { logger } from "../../logger.ts";
-import { toNumber } from "../../utils/toNumber.ts";
+import { toNumber } from "../../utils/glideParsers.ts";
 import type { ViolationCounterRepository } from "./models.ts";
 
 const VIOLATIONS_PREFIX = COMMON_KEY_PREFIX + "violations:";
@@ -18,13 +18,13 @@ const userViolationKey = (userId: number) => `${VIOLATIONS_PREFIX}counter:${user
  * If a user has no username, we're just skipping this field, and storing only
  * the violation counter.
  */
-const userHandleKey = (username: string) => `${VIOLATIONS_PREFIX}username:${username}`;
+const usernameToUserIdKey = (username: string) => `${VIOLATIONS_PREFIX}username:${username}`;
 /**
  * Storing userId to userMap map here.
  *
  * Reverse map of userHandleKey.
  */
-const userIdKey = (userId: number) => `${VIOLATIONS_PREFIX}userid:${userId}`;
+const userIdToUsernameKey = (userId: number) => `${VIOLATIONS_PREFIX}userid:${userId}`;
 
 export class ViolationCounterRepositoryValkey implements ViolationCounterRepository {
 	#client: GlideClient;
@@ -57,10 +57,10 @@ export class ViolationCounterRepositoryValkey implements ViolationCounterReposit
 
 		if (username) {
 			const expiry = this.#getExpiry(ttlMs);
-			transaction.set(userHandleKey(username), userId.toString(), {
+			transaction.set(usernameToUserIdKey(username), userId.toString(), {
 				expiry,
 			});
-			transaction.set(userIdKey(userId), username, {
+			transaction.set(userIdToUsernameKey(userId), username, {
 				expiry,
 			});
 		}
@@ -79,9 +79,9 @@ export class ViolationCounterRepositoryValkey implements ViolationCounterReposit
 			return false;
 		}
 
-		const keysToDelete = [userViolationKey(userId), userIdKey(userId)];
+		const keysToDelete = [userViolationKey(userId), userIdToUsernameKey(userId)];
 		if (username) {
-			keysToDelete.push(userHandleKey(username));
+			keysToDelete.push(usernameToUserIdKey(username));
 		}
 		const rowsAffected = await this.#client.del(keysToDelete);
 		return !!rowsAffected;
@@ -100,11 +100,11 @@ export class ViolationCounterRepositoryValkey implements ViolationCounterReposit
 	): Promise<{ userId: number; username: string | undefined } | undefined> {
 		if (typeof userIdOrHandle === "number") {
 			const userId = userIdOrHandle;
-			const username = await this.#client.get(userIdKey(userId));
+			const username = await this.#client.get(userIdToUsernameKey(userId));
 			return { userId, username: username?.toString() };
 		} else {
 			const username = userIdOrHandle;
-			const userId = toNumber(await this.#client.get(userHandleKey(username)));
+			const userId = toNumber(await this.#client.get(usernameToUserIdKey(username)));
 			if (userId == null) return undefined;
 			return { userId, username };
 		}

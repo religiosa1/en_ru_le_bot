@@ -1,6 +1,8 @@
 import { CommandGroup } from "../../models/CommandGroup.ts";
+import { attempt } from "../../utils/attempt.ts";
 import { formatDuration, parseDuration } from "../../utils/duration.ts";
-import { toNumber } from "../../utils/toNumber.ts";
+import { toNumber } from "../../utils/glideParsers.ts";
+import { parseUsername } from "../../utils/parseUsername.ts";
 
 export const userViolationCommands = new CommandGroup()
 	.addAdminCommand("mute", "Toggle mutes on language violations on/off", async (ctx) => {
@@ -14,7 +16,11 @@ export const userViolationCommands = new CommandGroup()
 	.addAdminCommand("pardon", "[@user] - Remove violations for specific user or all users", async (ctx) => {
 		const { logger } = ctx;
 		const userViolationService = ctx.container.userViolationService;
-		let userName = ctx.match?.toString().trim();
+		const [userName, error] = attempt(() => parseUsername(ctx.match));
+		if (error) {
+			await ctx.reply(error.toString());
+			return;
+		}
 
 		if (!userName) {
 			logger.info("Pardoning all users");
@@ -22,11 +28,6 @@ export const userViolationCommands = new CommandGroup()
 			return;
 		}
 
-		if (!userName.startsWith("@")) {
-			await ctx.reply("username must start with a `@`, yo");
-			return;
-		}
-		userName = userName.slice(1);
 		const pardoned = await userViolationService.pardon(userName);
 		if (pardoned) {
 			logger.info({ userName }, "Pardoned user");

@@ -2,7 +2,7 @@ import type { GlideClient } from "@valkey/valkey-glide";
 import { COMMON_KEY_PREFIX } from "../../constants.ts";
 import type { DIContainerInternal } from "../../container.ts";
 import { Time } from "../../enums/Time.ts";
-import { toNumber } from "../../utils/toNumber.ts";
+import { toNumber } from "../../utils/glideParsers.ts";
 
 const DEFAULT_COOLDOWN = 2 * Time.Minutes;
 
