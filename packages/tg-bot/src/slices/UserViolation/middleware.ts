@@ -45,7 +45,7 @@ export async function userViolationMiddleware(ctx: BotContext, next?: NextFuncti
 	const violationStats = await userViolationService.registerViolation(userId, ctx.message.from.username);
 	const warningsLeft = violationStats.maxViolations - violationStats.value;
 
-	if (warningsLeft > 0) {
+	if (warningsLeft >= 0) {
 		await ctx.reply(
 			[getWarningMessage(language), geViolationWarningMessage(language, violationStats.value, warningsLeft)].join(
 				"\n\n",
@@ -73,6 +73,13 @@ export async function userViolationMiddleware(ctx: BotContext, next?: NextFuncti
 			{
 				until_date: (Date.now() + muteDuration) / Time.Seconds,
 			},
+		);
+		logger.info(
+			{
+				nWarnings: violationStats.value,
+				maxViolations: violationStats.maxViolations,
+			},
+			"Temporarily restricting member",
 		);
 		await ctx.reply(
 			language === LanguageEnum.English
@@ -106,10 +113,10 @@ export function getWarningMessage(language: LanguageEnum): string {
 function geViolationWarningMessage(language: LanguageEnum, nWarnings: number, warningsLeft: number): string {
 	return match(language)
 		.with(LanguageEnum.English, () =>
-			warningsLeft === 1 ? `Это последнее предупреждение` : `Это ${nWarnings}-e предупреждение.`,
+			warningsLeft === 0 ? `Это последнее предупреждение` : `Это ${nWarnings}-e предупреждение.`,
 		)
 		.with(LanguageEnum.Russian, () =>
-			warningsLeft === 1 ? `This is your last warning.` : `This is your ${ordinalEn(nWarnings)} warning.`,
+			warningsLeft === 0 ? `This is your last warning.` : `This is your ${ordinalEn(nWarnings)} warning.`,
 		)
 		.exhaustive();
 }

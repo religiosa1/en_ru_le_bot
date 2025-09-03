@@ -12,9 +12,9 @@ export const cooldownCommands = new CommandGroup().addAdminCommand(
 		const { cooldownService } = ctx.container;
 		const durationStr = ctx.match?.toString();
 		if (!durationStr) {
+			const val = await cooldownService.reset();
 			logger.info("cooldown reset to default values");
-			cooldownService.setCooldownValue(cooldownService.defaultCooldown);
-			await ctx.reply(`Setting cooldown to the default value of ${formatDuration(cooldownService.defaultCooldown)}`);
+			await ctx.reply(`Setting cooldown to the default value of ${formatDuration(val)}`);
 			return;
 		}
 
@@ -27,8 +27,8 @@ export const cooldownCommands = new CommandGroup().addAdminCommand(
 			await ctx.reply(`Cooldown must be in range between 0 and ${formatDuration(cooldownService.maxCooldown)}`);
 			return;
 		}
+		await cooldownService.setCooldownValue(cooldown);
 		logger.info({ cooldown }, `cooldown modified to be ${formatDuration(cooldown)}`);
-		cooldownService.setCooldownValue(cooldown);
 		await ctx.reply(`Cooldown between warnings is now ${formatDuration(cooldown)}`);
 	},
 );

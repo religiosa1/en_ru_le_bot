@@ -15,6 +15,6 @@ export async function cooldownMiddleware(ctx: BotContext, next?: NextFunction) {
 		);
 		return;
 	}
-	cooldownService.activateCooldown();
+	await cooldownService.activateCooldown();
 	await next?.();
 }

@@ -3,7 +3,7 @@ import { type AwilixContainer, asClass, asFunction, asValue, createContainer, Li
 import type { Api } from "grammy";
 import { AlarmService } from "./slices/Alarm/service.ts";
 import { ChatAdminRepo } from "./slices/ChatAdmins/service.ts";
-import { CooldownService } from "./slices/Cooldown/service.ts";
+import { type CooldownService, cooldownServiceFactory } from "./slices/Cooldown/factory.ts";
 import { LangDayService } from "./slices/LangDay/service.ts";
 import { type UserViolationService, userViolationServiceFactory } from "./slices/UserViolation/factory.ts";
 
@@ -55,7 +55,7 @@ export async function configureDefaultContainer(api: Api, chatId: number): Promi
 		userViolationService: asFunction(userViolationServiceFactory, {
 			lifetime: Lifetime.SCOPED,
 		}),
-		cooldownService: asClass(CooldownService, {
+		cooldownService: asFunction(cooldownServiceFactory, {
 			lifetime: Lifetime.SCOPED,
 		}),
 		alarmService: asClass(AlarmService, {

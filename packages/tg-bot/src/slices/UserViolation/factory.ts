@@ -1,11 +1,12 @@
-import type { GlideClient } from "@valkey/valkey-glide";
+import type { DIContainerInternal } from "../../container.ts";
 import { UserViolationService } from "./service.ts";
 import { ViolationCounterRepositoryValkey } from "./ViolationCounterRepositoryValkey.ts";
 import { ViolationSettingsRepositoryValkey } from "./ViolationSettingsRepositoryValkey.ts";
 
-export { UserViolationService };
+export type { UserViolationService };
 
-export function userViolationServiceFactory({ valkeyClient }: { valkeyClient: GlideClient }): UserViolationService {
+type UserViolationServiceFactoryParams = Pick<DIContainerInternal, "valkeyClient">;
+export function userViolationServiceFactory({ valkeyClient }: UserViolationServiceFactoryParams): UserViolationService {
 	const violationSettingsRepository = new ViolationSettingsRepositoryValkey({ valkeyClient });
 	const violationCounterRepository = new ViolationCounterRepositoryValkey({ valkeyClient });
 	const service = new UserViolationService({ violationSettingsRepository, violationCounterRepository });

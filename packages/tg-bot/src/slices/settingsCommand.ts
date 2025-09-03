@@ -15,7 +15,7 @@ export const settingsCommands = new CommandGroup().addAdminCommand(
     mute duration: ${formatDuration(await userViolationService.getMuteDuration())}
     warnings number: ${await userViolationService.getMaxViolationNumber()}
     warnings expiry: ${formatDuration(await userViolationService.getWarningsExpiry())}
-    cooldown: ${formatDuration(cooldownService.getCooldownValue())}
+    cooldown: ${formatDuration(await cooldownService.getCooldownValue())}
     `;
 		const cooldownUntil = cooldownService.getCooldownEndTs();
 		if (cooldownUntil) {

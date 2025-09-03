@@ -167,7 +167,7 @@ simultaneously, we shouldn't give them a warning.
 - **Only the target chat is checked**, i.e. if someone adds the bot to other 
   chats it won't actually do anything there, DMs aren't verified either
 - **Non-letter characters are removed for a check**
-- **Minimum Length**: Number of letter characters in a message be at least 7 
+- **Minimum Length**: Number of letter characters in a message be at least 5
   characters to trigger language detection 
 - **Admin Immunity**: Chat administrators are exempt from language checks 
   (this includes admin-bots as well)
@@ -205,6 +205,7 @@ The bot uses a hybrid storage approach with different data stored in memory vs V
 - **Chat Admin Cache** (`ChatAdminRepo`): Admin user IDs with 3-hour TTL, refreshed automatically when expired
 - **Language Detection Models**: Loaded once at startup for performance
 - **Forced language and disabled langday setting**
+- Current active cooldown value
 
 Data in memory doesn't survive bot re-deployments or start-stop cycles of 
 course, it is ephemeral.
@@ -224,7 +225,7 @@ course, it is ephemeral.
   - Max violations before mute: `enrule:violation_settings:max_violations` (default: 3)
   - Mute duration: `enrule:violation_settings:mute_duration` (default: 15 minutes)
   - Warnings expiry: `enrule:violation_settings:warnings_expiry` (default: 3 hours)
-
+  - Cooldown duration: `enrule:cooldown:duration` (default: 2 minutes)
 **Key Prefix**: All Valkey keys use `enrule:` prefix for namespace isolation.
 
 **Client**: Uses Valkey Glide client with configurable host/port via environment

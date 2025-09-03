@@ -7,7 +7,7 @@ import { Time } from "../../enums/Time.ts";
 import type { BotContextWithMsgLanguage } from "../../models/BotContextWithMsgLanguage.ts";
 import { stripNonLetterOrWhitespaceChars } from "./utils.ts";
 
-const MIN_MSG_LENGTH = 7;
+const MIN_MSG_LENGTH = 5;
 
 /**
  * As telegram can sent a lot of messages that we missed in updates, we don't want to be triggered on old messages.
