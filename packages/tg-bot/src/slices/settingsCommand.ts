@@ -9,7 +9,7 @@ export const settingsCommands = new CommandGroup().addAdminCommand(
 	async (ctx) => {
 		const { langDayService, userViolationService, cooldownService } = ctx.container;
 		let msg = d`
-    language checks: ${onOff(!langDayService.isLangDayDisabled)}
+    language checks: ${onOff(!langDayService.isLangDayDisabled())}
     mute capacity: ${onOff(await userViolationService.getMuteEnabled())}
     forced language: ${langDayService.getForcedLanguage() ?? "none"}
     mute duration: ${formatDuration(await userViolationService.getMuteDuration())}
@@ -21,7 +21,7 @@ export const settingsCommands = new CommandGroup().addAdminCommand(
 		if (cooldownUntil) {
 			const cooldownFor = Date.now() - cooldownUntil;
 			if (cooldownFor > 3 * Time.Seconds) {
-				msg += `current cooldown for: ${formatDuration(cooldownFor, { smallestUnit: "s" })}`;
+				msg += `\ncurrent cooldown for: ${formatDuration(cooldownFor, { smallestUnit: "s" })}`;
 			}
 		}
 

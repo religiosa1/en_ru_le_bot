@@ -166,8 +166,9 @@ simultaneously, we shouldn't give them a warning.
 
 - **Only the target chat is checked**, i.e. if someone adds the bot to other 
   chats it won't actually do anything there, DMs aren't verified either
-- **Minimum Length**: Messages must be at least 15 characters to trigger 
-  language detection
+- **Non-letter characters are removed for a check**
+- **Minimum Length**: Number of letter characters in a message be at least 7 
+  characters to trigger language detection 
 - **Admin Immunity**: Chat administrators are exempt from language checks 
   (this includes admin-bots as well)
 - **Age Filter**: Messages older than 5 minutes are ignored (handles missed 

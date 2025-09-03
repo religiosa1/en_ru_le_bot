@@ -21,9 +21,10 @@ export class BotContext extends Context {
 		super(update, api, me);
 
 		this.logger = baseLogger.child({
-			messageId: this.message?.message_id,
+			messageId: this.msgId,
 			userName: this.message?.from.username,
 			userId: this.message?.from.id,
+			chatId: this.chatId,
 		});
 	}
 }

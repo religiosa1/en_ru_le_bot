@@ -6,9 +6,7 @@ import type { ViolationSettingsRepository } from "./models.ts";
 
 const SETTINGS_KEY_PREFIX = COMMON_KEY_PREFIX + "violation_settings:";
 
-// TODO: This actually needs to be true,  but for the sake of testing,
-// let's approach it carefully and require an explicit opt-in for now.
-export const DEFAULT_MUTE_ENABLED = false;
+export const DEFAULT_MUTE_ENABLED = true;
 const MUTE_ENABLED_KEY = SETTINGS_KEY_PREFIX + "mute_enabled";
 
 export const DEFAULT_MAX_VIOLATION = 3;

@@ -5,8 +5,9 @@ import type { BotContext } from "../../BotContext.ts";
 import { LanguageEnum } from "../../enums/Language.ts";
 import { Time } from "../../enums/Time.ts";
 import type { BotContextWithMsgLanguage } from "../../models/BotContextWithMsgLanguage.ts";
+import { stripNonLetterOrWhitespaceChars } from "./utils.ts";
 
-const MIN_MSG_LENGTH = 15;
+const MIN_MSG_LENGTH = 7;
 
 /**
  * As telegram can sent a lot of messages that we missed in updates, we don't want to be triggered on old messages.
@@ -22,8 +23,6 @@ export async function checkMessageLanguage(ctx: BotContext, next?: NextFunction)
 	const { logger } = ctx;
 	logger.debug(
 		{
-			chatId: ctx.message?.chat.id,
-			from: ctx.message?.from?.username,
 			text: ctx.message?.text,
 		},
 		"Message received",
@@ -40,10 +39,21 @@ export async function checkMessageLanguage(ctx: BotContext, next?: NextFunction)
 		logger.info({ date: ctx.message.date }, "Message is two old, we don't check old messages");
 		return;
 	}
-	if (!ctx.message?.text || ctx.message.text.length < MIN_MSG_LENGTH) {
-		logger.debug({ msgLength: ctx.message?.text?.length }, "The message is too short for a check, ignoring");
+
+	if (!ctx.message?.text) {
+		logger.debug("No text message to check");
 		return;
 	}
+
+	const textWithoutDigitsOrPunctuation = stripNonLetterOrWhitespaceChars(ctx.message.text);
+	if (textWithoutDigitsOrPunctuation.length < MIN_MSG_LENGTH) {
+		logger.debug(
+			{ msgLength: textWithoutDigitsOrPunctuation?.length },
+			"The message is too short for a check, ignoring",
+		);
+		return;
+	}
+
 	const admins = await chatAdminRepo.getAdminsIds();
 	if (admins.includes(ctx.message.from.id)) {
 		logger.debug("User is an admin, aborting");
@@ -56,7 +66,7 @@ export async function checkMessageLanguage(ctx: BotContext, next?: NextFunction)
 		return;
 	}
 
-	const msgLanguages = await langDetection.isRussianOrEnglish(ctx.message.text);
+	const msgLanguages = await langDetection.isRussianOrEnglish(textWithoutDigitsOrPunctuation);
 	logger.debug({ msgLanguages }, "Language detection result");
 
 	const msgLang = determineMainLanguage(msgLanguages);
