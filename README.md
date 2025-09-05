@@ -103,7 +103,30 @@ with a unit suffix. For example:
   Our goal isn't to ban everyone or spam with warnings and threats, but to 
   stimulate the language exchange.
 
-  Without an argument displays the current cooldown value, with a value sets it. 
+  Without an argument displays the current cooldown value, with a value sets it.
+
+- /captcha Toggle captcha check for newcomers on/off
+
+  When enabled, new members must solve an arithmetic question to prove they're 
+  not bots. Users who fail to answer within the time limit or fail 7 attempts 
+  are banned.
+
+- /captcha_time [duration] - Set or view time in which members must pass captcha
+
+  Without arguments displays the current captcha verification time limit. With 
+  duration argument sets the time limit for new members to solve the captcha 
+  question (default: 20 minutes).
+
+- /trust @username - Remove captcha check for a specific user
+
+  Immediately removes captcha verification requirement for the specified user, 
+  marking them as trusted. Useful for legitimate users who may have trouble 
+  with the captcha system.
+
+- /captcha_bots Toggle bots allowed on/off
+
+  When disabled, all bots attempting to join the chat are automatically banned. 
+  When enabled, bots are allowed to join without captcha verification. 
   
 
 ### Hidden admin commands
@@ -197,6 +220,46 @@ Given a cooldown time common for all violations, and 3 warnings, bot shouldn't
 really mute anyone all that often, it's more of a scare-tactic to show it has
 teeth (otherwise users just ignore the bot).
 
+## Captcha System
+
+The bot includes an anti-spam captcha system to prevent bot accounts and 
+spam. When enabled, new members must solve a simple arithmetic question to 
+prove they're human.
+
+### How It Works
+
+1. **New Member Detection**: When someone joins the chat, the system detects 
+   the new member through Telegram's chat member events
+2. **Bot Handling**: If the new member is an official bot:
+   - If bots are disabled (`/captcha_bots` off), the bot is immediately banned
+   - If bots are enabled, they join without verification
+3. **Human Verification**: For human users, the system:
+   - Generates a simple arithmetic question (e.g., "What is 9 + 7?")
+   - Posts the question mentioning the user in both English and Russian
+   - Sets a timer for verification (default: 20 minutes)
+
+### Verification Process
+
+- **Message Deletion**: All messages from unverified users are automatically deleted
+- **Answer Checking**: User messages are checked against the expected answer
+- **Attempt Tracking**: Failed attempts are counted (max 7 attempts)
+- **Progressive Warnings**: Every 3rd failed attempt repeats the same question,
+  in case user missed the original one.
+- **Timeout/Ban**: Users who exceed max attempts or don't respond in time are 
+  banned
+- **Success**: Correct answers immediately remove verification requirement
+
+### Technical Implementation
+
+The captcha system uses:
+- **Automatic cleanup**: Old verification data expires after 1 day
+- **Message tracking**: Captcha messages are tracked and can be cleaned up
+- **Username mapping**: Bidirectional username↔userId mapping for admin commands
+- **Background jobs**: Periodic cleanup of expired verifications
+- **Error handling**: Graceful handling of message deletion failures
+
+The system is disabled by default and must be explicitly enabled by admins.
+
 ## Storage:
 
 The bot uses a hybrid storage approach with different data stored in memory vs Valkey:
@@ -226,6 +289,22 @@ course, it is ephemeral.
   - Mute duration: `enrule:violation_settings:mute_duration` (default: 15 minutes)
   - Warnings expiry: `enrule:violation_settings:warnings_expiry` (default: 3 hours)
   - Cooldown duration: `enrule:cooldown:duration` (default: 2 minutes)
+
+- **Captcha System**: Anti-spam verification for new members
+  - Settings:
+    - Captcha enabled/disabled: `enrule:captcha_settings:enabled` (default: false)
+    - Bots allowed: `enrule:captcha_settings:bots_allowed` (default: false)
+    - Max verification time: `enrule:captcha_settings:max_verification_age` (default: 20 minutes)
+  - Per-user verification data (expires after 1 day):
+    - Question: `enrule:captcha:question:{userId}`
+    - Expected answer: `enrule:captcha:answer:{userId}`
+    - Attempts counter: `enrule:captcha:attempts_counter:{userId}`
+    - Message IDs (set): `enrule:captcha:msg_ids:{userId}`
+    - First asked timestamp: `enrule:captcha:first_asked_at:{userId}`
+    - Username bidirectional mapping:
+      - `enrule:captcha:userid:{username}` → userId
+      - `enrule:captcha:username:{userId}` → username
+
 **Key Prefix**: All Valkey keys use `enrule:` prefix for namespace isolation.
 
 **Client**: Uses Valkey Glide client with configurable host/port via environment

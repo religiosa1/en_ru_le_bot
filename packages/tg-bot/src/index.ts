@@ -7,7 +7,7 @@ import { AdminOnlyCommand } from "./models/Command.ts";
 import { getConfig } from "./models/config.ts";
 import * as scopes from "./scopes.ts";
 import { allCommands } from "./slices/allCommands.ts";
-// import { captchaMiddleware, onMemberJoinHandler } from "./slices/Captcha/middleware.ts";
+import { captchaMiddleware, onChatMemberHandler } from "./slices/Captcha/middleware.ts";
 import { adminOnly } from "./slices/ChatAdmins/middleware.ts";
 import { cooldownMiddleware } from "./slices/Cooldown/middleware.ts";
 import { checkMessageLanguage } from "./slices/LangDay/middleware.ts";
@@ -43,22 +43,9 @@ if (chatId) {
 	bot.api.setMyCommands(allCommands.getAdminsCommandGroup().toBotCommands(), { scope: scopes.admins });
 }
 
-// TODO Commented out, until we debug the event update
-// bot.on("message:new_chat_members", onMemberJoinHandler);
-// bot.on("chat_member", onChatMemberHandler);
+bot.on("chat_member", onChatMemberHandler);
 
-bot.on("chat_member", (ctx) => {
-	logger.info("!!!!!!!!!chat member!!!!!!!!!");
-	const member = ctx.update.chat_member?.new_chat_member;
-	const oldMember = ctx.update.chat_member?.old_chat_member;
-	if (!member || member.status !== "member" || (oldMember != null && oldMember.status !== "left")) {
-		return;
-	}
-	logger.info({ ctx }, "!!!!!!!!!chat member JOINED !!!!!!!!!");
-});
-
-// TODO captcha check, once on:new_chat_members is working
-bot.on("msg:text", checkMessageLanguage, cooldownMiddleware, userViolationMiddleware);
+bot.on("msg:text", captchaMiddleware, checkMessageLanguage, cooldownMiddleware, userViolationMiddleware);
 
 bot.catch((err) => {
 	logger.error({ err }, `"An error has occurred: ${err}`);

@@ -3,6 +3,7 @@ import type { NextFunction } from "grammy";
 import type { User } from "grammy/types";
 import { dedent as d } from "ts-dedent";
 import type { BotContext } from "../../BotContext.ts";
+import { formatDuration } from "../../utils/duration.ts";
 import { makeQuestionAnswer } from "./makeQuestionAnswer.ts";
 
 const MAX_ATTEMPTS = 7;
@@ -21,8 +22,12 @@ export async function captchaMiddleware(ctx: BotContext, next: NextFunction): Pr
 	) {
 		return await next();
 	}
-
 	const text = ctx.message.text ?? "";
+
+	await ctx.deleteMessage().catch((error) => {
+		logger.error({ error }, "Failed to remove non-verified user's message");
+	});
+
 	const verificationResult = await captchaService.verifyUserAnswer(userId, text);
 	if (verificationResult.correct) {
 		logger.info("Captcha verification passed");
@@ -31,9 +36,6 @@ export async function captchaMiddleware(ctx: BotContext, next: NextFunction): Pr
 	}
 
 	logger.info({ text, expectedAnswer: verificationResult.expectedAnswer }, "Captcha verification failed");
-	await ctx.deleteMessage().catch((error) => {
-		logger.error({ error }, "Failed to remove non-verified user's message");
-	});
 	if (verificationResult.attemptsMade >= MAX_ATTEMPTS) {
 		logger.info("Too many failed verification attempts, banning them for good.");
 		await ctx.banChatMember(userId);
@@ -41,7 +43,10 @@ export async function captchaMiddleware(ctx: BotContext, next: NextFunction): Pr
 	} else if (verificationResult.attemptsMade % 3 === 0) {
 		const question = await captchaService.getVerificationQuestion(userId);
 		assert(question);
-		const msg = await ctx.reply(getCaptchaMessage(question, ctx.message.from), { parse_mode: "MarkdownV2" });
+		const allowedTime = await captchaService.getMaxVerificationAge();
+		const msg = await ctx.reply(getCaptchaMessage(question, ctx.message.from, allowedTime), {
+			parse_mode: "MarkdownV2",
+		});
 		await captchaService.addUserVerificationMsg(userId, msg.message_id);
 	}
 }
@@ -76,7 +81,8 @@ export async function onChatMemberHandler(ctx: BotContext): Promise<void> {
 		}
 	} else {
 		const [question, answer] = makeQuestionAnswer();
-		const msg = await ctx.reply(getCaptchaMessage(question, user), { parse_mode: "MarkdownV2" });
+		const allowedTime = await captchaService.getMaxVerificationAge();
+		const msg = await ctx.reply(getCaptchaMessage(question, user, allowedTime), { parse_mode: "MarkdownV2" });
 		await captchaService.addUserVerificationCheck({
 			userId: user.id,
 			userName: user.username,
@@ -97,15 +103,18 @@ function getNewUserFromChatMemberEvent(ctx: BotContext): User | undefined {
 	return member.user;
 }
 
-function getCaptchaMessage(question: string, member: User): string {
+function getCaptchaMessage(question: string, member: User, timeToSolve: number): string {
 	const mention = `[@${escapeMdValue(member.username || member.first_name)}](tg://user?id=${member.id})`;
 
+	const dur = formatDuration(timeToSolve);
 	return d`
   ${escapeMdValue(question)}
 
-  ${mention}, please, send the solution to the arithmetic operation provided. Thank you!
+  ${mention}, please, send the solution to the arithmetic operation provided.
+	If you won't do it in ${dur}, we'll consider you a bot. Thank you!
 
-  ${mention}, пожалуйста, напиши сумму чисел в примере. Спасибо!`;
+  ${mention}, пожалуйста, напиши сумму чисел в примере.
+	Если ты не сделаешь этого в течение ${dur}, мы сочтём тебя ботом. Спасибо!`;
 }
 
 function escapeMdValue(input: string): string {

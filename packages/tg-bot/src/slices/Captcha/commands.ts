@@ -48,4 +48,10 @@ export const captchaCommands = new CommandGroup()
 			logger.info({ maxVerificationAge: durationValue }, "Captcha maxVerificationAge changed");
 			await ctx.reply(`Captcha verification time is now ${formatDuration(durationValue)}`);
 		},
-	);
+	)
+	.addAdminCommand("captcha_bots", "toggle bots allowed on/off", async (ctx) => {
+		const { logger } = ctx;
+		const { captchaService } = ctx.container;
+		const value = await captchaService.toggleBotsAllowed();
+		logger.info({ value }, "Bots allowed toggled ");
+	});

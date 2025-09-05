@@ -7,16 +7,19 @@ export const settingsCommands = new CommandGroup().addAdminCommand(
 	"settings",
 	"display current bot settings",
 	async (ctx) => {
-		const { langDayService, userViolationService, cooldownService } = ctx.container;
+		const { langDayService, userViolationService, cooldownService, captchaService } = ctx.container;
 		let msg = d`
-    language checks: ${onOff(!langDayService.isLangDayDisabled())}
-    mute capacity: ${onOff(await userViolationService.getMuteEnabled())}
-    forced language: ${langDayService.getForcedLanguage() ?? "none"}
-    mute duration: ${formatDuration(await userViolationService.getMuteDuration())}
-    warnings number: ${await userViolationService.getMaxViolationNumber()}
-    warnings expiry: ${formatDuration(await userViolationService.getWarningsExpiry())}
-    cooldown: ${formatDuration(await cooldownService.getCooldownValue())}
-    `;
+		language checks: ${onOff(!langDayService.isLangDayDisabled())}
+		mute capacity: ${onOff(await userViolationService.getMuteEnabled())}
+		forced language: ${langDayService.getForcedLanguage() ?? "none"}
+		mute duration: ${formatDuration(await userViolationService.getMuteDuration())}
+		warnings number: ${await userViolationService.getMaxViolationNumber()}
+		warnings expiry: ${formatDuration(await userViolationService.getWarningsExpiry())}
+		cooldown: ${formatDuration(await cooldownService.getCooldownValue())}
+		captcha: ${onOff(await captchaService.getEnabled())}
+		captcha verification time: ${formatDuration(await captchaService.getMaxVerificationAge())}
+		captcha bots allowed: ${await captchaService.getBotsAllowed()}
+		`;
 		const cooldownUntil = cooldownService.getCooldownEndTs();
 		if (cooldownUntil) {
 			const cooldownFor = Date.now() - cooldownUntil;
