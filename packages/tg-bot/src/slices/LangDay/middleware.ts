@@ -35,9 +35,15 @@ export async function checkMessageLanguage(ctx: BotContext, next?: NextFunction)
 		);
 		return;
 	}
-	if (ctx.message.date && Date.now() - ctx.message.date * Time.Seconds > MESSAGE_AGE_THRESHOLD) {
-		logger.info({ date: ctx.message.date }, "Message is two old, we don't check old messages");
-		return;
+	if (ctx.message.date) {
+		const messageDateMs = ctx.message.date * Time.Seconds;
+		const messageAge = Date.now() - messageDateMs;
+		if (messageAge > MESSAGE_AGE_THRESHOLD) {
+			logger.info({ date: ctx.message.date }, "Message is two old, we don't check old messages");
+			return;
+		}
+	} else {
+		logger.warn({ ctx }, "No message date in the context");
 	}
 
 	if (!ctx.message?.text) {
@@ -65,6 +71,10 @@ export async function checkMessageLanguage(ctx: BotContext, next?: NextFunction)
 		logger.debug({ language }, "No specific language is set, aborting");
 		return;
 	}
+
+	// No action for allLanguages at the moment, until we accumulate enough data on accuracy in the logs.
+	const detectedGeneralLanguage = await langDetection.detectAllLanguagesFast(textWithoutDigitsOrPunctuation);
+	logger.debug({ detectedGeneralLanguage, textWithoutDigitsOrPunctuation }, "General language determined");
 
 	const msgLanguages = await langDetection.isRussianOrEnglish(textWithoutDigitsOrPunctuation);
 	logger.debug({ msgLanguages }, "Language detection result");

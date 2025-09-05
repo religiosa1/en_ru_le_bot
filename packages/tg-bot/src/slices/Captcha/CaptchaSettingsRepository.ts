@@ -4,7 +4,8 @@ import type { DIContainerInternal } from "../../container.ts";
 import { Time } from "../../enums/Time.ts";
 import { toBool, toNumber } from "../../utils/glideParsers.ts";
 
-const DEFAULT_ENABLED = true;
+// must be explicitly opt-in
+const DEFAULT_ENABLED = false;
 const DEFAULT_BOTS_ALLOWED = false;
 const DEFAULT_MAX_VERIFICATION_AGE = 20 * Time.Minutes;
 
@@ -44,5 +45,9 @@ export class CaptchaSettingsRepository {
 	async getMaxVerificationAge(): Promise<number> {
 		const value = await this.#client.get(MAX_VERIFICATION_AGE_KEY);
 		return toNumber(value) ?? DEFAULT_MAX_VERIFICATION_AGE;
+	}
+
+	async setMaxVerificationAge(value: number): Promise<void> {
+		await this.#client.set(MAX_VERIFICATION_AGE_KEY, value.toString());
 	}
 }

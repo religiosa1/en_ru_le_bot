@@ -36,9 +36,9 @@ export class CaptchaRepository {
 		};
 		transaction.set(userAskedQuestionKey(verification.userId), verification.question, { expiry });
 		transaction.set(userExpectedAnswerKey(verification.userId), verification.answer, { expiry });
-		transaction.set(userMsgIdsKey(verification.userId), verification.msgId.toString(), { expiry });
-		transaction.sadd(questionFirstAskedAtKey(verification.userId), [Date.now().toString()]);
-		transaction.pexpire(questionFirstAskedAtKey(verification.userId), VALUES_EXPIRATION);
+		transaction.set(questionFirstAskedAtKey(verification.userId), Date.now().toString(), { expiry });
+		transaction.sadd(userMsgIdsKey(verification.userId), [verification.msgId.toString()]);
+		transaction.pexpire(userMsgIdsKey(verification.userId), VALUES_EXPIRATION);
 		if (verification.userName) {
 			transaction.set(usernameToUserIdKey(verification.userName), verification.userId.toString(), { expiry });
 			transaction.set(userIdToUsernameKey(verification.userId), verification.userName);
@@ -47,7 +47,7 @@ export class CaptchaRepository {
 	}
 
 	async addUserVerificationMsg(userId: number, msgId: number): Promise<void> {
-		const key = questionFirstAskedAtKey(userId);
+		const key = userMsgIdsKey(userId);
 		await this.#client.sadd(key, [msgId.toString()]);
 		await this.#client.pexpire(key, VALUES_EXPIRATION, { expireOption: ExpireOptions.HasNoExpiry });
 	}
@@ -80,6 +80,7 @@ export class CaptchaRepository {
 			questionFirstAskedAtKey(user.id),
 			userAttemptsMadeKey(user.id),
 			userIdToUsernameKey(user.id),
+			userMsgIdsKey(user.id),
 		];
 		if (user.name) {
 			keysToDelete.push(usernameToUserIdKey(user.name));

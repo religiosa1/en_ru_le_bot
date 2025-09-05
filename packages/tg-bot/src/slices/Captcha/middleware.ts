@@ -46,7 +46,7 @@ export async function captchaMiddleware(ctx: BotContext, next: NextFunction): Pr
 	}
 }
 
-export async function onMemberJoinHandler(ctx: BotContext): Promise<void> {
+export async function onChatMemberHandler(ctx: BotContext): Promise<void> {
 	const { logger } = ctx;
 	const { captchaService, chatId } = ctx.container;
 
@@ -57,32 +57,44 @@ export async function onMemberJoinHandler(ctx: BotContext): Promise<void> {
 		);
 	}
 
-	const members = ctx.message?.new_chat_members;
-	logger.info({ members }, "New members joined");
-
-	if (!members?.length || !(await captchaService.getEnabled())) {
+	const user = getNewUserFromChatMemberEvent(ctx);
+	if (!user) {
 		return;
 	}
 
-	const areBotsAllowed = await captchaService.getBotsAllowed();
-	for (const member of members) {
-		if (member.is_bot) {
-			logger.info({ member }, "New joined user is a bot");
-			if (!areBotsAllowed) {
-				await ctx.banChatMember(member.id);
-			}
-		} else {
-			const [question, answer] = makeQuestionAnswer();
-			const msg = await ctx.reply(getCaptchaMessage(question, member), { parse_mode: "MarkdownV2" });
-			await captchaService.addUserVerificationCheck({
-				userId: member.id,
-				userName: member.username,
-				question: question,
-				answer: answer,
-				msgId: msg.message_id,
-			});
-		}
+	logger.info({ user }, "New member joined");
+
+	if (!(await captchaService.getEnabled())) {
+		return;
 	}
+
+	if (user.is_bot) {
+		logger.info({ user }, "New joined user is a bot");
+		const areBotsAllowed = await captchaService.getBotsAllowed();
+		if (!areBotsAllowed) {
+			await ctx.banChatMember(user.id);
+		}
+	} else {
+		const [question, answer] = makeQuestionAnswer();
+		const msg = await ctx.reply(getCaptchaMessage(question, user), { parse_mode: "MarkdownV2" });
+		await captchaService.addUserVerificationCheck({
+			userId: user.id,
+			userName: user.username,
+			question: question,
+			answer: answer,
+			msgId: msg.message_id,
+		});
+	}
+}
+
+/** Analyzes chat_member event and tries to determine, if it's a new user joined */
+function getNewUserFromChatMemberEvent(ctx: BotContext): User | undefined {
+	const member = ctx.update.chat_member?.new_chat_member;
+	const oldMember = ctx.update.chat_member?.old_chat_member;
+	if (!member || member.status !== "member" || (oldMember != null && oldMember.status !== "left")) {
+		return;
+	}
+	return member.user;
 }
 
 function getCaptchaMessage(question: string, member: User): string {

@@ -45,8 +45,16 @@ if (chatId) {
 
 // TODO Commented out, until we debug the event update
 // bot.on("message:new_chat_members", onMemberJoinHandler);
-bot.on("message:new_chat_members", (ctx) => {
-	logger.info({ ctx }, "!!!!!!!!!New chat member!!!!!!!!!");
+// bot.on("chat_member", onChatMemberHandler);
+
+bot.on("chat_member", (ctx) => {
+	logger.info("!!!!!!!!!chat member!!!!!!!!!");
+	const member = ctx.update.chat_member?.new_chat_member;
+	const oldMember = ctx.update.chat_member?.old_chat_member;
+	if (!member || member.status !== "member" || (oldMember != null && oldMember.status !== "left")) {
+		return;
+	}
+	logger.info({ ctx }, "!!!!!!!!!chat member JOINED !!!!!!!!!");
 });
 
 // TODO captcha check, once on:new_chat_members is working

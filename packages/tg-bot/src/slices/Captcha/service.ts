@@ -1,12 +1,8 @@
 import type { Api } from "grammy";
 import type { DIContainerInternal } from "../../container.ts";
-import { Time } from "../../enums/Time.ts";
-import { logger as baseLogger } from "../../logger.ts";
 import type { CaptchaRepository } from "./CaptchaRepository.ts";
 import type { CaptchaSettingsRepository } from "./CaptchaSettingsRepository.ts";
 import type { MemberVerification } from "./models.ts";
-
-const BACKGROUND_BAN_INTERVAL = 60 * Time.Seconds;
 
 interface VerificationResult {
 	correct: boolean;
@@ -19,12 +15,11 @@ type CaptchaServiceParams = Pick<DIContainerInternal, "api" | "chatId"> & {
 	captchaSettingsRepository: CaptchaSettingsRepository;
 };
 
-export class CaptchaService implements Disposable {
+export class CaptchaService {
 	readonly #chatId: number;
 	readonly #api: Api;
 	readonly #repository: CaptchaRepository;
 	readonly #settings: CaptchaSettingsRepository;
-	readonly #interval = setInterval(() => this.#runBackgroundJob(), BACKGROUND_BAN_INTERVAL);
 
 	constructor({ chatId, api, captchaRepository, captchaSettingsRepository }: CaptchaServiceParams) {
 		this.#chatId = chatId;
@@ -33,9 +28,7 @@ export class CaptchaService implements Disposable {
 		this.#settings = captchaSettingsRepository;
 	}
 
-	[Symbol.dispose](): void {
-		clearInterval(this.#interval);
-	}
+	// settings
 
 	async getEnabled(): Promise<boolean> {
 		return await this.#settings.getEnabled();
@@ -56,6 +49,19 @@ export class CaptchaService implements Disposable {
 		await this.#settings.setBotsAllowed(newValue);
 		return newValue;
 	}
+
+	async getMaxVerificationAge(): Promise<number> {
+		return this.#settings.getMaxVerificationAge();
+	}
+
+	async setMaxVerificationAge(value: number): Promise<void> {
+		if (!Number.isInteger(value) || value <= 0) {
+			throw new TypeError("MaxVerificationAge must be a positive int (ms)");
+		}
+		await this.#settings.setMaxVerificationAge(value);
+	}
+
+	// actions
 
 	async addUserVerificationCheck(verification: MemberVerification): Promise<void> {
 		await this.#repository.addUserVerificationCheck(verification);
@@ -91,26 +97,7 @@ export class CaptchaService implements Disposable {
 		await this.#repository.removeUserVerificationCheck(userIdOrUsername);
 	}
 
-	async #runBackgroundJob() {
-		const logger = baseLogger.child({ jobId: Date.now() });
-		logger.debug("Background captcha job started");
-		try {
-			const maxVerificationAge = await this.#settings.getMaxVerificationAge();
-			const staleVerifications = await this.#repository.getVerificationsOlderThan(Date.now() - maxVerificationAge);
-			if (staleVerifications.length) {
-				logger.info({ staleVerifications }, "Stale verifications for users, proceeding with a ban");
-			}
-			for (const userId of staleVerifications) {
-				try {
-					await this.#api.banChatMember(this.#chatId, userId);
-					await this.removeUserVerificationCheck(userId);
-				} catch (error) {
-					logger.error({ userId, error }, "Error while processing stale verification");
-				}
-			}
-			logger.debug("Background captcha job ended");
-		} catch (error) {
-			logger.error({ error }, "Error in background captcha job");
-		}
+	async getVerificationsOlderThan(timestampMs: number): Promise<number[]> {
+		return await this.#repository.getVerificationsOlderThan(timestampMs);
 	}
 }

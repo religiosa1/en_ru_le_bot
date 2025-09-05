@@ -3,6 +3,7 @@
 import { before, beforeEach, describe, it, mock } from "node:test";
 import type { BotContext } from "../../../BotContext.ts";
 import { LanguageEnum } from "../../../enums/Language.ts";
+import { Time } from "../../../enums/Time.ts";
 import { logger } from "../../../logger.ts";
 import type { BotContextWithMsgLanguage } from "../../../models/BotContextWithMsgLanguage.ts";
 import type { ChatAdminRepo } from "../../ChatAdmins/service.ts";
@@ -107,7 +108,7 @@ describe("checkMessageLanguage", () => {
 	});
 
 	it("doesn't issue a warning on short texts", async (t) => {
-		await checkMessageLanguage(makeMockContext("Hello!"), nextFn);
+		await checkMessageLanguage(makeMockContext("Hi!"), nextFn);
 		t.assert.equal(nextFn.mock.callCount(), 0, "No next on short english text");
 
 		await checkMessageLanguage(makeMockContext(EN_TEXT), nextFn);
@@ -115,7 +116,7 @@ describe("checkMessageLanguage", () => {
 	});
 
 	it("doesn't check old messages", async (t) => {
-		await checkMessageLanguage(makeMockContext(EN_TEXT, { date: new Date("2020-01-02").getTime() }), nextFn);
+		await checkMessageLanguage(makeMockContext(EN_TEXT, { date: new Date("2020-01-02") }), nextFn);
 		t.assert.equal(nextFn.mock.callCount(), 0, "No next for old messages");
 		await checkMessageLanguage(makeMockContext(EN_TEXT), nextFn);
 		t.assert.equal(nextFn.mock.callCount(), 1, "next called for a fresh one");
@@ -124,7 +125,7 @@ describe("checkMessageLanguage", () => {
 
 interface MakeMockContextOpts {
 	chatId?: number;
-	date?: number;
+	date?: Date;
 	adminsIds?: number[];
 	forcedLanguage?: LanguageEnum;
 	langDayDisabled?: boolean;
@@ -135,7 +136,7 @@ function makeMockContext(
 	text: string,
 	{
 		chatId = +process.env.CHAT_ID!,
-		date = Date.now(),
+		date = new Date(),
 		adminsIds = [],
 		forcedLanguage,
 		langDayDisabled,
@@ -152,9 +153,10 @@ function makeMockContext(
 		container: {
 			chatAdminRepo: mockAdminRepo,
 			langDayService,
+			chatId: +process.env.CHAT_ID!,
 		},
 		message: {
-			date,
+			date: date.getTime() / Time.Seconds,
 			text,
 			chat: {
 				id: chatId,
