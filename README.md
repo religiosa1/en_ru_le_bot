@@ -158,13 +158,12 @@ a custom Rust/NAPI wrapper:
   - Used to determine if users are writing in the wrong language on 
     language-specific days
 
-2. **Fast Multi-Language Detection** (`detectAllLanguagesFast`) 
-  - Lower accuracy but supports all languages available in lingua-rs
-  - Excludes languages with high false-positive rates on short messages 
-    (Tagalog, Sotho, Latin)
-  - Uses low-accuracy mode for faster processing
-  - Currently not used in main bot logic but available for extensions
-  - The idea behind it -- to warn users writing outside of 2 target languages
+2. **Other Language Detection** (`detectOtherLanguage`)
+  - Regex-based quick check for non-Russian/English text
+  - Detects messages containing characters outside Cyrillic and Latin scripts
+  - Used as a fast pre-filter before running Russian/English detection
+  - Filters out kaomoji and other decorative characters to avoid false positives
+  - When triggered, message language is marked as "other" without further processing
 
 ### Multi-Language Message Handling
 

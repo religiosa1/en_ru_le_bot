@@ -5,6 +5,7 @@ import type { BotContext } from "../../BotContext.ts";
 import { LanguageEnum } from "../../enums/Language.ts";
 import { Time } from "../../enums/Time.ts";
 import type { BotContextWithMsgLanguage } from "../../models/BotContextWithMsgLanguage.ts";
+import { detectOtherLanguage } from "./detectOtherLanguage.ts";
 import { stripNonLetterOrWhitespaceChars } from "./utils.ts";
 
 const MIN_MSG_LENGTH = 5;
@@ -71,28 +72,29 @@ export async function checkMessageLanguage(ctx: BotContext, next?: NextFunction)
 		logger.debug({ language }, "No specific language is set, aborting");
 		return;
 	}
-
-	// No action for allLanguages at the moment, until we accumulate enough data on accuracy in the logs.
-	const detectedGeneralLanguage = await langDetection.detectAllLanguagesFast(textWithoutDigitsOrPunctuation);
-	logger.debug({ detectedGeneralLanguage, textWithoutDigitsOrPunctuation }, "General language determined");
-
-	const msgLanguages = await langDetection.isRussianOrEnglish(textWithoutDigitsOrPunctuation);
-	logger.debug({ msgLanguages }, "Language detection result");
-
-	const msgLang = determineMainLanguage(msgLanguages);
-
-	if (msgLang == null) {
-		logger.info({ msgLanguages }, "Seems to be a mixed language message, not issuing a warning");
-		return;
-	} else if (msgLang === language) {
-		logger.debug({ language }, "Correct language, nothing to do here");
-		return;
-	} else {
-		logger.info({ msgLang, language }, "Language mismatch, proceeding with a warning or a general notice");
-	}
-
 	(ctx as BotContextWithMsgLanguage).language = language;
-	(ctx as BotContextWithMsgLanguage).msgLanguage = msgLang;
+
+	if (detectOtherLanguage(textWithoutDigitsOrPunctuation)) {
+		logger.info("Regexp check for other languages triggered");
+		(ctx as BotContextWithMsgLanguage).msgLanguage = "other";
+	} else {
+		const msgLanguages = await langDetection.isRussianOrEnglish(textWithoutDigitsOrPunctuation);
+		logger.debug({ msgLanguages }, "Language detection result");
+
+		const msgLang = determineMainLanguage(msgLanguages);
+
+		if (msgLang == null) {
+			logger.info({ msgLanguages }, "Seems to be a mixed language message, not issuing a warning");
+			return;
+		} else if (msgLang === language) {
+			logger.debug({ language }, "Correct language, nothing to do here");
+			return;
+		} else {
+			logger.info({ msgLang, language }, "Language mismatch, proceeding with a warning or a general notice");
+		}
+
+		(ctx as BotContextWithMsgLanguage).msgLanguage = msgLang;
+	}
 
 	await next?.();
 }

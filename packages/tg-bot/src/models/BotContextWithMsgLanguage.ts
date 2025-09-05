@@ -3,7 +3,7 @@ import type { LanguageEnum } from "../enums/Language.ts";
 
 export interface BotContextWithMsgLanguage extends BotContext {
 	language: LanguageEnum;
-	msgLanguage: LanguageEnum;
+	msgLanguage: LanguageEnum | "other";
 }
 
 export function isBotContextWithMsgLanguage(ctx: BotContext): ctx is BotContextWithMsgLanguage {
