@@ -13,9 +13,13 @@ export interface ViolationCounterRepository {
 	/**
 	 * Remove violation for a user.
 	 * @param userIdOrHandle either a number userid, or username (as in mention, but without the leading @);
+	 * @returns id of unbanned user in case of success, undefined, if now record for the user found
 	 */
-	removeViolation(userIdOrHandle: string | number): Promise<boolean>;
-	removeAllViolations(): Promise<number>;
+	removeViolation(userIdOrHandle: string | number): Promise<number | undefined>;
+	/** Remove all existing violations.
+	 * @returns list of users that were unbanned
+	 */
+	removeAllViolations(): Promise<number[]>;
 }
 
 export interface ViolationSettingsRepository {

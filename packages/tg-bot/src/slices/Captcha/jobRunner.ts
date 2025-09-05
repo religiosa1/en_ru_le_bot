@@ -29,11 +29,13 @@ export class CaptchaJobRunner implements Disposable {
 		logger.trace("Background captcha job started");
 		try {
 			const maxVerificationAge = await this.#captchaService.getMaxVerificationAge();
-			const staleVerifications = await this.#captchaService.getVerificationsOlderThan(Date.now() - maxVerificationAge);
-			if (staleVerifications.length) {
-				logger.info({ staleVerifications }, "Stale verifications for users, proceeding with a ban");
+			const staleUserIds = await this.#captchaService.getUserIdsForVerificationsOlderThan(
+				Date.now() - maxVerificationAge,
+			);
+			if (staleUserIds.length) {
+				logger.info({ staleVerifications: staleUserIds }, "Stale verifications for users, proceeding with a ban");
 			}
-			for (const userId of staleVerifications) {
+			for (const userId of staleUserIds) {
 				try {
 					await this.#api.banChatMember(this.#chatId, userId);
 					await this.#captchaService.removeUserVerificationCheck(userId);

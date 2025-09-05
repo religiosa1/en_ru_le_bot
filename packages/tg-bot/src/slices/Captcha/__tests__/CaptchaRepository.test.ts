@@ -122,7 +122,7 @@ describe("CaptchaRepository", () => {
 		// A fresh one, shouldn't be included in the response.
 		await repo.addUserVerificationCheck({ ...mockVerification, userId: 3 });
 
-		const staleVerificationUserIds = await repo.getVerificationsOlderThan(Date.now());
+		const staleVerificationUserIds = await repo.getUserIdsForVerificationsOlderThan(Date.now());
 		t.assert.deepEqual(staleVerificationUserIds.toSorted(), [1, 2]);
 	});
 });

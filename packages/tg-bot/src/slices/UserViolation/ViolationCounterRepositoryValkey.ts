@@ -8,7 +8,8 @@ import type { ViolationCounterRepository } from "./models.ts";
 
 const VIOLATIONS_PREFIX = COMMON_KEY_PREFIX + "violations:";
 
-const userViolationKey = (userId: number) => `${VIOLATIONS_PREFIX}counter:${userId}`;
+const USER_VIOLATIONS_KEY_PREFIX = `${VIOLATIONS_PREFIX}counter:`;
+const userViolationKey = (userId: number) => `${USER_VIOLATIONS_KEY_PREFIX}${userId}`;
 /**
  * Storing username to userId map here.
  *
@@ -72,11 +73,11 @@ export class ViolationCounterRepositoryValkey implements ViolationCounterReposit
 		return value;
 	}
 
-	async removeViolation(userIdOrHandle: number | string): Promise<boolean> {
+	async removeViolation(userIdOrHandle: number | string): Promise<number | undefined> {
 		const { userId, username } = (await this.#searchUser(userIdOrHandle)) ?? {};
 		if (userId == null) {
 			logger.info({ username: userIdOrHandle }, `Unable to find user with the provided username.`);
-			return false;
+			return undefined;
 		}
 
 		const keysToDelete = [userViolationKey(userId), userIdToUsernameKey(userId)];
@@ -84,15 +85,15 @@ export class ViolationCounterRepositoryValkey implements ViolationCounterReposit
 			keysToDelete.push(usernameToUserIdKey(username));
 		}
 		const rowsAffected = await this.#client.del(keysToDelete);
-		return !!rowsAffected;
+		return rowsAffected ? userId : undefined;
 	}
 
-	async removeAllViolations(): Promise<number> {
-		const total = await this.#client.invokeScript(ViolationCounterRepositoryValkey.removeAllViolationsLuaScript, {
-			args: [VIOLATIONS_PREFIX + "*"],
+	async removeAllViolations(): Promise<number[]> {
+		const userIds = await this.#client.invokeScript(ViolationCounterRepositoryValkey.removeAllViolationsLuaScript, {
+			args: [VIOLATIONS_PREFIX + "*", USER_VIOLATIONS_KEY_PREFIX],
 		});
-		assert(typeof total === "number", "RemoveAll script result type must be a number");
-		return total;
+		assert(Array.isArray(userIds), "RemoveAll script result type must be an array");
+		return userIds as number[];
 	}
 
 	async #searchUser(
@@ -118,8 +119,9 @@ export class ViolationCounterRepositoryValkey implements ViolationCounterReposit
 	}
 
 	private static readonly removeAllViolationsLuaScript = new Script(d`
-		local total = 0
+		local userIds = {}
 		local pattern = ARGV[1]
+		local userIdPattern = ARGV[2]
 
 		local cursor = "0"
 		repeat
@@ -128,9 +130,20 @@ export class ViolationCounterRepositoryValkey implements ViolationCounterReposit
 			local keys = result[2]
 			
 			if #keys > 0 then
-				total = total + redis.call("DEL", unpack(keys))
+				for i = 1, #keys do
+					local key = keys[i]
+					local deletedCount = redis.call("DEL", key)
+					if deletedCount > 0 then
+						-- Extract userId from keys like "violations:counter:123" 
+						-- this works for one key specifically
+						local userId = string.match(key, userIdPattern .. "(%d+)")
+						if userId then
+							table.insert(userIds, tonumber(userId))
+						end
+					end
+				end
 			end
 		until cursor == "0"
 		
-		return total`);
+		return userIds`);
 }

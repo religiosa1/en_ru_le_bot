@@ -89,8 +89,8 @@ export class CaptchaRepository {
 		await this.#client.del(keysToDelete);
 	}
 
-	async getVerificationsOlderThan(timestampMs: number): Promise<number[]> {
-		const result = await this.#client.invokeScript(CaptchaRepository.getVerificationsOlderThanScript, {
+	async getUserIdsForVerificationsOlderThan(timestampMs: number): Promise<number[]> {
+		const result = await this.#client.invokeScript(CaptchaRepository.getUserIdsForVerificationsOlderThanScript, {
 			args: [QUESTION_FIRST_ASKED_AT_PREFIX, timestampMs.toString()],
 		});
 		return Array.isArray(result) ? result.map((id) => Number(id)) : [];
@@ -120,7 +120,7 @@ export class CaptchaRepository {
 		}
 	}
 
-	private static readonly getVerificationsOlderThanScript = new Script(d`
+	private static readonly getUserIdsForVerificationsOlderThanScript = new Script(d`
 		local basePattern = ARGV[1]
 		local timestampMs = tonumber(ARGV[2])
 		local userIds = {}

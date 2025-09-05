@@ -88,14 +88,16 @@ describe("ViolationSettingsRepositoryValkey", () => {
 			await repo.registerViolation(123, "john", 5 * Time.Minutes);
 			await repo.registerViolation(321, "doe", 5 * Time.Minutes);
 
-			await repo.removeAllViolations();
+			const removedIds = await repo.removeAllViolations();
+			t.assert.deepEqual(removedIds.toSorted(), [123, 321]);
 			t.assert.equal(await repo.getViolationCount(123), undefined, "after");
 			t.assert.equal(await repo.getViolationCount(321), undefined, "after");
 		});
 
-		it("does nothing if there's no violations", async () => {
+		it("does nothing if there's no violations", async (t) => {
 			const repo = new ViolationCounterRepositoryValkey({ valkeyClient: client });
-			await repo.removeAllViolations();
+			const got = await repo.removeAllViolations();
+			t.assert.deepEqual(got, []);
 		});
 	});
 });

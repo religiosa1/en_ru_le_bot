@@ -15,12 +15,12 @@ export class UserViolationService {
 		this.#settings = violationSettingsRepository;
 	}
 
-	async pardon(userIdOrHandle: number | string): Promise<boolean> {
+	async pardon(userIdOrHandle: number | string): Promise<number | undefined> {
 		return await this.#repository.removeViolation(userIdOrHandle);
 	}
 
-	async pardonAll(): Promise<void> {
-		await this.#repository.removeAllViolations();
+	async pardonAll(): Promise<number[]> {
+		return await this.#repository.removeAllViolations();
 	}
 
 	async registerViolation(userId: number, username: string | undefined): Promise<ViolationStats> {

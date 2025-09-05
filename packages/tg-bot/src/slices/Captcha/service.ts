@@ -97,7 +97,7 @@ export class CaptchaService {
 		await this.#repository.removeUserVerificationCheck(userIdOrUsername);
 	}
 
-	async getVerificationsOlderThan(timestampMs: number): Promise<number[]> {
-		return await this.#repository.getVerificationsOlderThan(timestampMs);
+	async getUserIdsForVerificationsOlderThan(timestampMs: number): Promise<number[]> {
+		return await this.#repository.getUserIdsForVerificationsOlderThan(timestampMs);
 	}
 }
