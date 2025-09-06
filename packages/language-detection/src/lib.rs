@@ -5,7 +5,7 @@ use std::sync::OnceLock;
 use napi_derive::napi;
 
 static RUSSIAN_ENGLISH_DETECTOR: OnceLock<LanguageDetector> = OnceLock::new();
-// static ALL_LANGUAGES_DETECTOR: OnceLock<LanguageDetector> = OnceLock::new();
+static ALL_LANGUAGES_DETECTOR: OnceLock<LanguageDetector> = OnceLock::new();
 
 /// Language detection result
 #[napi(object)]
@@ -57,18 +57,26 @@ pub async fn is_russian_or_english(input: String) -> Vec<DetectedLanguage> {
     .collect()
 }
 
-// Low accuracy detection of all available languages. This will detect any
-// supported language, besides explicitly filtered out because of higher amount
-// of false positives.
-// #[napi]
-// pub async fn detect_all_languages_fast(input: String) -> Vec<DetectedLanguage> {
-//   let detector = ALL_LANGUAGES_DETECTOR.get_or_init(load_all_languages_detector);
-//   let result = detector.detect_multiple_languages_of(&input);
-//   result
-//     .into_iter()
-//     .map(|d| DetectedLanguage::from(d, &input))
-//     .collect()
-// }
+#[napi(object)]
+pub struct AllLanguagesDetectionData {
+  /// ISO 639-1 language code, e.g. "en", "ru"
+  pub language: String,
+  pub confidence: f64,
+}
+
+/// Low accuracy detection of all available languages.
+/// This is intended to detect any language known by lingua-rs, but it has a high amount
+/// of false positives, so this require some additional checks to mitigate that.
+#[napi]
+pub async fn detect_all_languages_fast(input: String) -> Option<AllLanguagesDetectionData> {
+  let detector = ALL_LANGUAGES_DETECTOR.get_or_init(load_all_languages_detector);
+  let language = detector.detect_language_of(&input)?;
+  let confidence = detector.compute_language_confidence(&input, language);
+  Some(AllLanguagesDetectionData {
+    language: language.iso_code_639_1().to_string(),
+    confidence,
+  })
+}
 
 /// Preload language models.
 ///
@@ -77,7 +85,7 @@ pub async fn is_russian_or_english(input: String) -> Vec<DetectedLanguage> {
 #[napi]
 pub fn load_language_models() {
   RUSSIAN_ENGLISH_DETECTOR.get_or_init(load_russian_english_detector);
-  // ALL_LANGUAGES_DETECTOR.get_or_init(load_all_languages_detector);
+  ALL_LANGUAGES_DETECTOR.get_or_init(load_all_languages_detector);
 }
 
 fn load_russian_english_detector() -> LanguageDetector {
@@ -86,16 +94,12 @@ fn load_russian_english_detector() -> LanguageDetector {
     .build()
 }
 
-// List of languages explicitly excluded from all languages detection, because of higher
-// false positive detection values.
-// const FALSE_POSITIVE_LANGUAGES: &[lingua::Language] = &[Tagalog, Sotho, Latin];
-
-// fn load_all_languages_detector() -> LanguageDetector {
-//   LanguageDetectorBuilder::from_all_languages_without(FALSE_POSITIVE_LANGUAGES)
-//     .with_preloaded_language_models()
-//     .with_low_accuracy_mode()
-//     .build()
-// }
+fn load_all_languages_detector() -> LanguageDetector {
+  LanguageDetectorBuilder::from_all_languages()
+    .with_preloaded_language_models()
+    .with_low_accuracy_mode()
+    .build()
+}
 
 #[cfg(test)]
 mod tests {

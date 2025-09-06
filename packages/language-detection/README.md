@@ -1,23 +1,40 @@
-# `@napi-rs/package-template`
+# `@en-ru-le/language-detection`
 
-![https://github.com/napi-rs/package-template/actions](https://github.com/napi-rs/package-template/workflows/CI/badge.svg)
+> Language detection package for Russian, English, and other languages using lingua-rs.
 
-> Template project for writing node packages with napi-rs.
+# API
 
-# Usage
+## `isRussianOrEnglish(input: string): Promise<DetectedLanguage[]>`
 
-1. Click **Use this template**.
-2. **Clone** your project.
-3. Run `yarn install` to install dependencies.
-4. Run `yarn napi rename -n [@your-scope/package-name] -b [binary-name]` command under the project folder to rename your package.
+High-accuracy detection specifically optimized for Russian and English text. Returns detailed information about detected text segments including:
 
-## Install this test package
+- `startIndex`: Start position in the input text
+- `endIndex`: End position in the input text  
+- `language`: Detected language code ("ru" or "en")
+- `confidence`: Detection confidence (0.0 - 1.0)
 
+## `detectAllLanguagesFast(input: string): Promise<AllLanguagesDetectionData | null>`
+
+Fast detection of any language supported by lingua-rs. This function:
+
+- Has higher false positive rates compared to `isRussianOrEnglish`
+- Returns single language detection with confidence score
+- Intended for use with additional validation layers
+- Returns `null` if no language can be determined
+
+**Note**: This function is designed for speed over accuracy and should be combined with additional checks to mitigate false positives.
+
+## `loadLanguageModels(): void`
+
+Preloads language detection models to improve first-call performance. Call this during application initialization.
+
+# Installation
+
+```bash
+npm install @en-ru-le/language-detection
 ```
-yarn add @napi-rs/package-template
-```
 
-## Ability
+# Language Detection Approach
 
 ### Build
 

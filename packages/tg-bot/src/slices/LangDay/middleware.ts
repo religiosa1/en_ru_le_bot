@@ -5,7 +5,7 @@ import type { BotContext } from "../../BotContext.ts";
 import { LanguageEnum } from "../../enums/Language.ts";
 import { Time } from "../../enums/Time.ts";
 import type { BotContextWithMsgLanguage } from "../../models/BotContextWithMsgLanguage.ts";
-import { detectOtherLanguage } from "./detectOtherLanguage.ts";
+import { detectLanguageOutsideOfEnRu } from "./detectOtherLanguages/detectOtherLanguages.ts";
 import { stripNonLetterOrWhitespaceChars } from "./utils.ts";
 
 const MIN_MSG_LENGTH = 5;
@@ -74,8 +74,8 @@ export async function checkMessageLanguage(ctx: BotContext, next?: NextFunction)
 	}
 	(ctx as BotContextWithMsgLanguage).language = language;
 
-	if (detectOtherLanguage(textWithoutDigitsOrPunctuation)) {
-		logger.info("Regexp check for other languages triggered");
+	if (await detectLanguageOutsideOfEnRu(logger, textWithoutDigitsOrPunctuation)) {
+		logger.info("Decided it's a bad language");
 		(ctx as BotContextWithMsgLanguage).msgLanguage = "other";
 	} else {
 		const msgLanguages = await langDetection.isRussianOrEnglish(textWithoutDigitsOrPunctuation);

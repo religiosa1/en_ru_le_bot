@@ -158,11 +158,15 @@ a custom Rust/NAPI wrapper:
   - Used to determine if users are writing in the wrong language on 
     language-specific days
 
-2. **Other Language Detection** (`detectOtherLanguage`)
-  - Regex-based quick check for non-Russian/English text
-  - Detects messages containing characters outside Cyrillic and Latin scripts
-  - Used as a fast pre-filter before running Russian/English detection
-  - Filters out kaomoji and other decorative characters to avoid false positives
+2. **Other Language Detection** (`detectLanguageOutsideOfEnRu`)
+  - Multi-layered approach combining regex and ML detection for non-Russian/English text
+  - **Layer 1 - Character Set Detection**: Regex-based quick check for characters outside 
+    Cyrillic and Latin scripts (e.g., Chinese, Arabic)
+  - **Layer 2 - ML Language Detection**: Uses lingua-rs via `detectAllLanguagesFast` 
+    for comprehensive language identification with 0.7 confidence threshold
+  - **Layer 3 - Dictionary Validation**: Cross-references detected words against 
+    5000 most common English and Russian words to reduce false positives
+  - Requires >40% unknown words to confirm non-English/Russian classification
   - When triggered, message language is marked as "other" without further processing
 
 ### Multi-Language Message Handling
