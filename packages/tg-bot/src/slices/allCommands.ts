@@ -2,6 +2,7 @@ import type { BotContext } from "../BotContext.ts";
 import { CommandGroup } from "../models/CommandGroup.ts";
 
 import { alarmCommands } from "./Alarm/commands.ts";
+import { captchaCommands } from "./Captcha/commands.ts";
 import { chatAdminCommands } from "./ChatAdmins/commands.ts";
 import { cooldownCommands } from "./Cooldown/commands.ts";
 import { langDayCommands } from "./LangDay/commands.ts";
@@ -19,6 +20,7 @@ export const allCommands = CommandGroup.merge(
 	retranslateCommands,
 	rulesCommand,
 	settingsCommands,
+	captchaCommands,
 ).addCommand("help", '["members"] display help on bot commands', async (ctx: BotContext) => {
 	const { chatAdminRepo } = ctx.container;
 	const omitAdminSection = ctx.match === "members";

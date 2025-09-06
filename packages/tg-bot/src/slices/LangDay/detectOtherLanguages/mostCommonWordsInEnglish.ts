@@ -18,6 +18,16 @@
  * ```
  */
 export const mostCommonWordsInEnglish = new Set([
+	// Some additions -- not present in the original list, but common in the chat:
+	"hello",
+	"pardon",
+	"hi",
+	"hey",
+	"lol",
+	"everyone",
+	"everybody",
+	"anyone",
+	"anybody",
 	// First 1000 (actually 953)
 	"the",
 	"of",

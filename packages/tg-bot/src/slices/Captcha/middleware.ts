@@ -1,10 +1,9 @@
 import assert from "node:assert";
 import type { NextFunction } from "grammy";
 import type { User } from "grammy/types";
-import { dedent as d } from "ts-dedent";
 import type { BotContext } from "../../BotContext.ts";
-import { formatDuration } from "../../utils/duration.ts";
 import { makeQuestionAnswer } from "./makeQuestionAnswer.ts";
+import { getCaptchaMessage, getCaptchaSuccessMessage } from "./messages.ts";
 
 const MAX_ATTEMPTS = 7;
 
@@ -32,7 +31,11 @@ export async function captchaMiddleware(ctx: BotContext, next: NextFunction): Pr
 	if (verificationResult.correct) {
 		logger.info("Captcha verification passed");
 		await captchaService.removeUserVerificationCheck(userId);
-		return await next();
+		await ctx.reply(getCaptchaSuccessMessage(ctx.message.from), {
+			parse_mode: "MarkdownV2",
+		});
+		// we're not calling the next handler, as captcha verification doesn't require any following lang checks
+		return;
 	}
 
 	logger.info({ text, expectedAnswer: verificationResult.expectedAnswer }, "Captcha verification failed");
@@ -101,22 +104,4 @@ function getNewUserFromChatMemberEvent(ctx: BotContext): User | undefined {
 		return;
 	}
 	return member.user;
-}
-
-function getCaptchaMessage(question: string, member: User, timeToSolve: number): string {
-	const mention = `[@${escapeMdValue(member.username || member.first_name)}](tg://user?id=${member.id})`;
-
-	const dur = formatDuration(timeToSolve);
-	return d`
-  ${escapeMdValue(question)}
-
-  ${mention}, please, send the solution to the arithmetic operation provided.
-	If you won't do it in ${dur}, we'll consider you a bot. Thank you!
-
-  ${mention}, пожалуйста, напиши сумму чисел в примере.
-	Если ты не сделаешь этого в течение ${dur}, мы сочтём тебя ботом. Спасибо!`;
-}
-
-function escapeMdValue(input: string): string {
-	return input.replaceAll(/[_*[\]()~`>#+\-=|{}.!\\]/g, "\\$&");
 }

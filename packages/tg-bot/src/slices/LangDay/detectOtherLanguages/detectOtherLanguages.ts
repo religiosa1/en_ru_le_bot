@@ -6,6 +6,8 @@ import { detectByCharset } from "./detectByCharset.ts";
 import { mostCommonWordsInEnglish } from "./mostCommonWordsInEnglish.ts";
 import { mostCommonWordsInRussian } from "./mostCommonWordsInRussian.ts";
 
+const MIN_LENGTH = 10;
+
 const TARGET_CONFIDENCE_LEVEL = 0.7;
 
 const UNKNOWN_WORDS_THRESHOLD = 0.4;
@@ -17,6 +19,11 @@ export async function detectLanguageOutsideOfEnRu(logger: Logger, text: string):
 	if (detectByCharset(cleanedText)) {
 		logger.debug("Language mismatch by charset");
 		return true;
+	}
+
+	if (cleanedText.length < MIN_LENGTH) {
+		logger.info("Text too short for ML recognition");
+		return false;
 	}
 
 	// If it's strictly latin/cyrillic -- going for lingua-rs detection

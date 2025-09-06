@@ -2,6 +2,8 @@ import { CommandGroup } from "../../models/CommandGroup.ts";
 import { attempt } from "../../utils/attempt.ts";
 import { formatDuration, parseDuration } from "../../utils/duration.ts";
 import { parseUsername } from "../../utils/parseUsername.ts";
+import { makeQuestionAnswer } from "./makeQuestionAnswer.ts";
+import { getCaptchaMessage, getCaptchaSuccessMessage } from "./messages.ts";
 
 export const captchaCommands = new CommandGroup()
 	.addAdminCommand("trust", "@username remove captcha check for a user", async (ctx) => {
@@ -54,4 +56,14 @@ export const captchaCommands = new CommandGroup()
 		const { captchaService } = ctx.container;
 		const value = await captchaService.toggleBotsAllowed();
 		logger.info({ value }, "Bots allowed toggled ");
+	})
+	// hidden command for testing captcha messages (as formatting can be tricky)
+	.addHiddenAdminCommand("captcha_msg", async (ctx) => {
+		const [question] = makeQuestionAnswer();
+		const { captchaService } = ctx.container;
+		if (!ctx.from) return;
+		const captchaMsg = getCaptchaMessage(question, ctx.from, await captchaService.getMaxVerificationAge());
+		await ctx.reply(captchaMsg, { parse_mode: "MarkdownV2" });
+		const successMsg = getCaptchaSuccessMessage(ctx.from);
+		await ctx.reply(successMsg, { parse_mode: "MarkdownV2" });
 	});
