@@ -37,6 +37,9 @@ RUN npm ci --only=production && npm cache clean --force
 
 # Stage 3: Final distroless production image
 FROM gcr.io/distroless/nodejs24-debian12:nonroot AS production
+LABEL org.opencontainers.image.source=https://github.com/religiosa1/en_ru_le_bot
+LABEL org.opencontainers.image.description="Node.js Telegram bot for a language exchange chat."
+LABEL org.opencontainers.image.licenses=MIT
 
 # Create app directory
 WORKDIR /app

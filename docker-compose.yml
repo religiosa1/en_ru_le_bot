@@ -12,6 +12,7 @@ services:
       - en-ru-le-network
 
   tg-bot:
+    image: ghcr.io/religiosa1/en_ru_le_bot:latest
     build:
       context: .
       dockerfile: Dockerfile

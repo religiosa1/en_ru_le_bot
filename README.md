@@ -338,7 +338,7 @@ You can also build just the Docker image:
 docker build -t en-ru-le-bot .
 
 # Run with external Valkey instance
-docker run --env-file .env en-ru-le-bot
+docker run -e TOKEN=123321 -e CHAT_ID=32167 -e VALKEY_HOST=localhost ghcr.io/religiosa1/en_ru_le_bot
 ```
 
 ### Option 2: Manual Build
