@@ -1,0 +1,76 @@
+# Dependencies
+node_modules/
+packages/*/node_modules/
+.yarn/cache/
+.yarn/unplugged/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Build artifacts
+packages/language-detection/target/
+packages/language-detection/*.node
+packages/language-detection/index.js
+packages/language-detection/index.d.ts
+packages/tg-bot/dist/
+packages/tg-bot/build/
+*.tsbuildinfo
+
+# Environment files
+.env*
+!.env.example
+packages/*/.env*
+!packages/*/.env.example
+
+# Development and test files
+coverage/
+.nyc_output/
+packages/*/coverage/
+packages/*/__tests__/
+packages/*/test/
+packages/*/*.test.js
+packages/*/*.test.ts
+packages/language-detection/__test__/
+packages/language-detection/benchmark/
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+logs/
+*.log
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# Documentation
+README.md
+*.md
+packages/*/README.md
+packages/*/*.md
+
+# Config files
+.husky/
+packages/*/.husky/
+.editorconfig
+packages/*/.editorconfig
+.prettierignore
+packages/*/.prettierignore
+
+# Docker
+Dockerfile*
+.dockerignore
+packages/*/.dockerignore

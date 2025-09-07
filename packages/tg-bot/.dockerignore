@@ -1,0 +1,59 @@
+# Dependencies
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Environment files
+.env*
+!.env.example
+
+# Build artifacts
+dist/
+build/
+*.tsbuildinfo
+
+# Development files
+coverage/
+.nyc_output/
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+logs
+*.log
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# Runtime data
+lib-cov
+coverage/
+.lcov
+
+# Documentation
+README.md
+*.md
+
+# Git
+.git/
+.gitignore
+
+# Test files
+*.test.js
+*.test.ts
+__tests__/
+test/
+
+# Misc
+.cache/
+.parcel-cache/

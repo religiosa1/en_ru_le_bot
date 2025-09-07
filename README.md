@@ -315,6 +315,34 @@ course, it is ephemeral.
 
 ## Build process.
 
+### Option 1: Docker
+
+The easiest way to run the bot is using Docker Compose, which handles both the bot and Valkey instance:
+
+```sh
+# Create .env file with your bot configuration
+cp .env.example .env  # if you have one, or create manually
+# Edit .env with your TOKEN and CHAT_ID
+
+# Build and run the entire stack
+docker compose up --build
+
+# Or run in background
+docker compose up --build -d
+```
+
+You can also build just the Docker image:
+
+```sh
+# Build the bot image
+docker build -t en-ru-le-bot .
+
+# Run with external Valkey instance
+docker run --env-file .env en-ru-le-bot
+```
+
+### Option 2: Manual Build
+
 Requires both rust and nodejs toolchains.
 
 First, build language-detection (napi-rs requires yarn instead of npm):
@@ -342,7 +370,7 @@ npm run dev | pino-pretty
 
 It requires a valkey instance, you can start one in docker:
 ```sh
-docker run --name enrule_valkey -p 6379:6379 -d valkey/valkey valkey-server --save 60 1 --loglevel warning
+docker run --name enrule_valkey -p 6379:6379 -d valkey/valkey:8.1-alpine valkey-server --save 60 1 --loglevel warning
 ```
 
 ## Configuration.

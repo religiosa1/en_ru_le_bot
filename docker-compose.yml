@@ -1,0 +1,36 @@
+version: '3.8'
+
+services:
+  valkey:
+    image: valkey/valkey:8.1-alpine
+    container_name: en-ru-le-valkey
+    restart: unless-stopped
+    volumes:
+      - valkey_data:/data
+    command: valkey-server --appendonly yes
+    networks:
+      - en-ru-le-network
+
+  tg-bot:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: en-ru-le-bot
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=production
+      - VALKEY_HOST=valkey
+      - VALKEY_PORT=6379
+      - TOKEN=${TOKEN:?TOKEN environment variable is required}
+      - CHAT_ID=${CHAT_ID:?CHAT_ID environment variable is required}
+    depends_on:
+      - valkey
+    networks:
+      - en-ru-le-network
+
+volumes:
+  valkey_data:
+
+networks:
+  en-ru-le-network:
+    driver: bridge
