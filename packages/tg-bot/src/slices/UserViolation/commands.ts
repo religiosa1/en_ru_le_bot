@@ -3,7 +3,8 @@ import { CommandGroup } from "../../models/CommandGroup.ts";
 import { attempt } from "../../utils/attempt.ts";
 import { formatDuration, parseDuration } from "../../utils/duration.ts";
 import { toNumber } from "../../utils/glideParsers.ts";
-import { parseUsername } from "../../utils/parseUsername.ts";
+import { getUserMentionFromMatchCtx } from "../../utils/parseUsername.ts";
+import { formatUser, isUser } from "../../utils/userUtils.ts";
 
 const ALL_PERMISSIONS: Required<ChatPermissions> = {
 	can_send_messages: true,
@@ -34,13 +35,13 @@ export const userViolationCommands = new CommandGroup()
 	.addAdminCommand("pardon", "[@user] - Remove violations for specific user or all users", async (ctx) => {
 		const { logger } = ctx;
 		const userViolationService = ctx.container.userViolationService;
-		const [userName, error] = attempt(() => parseUsername(ctx.match));
+		const [user, error] = attempt(() => getUserMentionFromMatchCtx(ctx));
 		if (error) {
 			await ctx.reply(error.toString());
 			return;
 		}
 
-		if (!userName) {
+		if (!user) {
 			const pardonedUserIds = await userViolationService.pardonAll();
 			for (const userId of pardonedUserIds) {
 				await ctx.api.restrictChatMember(ctx.container.chatId, userId, ALL_PERMISSIONS).catch((error) => {
@@ -48,19 +49,20 @@ export const userViolationCommands = new CommandGroup()
 				});
 			}
 			logger.info("Pardoned all users");
+			await ctx.reply("Pardoned all users");
 			return;
 		}
 
-		const userId = await userViolationService.pardon(userName);
+		const userId = await userViolationService.pardon(isUser(user) ? user.id : user);
 		if (userId) {
 			await ctx.api.restrictChatMember(ctx.container.chatId, userId, ALL_PERMISSIONS).catch((error) => {
 				logger.warn({ error, userId }, "Error restoring chat permissions, but warnings successfully removed");
 			});
-			logger.info({ userName }, "Pardoned user");
-			await ctx.reply(`Pardoned user @${userName}`);
+			logger.info({ user }, "Pardoned user");
+			await ctx.reply(`Pardoned user @${formatUser(user)}`);
 		} else {
-			logger.info({ userName }, "Unable to find violations for the user");
-			await ctx.reply(`Unable to find any violations for the @${userName}`);
+			logger.info({ user }, "Unable to find violations for the user");
+			await ctx.reply(`Unable to find any violations for the ${formatUser(user)}`);
 		}
 	})
 	.addAdminCommand("mute_duration", "[duration] - Set or view mute duration", async (ctx) => {

@@ -1,26 +1,27 @@
 import { CommandGroup } from "../../models/CommandGroup.ts";
 import { attempt } from "../../utils/attempt.ts";
 import { formatDuration, parseDuration } from "../../utils/duration.ts";
-import { parseUsername } from "../../utils/parseUsername.ts";
+import { getUserMentionFromMatchCtx } from "../../utils/parseUsername.ts";
+import { formatUser, isUser } from "../../utils/userUtils.ts";
 import { makeQuestionAnswer } from "./makeQuestionAnswer.ts";
 import { getCaptchaMessage, getCaptchaSuccessMessage } from "./messages.ts";
 
 export const captchaCommands = new CommandGroup()
 	.addAdminCommand("trust", "@username remove captcha check for a user", async (ctx) => {
-		const [userName, error] = attempt(() => parseUsername(ctx.match));
+		const [user, error] = attempt(() => getUserMentionFromMatchCtx(ctx));
 		if (error != null) {
 			ctx.reply(String(error));
 			return;
 		}
-		if (!userName) {
+		if (!user) {
 			ctx.reply("username is required in this command");
 			return;
 		}
 		const { logger } = ctx;
 		const { captchaService } = ctx.container;
-		await captchaService.removeUserVerificationCheck(userName);
-		logger.info({ userName }, "Trusted user");
-		await ctx.reply(`Ok, user @${userName} is now trusted`);
+		await captchaService.removeUserVerificationCheck(isUser(user) ? user.id : user);
+		logger.info({ userName: user }, "Trusted user");
+		await ctx.reply(`Ok, user @${formatUser(user)} is now trusted`);
 	})
 	.addAdminCommand("captcha", "toggle captcha check for newcomers on/off", async (ctx) => {
 		const { logger } = ctx;
