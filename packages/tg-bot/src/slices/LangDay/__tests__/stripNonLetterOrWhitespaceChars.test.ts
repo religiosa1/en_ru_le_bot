@@ -25,4 +25,15 @@ describe("stripNonLetterOrWhitespaceChars", () => {
 		const got = stripNonLetterOrWhitespaceChars("hi https://example.com/some?id=123&foo=bar#frag all");
 		t.assert.equal(got, "hi all");
 	});
+
+	it("removes all ha-ha from the text", (t) => {
+		t.assert.equal(stripNonLetterOrWhitespaceChars("hi ha-ha all"), "hi all");
+		t.assert.equal(stripNonLetterOrWhitespaceChars("hi he-haha all"), "hi all");
+		t.assert.equal(stripNonLetterOrWhitespaceChars("hi HAHA all"), "hi all");
+		t.assert.equal(stripNonLetterOrWhitespaceChars("hihaha all"), "hihaha all");
+
+		t.assert.equal(stripNonLetterOrWhitespaceChars("Всем привет ха-ха"), "Всем привет");
+		t.assert.equal(stripNonLetterOrWhitespaceChars("Всем привет хехе"), "Всем привет");
+		t.assert.equal(stripNonLetterOrWhitespaceChars("Всем привет ХА"), "Всем привет");
+	});
 });

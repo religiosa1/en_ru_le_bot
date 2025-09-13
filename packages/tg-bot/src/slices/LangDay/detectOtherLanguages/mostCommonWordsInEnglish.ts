@@ -28,6 +28,7 @@ export const mostCommonWordsInEnglish = new Set([
 	"everybody",
 	"anyone",
 	"anybody",
+	"afternoon",
 	// First 1000 (actually 953)
 	"the",
 	"of",

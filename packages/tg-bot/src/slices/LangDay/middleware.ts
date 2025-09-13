@@ -74,7 +74,7 @@ export async function checkMessageLanguage(ctx: BotContext, next?: NextFunction)
 	}
 	(ctx as BotContextWithMsgLanguage).language = language;
 
-	if (await detectLanguageOutsideOfEnRu(logger, textWithoutDigitsOrPunctuation)) {
+	if (await detectLanguageOutsideOfEnRu(logger, textWithoutDigitsOrPunctuation, language)) {
 		logger.info("Decided it's a bad language");
 		(ctx as BotContextWithMsgLanguage).msgLanguage = "other";
 	} else {

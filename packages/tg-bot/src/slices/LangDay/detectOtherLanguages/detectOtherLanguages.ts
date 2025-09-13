@@ -10,9 +10,14 @@ const MIN_LENGTH = 10;
 
 const TARGET_CONFIDENCE_LEVEL = 0.7;
 
-const UNKNOWN_WORDS_THRESHOLD = 0.4;
+// More than half of words in a sentence must be unknown
+const UNKNOWN_WORDS_THRESHOLD = 0.6;
 
-export async function detectLanguageOutsideOfEnRu(logger: Logger, text: string): Promise<boolean> {
+export async function detectLanguageOutsideOfEnRu(
+	logger: Logger,
+	text: string,
+	targetLanguage: LanguageEnum,
+): Promise<boolean> {
 	const cleanedText = stripNonLetterOrWhitespaceChars(text);
 
 	// Initially trying to filter out clearly bad languages, which use wrong script, such as chinese
@@ -23,6 +28,12 @@ export async function detectLanguageOutsideOfEnRu(logger: Logger, text: string):
 
 	if (cleanedText.length < MIN_LENGTH) {
 		logger.info("Text too short for ML recognition");
+		return false;
+	}
+
+	// If target language is russian, we're not doing any other checks outside of charset, as Russian
+	// morphology system makes it tricky to filter out false positives. Being written in cyrillic should be good enough
+	if (targetLanguage === LanguageEnum.Russian) {
 		return false;
 	}
 
