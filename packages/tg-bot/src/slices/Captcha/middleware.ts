@@ -1,7 +1,8 @@
 import assert from "node:assert";
 import type { NextFunction } from "grammy";
-import type { User } from "grammy/types";
 import type { BotContext } from "../../BotContext.ts";
+import { getNewUserFromChatMemberEvent } from "../../middlewares/userJoined.ts";
+import { raise } from "../../utils/raise.ts";
 import { makeQuestionAnswer } from "./makeQuestionAnswer.ts";
 import { getCaptchaMessage, getCaptchaSuccessMessage } from "./messages.ts";
 
@@ -54,21 +55,11 @@ export async function captchaMiddleware(ctx: BotContext, next: NextFunction): Pr
 	}
 }
 
-export async function onChatMemberHandler(ctx: BotContext): Promise<void> {
+export async function onChatMemberCaptchaHandler(ctx: BotContext): Promise<void> {
 	const { logger } = ctx;
-	const { captchaService, chatId } = ctx.container;
+	const { captchaService } = ctx.container;
 
-	if (ctx.message?.chat.id !== chatId) {
-		logger.debug(
-			{ actualChatId: ctx.message?.chat.id, targetChatId: chatId },
-			"Wrong chat, we're omitting captcha check",
-		);
-	}
-
-	const user = getNewUserFromChatMemberEvent(ctx);
-	if (!user) {
-		return;
-	}
+	const user = getNewUserFromChatMemberEvent(ctx) ?? raise("User must be present for captcha handler to work");
 
 	logger.info({ user }, "New member joined");
 
@@ -86,6 +77,7 @@ export async function onChatMemberHandler(ctx: BotContext): Promise<void> {
 		const [question, answer] = makeQuestionAnswer();
 		const allowedTime = await captchaService.getMaxVerificationAge();
 		const msg = await ctx.reply(getCaptchaMessage(question, user, allowedTime), { parse_mode: "MarkdownV2" });
+		logger.info({ user }, "Sent captcha check for the user");
 		await captchaService.addUserVerificationCheck({
 			userId: user.id,
 			userName: user.username,
@@ -94,14 +86,4 @@ export async function onChatMemberHandler(ctx: BotContext): Promise<void> {
 			msgId: msg.message_id,
 		});
 	}
-}
-
-/** Analyzes chat_member event and tries to determine, if it's a new user joined */
-function getNewUserFromChatMemberEvent(ctx: BotContext): User | undefined {
-	const member = ctx.update.chat_member?.new_chat_member;
-	const oldMember = ctx.update.chat_member?.old_chat_member;
-	if (!member || member.status !== "member" || (oldMember != null && oldMember.status !== "left")) {
-		return;
-	}
-	return member.user;
 }

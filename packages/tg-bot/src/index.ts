@@ -3,14 +3,17 @@ import { Bot } from "grammy";
 import { BotContext } from "./BotContext.ts";
 import { configureDefaultContainer } from "./container.ts";
 import { logger } from "./logger.ts";
+import { targetChatOnly } from "./middlewares/targetChatOnly.ts";
+import { userJoined } from "./middlewares/userJoined.ts";
 import { AdminOnlyCommand } from "./models/Command.ts";
 import { getConfig } from "./models/config.ts";
 import * as scopes from "./scopes.ts";
 import { allCommands } from "./slices/allCommands.ts";
-import { captchaMiddleware, onChatMemberHandler } from "./slices/Captcha/middleware.ts";
+import { captchaMiddleware, onChatMemberCaptchaHandler } from "./slices/Captcha/middleware.ts";
 import { adminOnly } from "./slices/ChatAdmins/middleware.ts";
 import { cooldownMiddleware } from "./slices/Cooldown/middleware.ts";
 import { checkMessageLanguage } from "./slices/LangDay/middleware.ts";
+import { onChatMemberProbationHandler } from "./slices/Probation/middleware.ts";
 import { userViolationMiddleware } from "./slices/UserViolation/middleware.ts";
 import { withPerfMeasure } from "./utils/withPerfMeasure.ts";
 
@@ -43,9 +46,17 @@ if (chatId) {
 	bot.api.setMyCommands(allCommands.getAdminsCommandGroup().toBotCommands(), { scope: scopes.admins });
 }
 
-bot.on("chat_member", onChatMemberHandler);
+bot.on("chat_member", targetChatOnly, userJoined, onChatMemberCaptchaHandler);
+bot.on("chat_member", targetChatOnly, userJoined, onChatMemberProbationHandler);
 
-bot.on("msg:text", captchaMiddleware, checkMessageLanguage, cooldownMiddleware, userViolationMiddleware);
+bot.on(
+	"msg:text",
+	targetChatOnly,
+	captchaMiddleware,
+	checkMessageLanguage,
+	cooldownMiddleware,
+	userViolationMiddleware,
+);
 
 bot.catch((err) => {
 	logger.error({ err }, `"An error has occurred: ${err}`);

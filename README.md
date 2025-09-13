@@ -190,8 +190,10 @@ simultaneously, we shouldn't give them a warning.
 
 ### Message Processing Rules
 
-- **Only the target chat is checked**, i.e. if someone adds the bot to other 
-  chats it won't actually do anything there, DMs aren't verified either
+- **Target chat filtering**: The bot now uses improved middleware to ensure all
+  processing (language detection, captcha, probation) only occurs in the configured
+  target chat. If someone adds the bot to other chats it won't do anything there,
+  DMs aren't verified either
 - **Non-letter characters are removed for a check**
 - **Minimum Length**: Number of letter characters in a message be at least 5
   characters to trigger language detection 
@@ -223,15 +225,27 @@ Given a cooldown time common for all violations, and 3 warnings, bot shouldn't
 really mute anyone all that often, it's more of a scare-tactic to show it has
 teeth (otherwise users just ignore the bot).
 
-## Captcha System
+## Anti-Spam Systems
 
-The bot includes an anti-spam captcha system to prevent bot accounts and 
-spam. When enabled, new members must solve a simple arithmetic question to 
+The bot includes multiple anti-spam systems to prevent bot accounts and unwanted behavior:
+
+### Probation System
+
+All new members are automatically placed under a probation period when they join:
+- **Duration**: 1 day (24 hours)
+- **Restrictions**: New members can only send text messages during probation
+- **Disabled capabilities**: Photos, videos, documents, audio, polls, stickers, animations, voice notes, and web page previews
+- **Permissions retained**: Can invite other users and send basic text messages
+- **Automatic**: Applied to all new members without any manual intervention
+
+### Captcha System
+
+The bot also includes an optional captcha system that can be enabled separately. When enabled, new members must solve a simple arithmetic question to
 prove they're human.
 
-### How It Works
+### How Captcha Works
 
-1. **New Member Detection**: When someone joins the chat, the system detects 
+1. **New Member Detection**: When someone joins the chat, the system detects
    the new member through Telegram's chat member events
 2. **Bot Handling**: If the new member is an official bot:
    - If bots are disabled (`/captcha_bots` off), the bot is immediately banned
@@ -254,14 +268,19 @@ prove they're human.
 
 ### Technical Implementation
 
-The captcha system uses:
+Both anti-spam systems use:
+- **Enhanced user detection**: Improved middleware for detecting new chat members
+  through Telegram's chat member events
+- **Modular architecture**: Separate middleware components for different functions
+  (probation, captcha, chat targeting) that can be combined
 - **Automatic cleanup**: Old verification data expires after 1 day
 - **Message tracking**: Captcha messages are tracked and can be cleaned up
 - **Username mapping**: Bidirectional username↔userId mapping for admin commands
 - **Background jobs**: Periodic cleanup of expired verifications
 - **Error handling**: Graceful handling of message deletion failures
 
-The system is disabled by default and must be explicitly enabled by admins.
+The captcha system is disabled by default and must be explicitly enabled by admins.
+The probation system is always active for new members.
 
 ## Storage:
 

@@ -28,12 +28,9 @@ export async function checkMessageLanguage(ctx: BotContext, next?: NextFunction)
 		},
 		"Message received",
 	);
-	const { chatId, chatAdminRepo, langDayService } = ctx.container;
-	if (ctx.message?.chat.id !== chatId) {
-		logger.info(
-			{ chatId: ctx.message?.chat.id, targetChatId: chatId, text: ctx.message?.text },
-			"mismatched chat id, ignoring the message",
-		);
+	const { chatAdminRepo, langDayService } = ctx.container;
+	if (!ctx.message) {
+		logger.info("No message object is present");
 		return;
 	}
 	if (ctx.message.date) {
