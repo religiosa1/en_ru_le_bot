@@ -27,7 +27,7 @@ export async function detectLanguageOutsideOfEnRu(
 	}
 
 	if (cleanedText.length < MIN_LENGTH) {
-		logger.info("Text too short for ML recognition");
+		logger.info({ cleanedText, text }, "Text too short for ML recognition");
 		return false;
 	}
 
@@ -63,7 +63,7 @@ export async function detectLanguageOutsideOfEnRu(
 
 	const words = cleanedText.split(/\s+/).map((i) => i.toLowerCase());
 	if (!words.length) {
-		logger.info("No words detected");
+		logger.info({ cleanedText }, "No words detected");
 		return false;
 	}
 	const nonRecognizedWords = words.filter((w) => !mostCommonWordsInEnglish.has(w) && !mostCommonWordsInRussian.has(w));

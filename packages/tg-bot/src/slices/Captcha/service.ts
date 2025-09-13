@@ -100,4 +100,8 @@ export class CaptchaService {
 	async getUserIdsForVerificationsOlderThan(timestampMs: number): Promise<number[]> {
 		return await this.#repository.getUserIdsForVerificationsOlderThan(timestampMs);
 	}
+
+	async clearAllVerifications(): Promise<void> {
+		return await this.#repository.clearAllVerifications();
+	}
 }

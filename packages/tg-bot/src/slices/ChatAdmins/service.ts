@@ -40,6 +40,7 @@ export class ChatAdminRepo {
 
 	async refreshAdminsList(signal?: AbortSignal) {
 		const admins = await this.#api.getChatAdministrators(this.#chatId, signal);
+		this.#refreshedAt = Date.now();
 		logger.trace({ admins }, "Admins list fetched");
 		this.#admins.clear();
 		for (const admin of admins) {

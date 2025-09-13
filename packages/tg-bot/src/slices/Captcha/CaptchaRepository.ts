@@ -1,4 +1,4 @@
-import { Batch, ExpireOptions, type GlideClient, Script, TimeUnit } from "@valkey/valkey-glide";
+import { Batch, ExpireOptions, type GlideClient, type GlideString, Script, TimeUnit } from "@valkey/valkey-glide";
 import { dedent as d } from "ts-dedent";
 import { COMMON_KEY_PREFIX } from "../../constants.ts";
 import type { DIContainerInternal } from "../../container.ts";
@@ -103,6 +103,19 @@ export class CaptchaRepository {
 		}
 		const msgIdsStr = await this.#client.smembers(userMsgIdsKey(member.id));
 		return Array.from(msgIdsStr, toNumber).filter((v) => v != null);
+	}
+
+	async clearAllVerifications(): Promise<void> {
+		let cursor: GlideString = "0";
+		do {
+			const [newCursor, keys] = await this.#client.scan(cursor, {
+				match: CAPTCHA_KEY_PREFIX + "*",
+			});
+			cursor = newCursor;
+			if (keys.length) {
+				await this.#client.del(keys);
+			}
+		} while (cursor !== "0");
 	}
 
 	async #searchMember(

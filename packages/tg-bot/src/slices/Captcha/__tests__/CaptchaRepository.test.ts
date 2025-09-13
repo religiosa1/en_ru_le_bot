@@ -125,4 +125,18 @@ describe("CaptchaRepository", () => {
 		const staleVerificationUserIds = await repo.getUserIdsForVerificationsOlderThan(Date.now() - Time.Minutes);
 		t.assert.deepEqual(staleVerificationUserIds.toSorted(), [1, 2]);
 	});
+
+	it("deletes all violations", async (t) => {
+		const repo = new CaptchaRepository({ valkeyClient });
+		await repo.addUserVerificationCheck(mockVerification);
+		await repo.addUserVerificationCheck({ ...mockVerification, userId: 2 });
+
+		const question = await repo.getVerificationQuestion(mockVerification.userId);
+		t.assert.equal(question, mockVerification.question);
+
+		await repo.clearAllVerifications();
+
+		t.assert.equal(await repo.getVerificationQuestion(mockVerification.userId), undefined);
+		t.assert.equal(await repo.getVerificationQuestion(2), undefined);
+	});
 });

@@ -37,8 +37,9 @@ export class CaptchaJobRunner implements Disposable {
 			}
 			for (const userId of staleUserIds) {
 				try {
-					await this.#api.banChatMember(this.#chatId, userId);
+					// Removing user verification record first, so if we fail on ban, we won't endlessly go over the record until it expires
 					await this.#captchaService.removeUserVerificationCheck(userId);
+					await this.#api.banChatMember(this.#chatId, userId);
 				} catch (error) {
 					logger.error({ userId, error }, "Error while processing stale verification");
 				}

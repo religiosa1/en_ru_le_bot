@@ -67,4 +67,12 @@ export const captchaCommands = new CommandGroup()
 		await ctx.reply(captchaMsg, { parse_mode: "MarkdownV2" });
 		const successMsg = getCaptchaSuccessMessage(ctx.from);
 		await ctx.reply(successMsg, { parse_mode: "MarkdownV2" });
+	})
+	// Hidden command to nuke captcha storage
+	.addHiddenAdminCommand("captcha_clear", async (ctx) => {
+		const { logger } = ctx;
+		const { captchaService } = ctx.container;
+		await captchaService.clearAllVerifications();
+		logger.info("Cleared all captcha verifications");
+		await ctx.reply(`Removed all pending captcha checks`);
 	});
