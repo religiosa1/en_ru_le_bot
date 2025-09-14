@@ -8,7 +8,7 @@ export const cooldownCommands = new CommandGroup().addAdminCommand(
 	"cooldown",
 	"[duration] Set cooldown value for wrong language warnings",
 	async (ctx) => {
-		const { logger } = ctx;
+		const logger = ctx.getLogger("cooldown::command");
 		const { cooldownService } = ctx.container;
 		const durationStr = ctx.match?.toString();
 		if (!durationStr) {

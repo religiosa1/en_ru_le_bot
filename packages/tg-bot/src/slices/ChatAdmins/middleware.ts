@@ -2,7 +2,7 @@ import type { NextFunction } from "grammy";
 import type { BotContext } from "../../BotContext.ts";
 
 export async function adminOnly(ctx: BotContext, next: NextFunction): Promise<void> {
-	const { logger } = ctx;
+	const logger = ctx.getLogger("chat_admins::middleware");
 	const admins = await ctx.container.chatAdminRepo.getAdminsIds();
 	const userId = ctx.message?.from.id;
 	if (!userId || !admins.includes(userId)) {

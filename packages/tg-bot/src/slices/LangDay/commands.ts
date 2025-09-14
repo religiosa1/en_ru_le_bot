@@ -2,9 +2,11 @@ import { match } from "ts-pattern";
 import { LanguageEnum } from "../../enums/Language.ts";
 import { CommandGroup } from "../../models/CommandGroup.ts";
 
+const scope = (name: string) => `lang_day::command::${name}`;
+
 export const langDayCommands = new CommandGroup()
 	.addCommand("today", "check current day: whether it's English, Russian, or Free", async (ctx) => {
-		const { logger } = ctx;
+		const logger = ctx.getLogger(scope("today"));
 		const { langDayService } = ctx.container;
 
 		logger.info("Today command called");
@@ -35,7 +37,7 @@ export const langDayCommands = new CommandGroup()
 		await ctx.reply(msg);
 	})
 	.addAdminCommand("langchecks", "Toggle language checks on/off", async (ctx) => {
-		const { logger } = ctx;
+		const logger = ctx.getLogger(scope("langchecks"));
 		const { langDayService } = ctx.container;
 
 		const disabled = !langDayService.isLangDayDisabled();
@@ -44,7 +46,7 @@ export const langDayCommands = new CommandGroup()
 		await ctx.reply(`Language checks are now ${disabled ? "disabled" : "enabled"}`);
 	})
 	.addAdminCommand("forcelang", "[en|ru] Force a specific language", async (ctx) => {
-		const { logger } = ctx;
+		const logger = ctx.getLogger(scope("forcelang"));
 		const { langDayService } = ctx.container;
 
 		const langStr = ctx.match?.toString();

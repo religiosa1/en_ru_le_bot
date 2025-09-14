@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { Batch, type GlideClient, Script, TimeUnit } from "@valkey/valkey-glide";
 import { dedent as d } from "ts-dedent";
 import { COMMON_KEY_PREFIX } from "../../constants.ts";
-import { logger } from "../../logger.ts";
+import { logger as baseLogger } from "../../logger.ts";
 import { toNumber } from "../../utils/glideParsers.ts";
 import type { ViolationCounterRepository } from "./models.ts";
 
@@ -29,6 +29,7 @@ const userIdToUsernameKey = (userId: number) => `${VIOLATIONS_PREFIX}userid:${us
 
 export class ViolationCounterRepositoryValkey implements ViolationCounterRepository {
 	#client: GlideClient;
+	readonly #logger = baseLogger.child({ scope: "user_violation::counter_repo" });
 
 	constructor({ valkeyClient }: { valkeyClient: GlideClient }) {
 		this.#client = valkeyClient;
@@ -76,7 +77,7 @@ export class ViolationCounterRepositoryValkey implements ViolationCounterReposit
 	async removeViolation(userIdOrHandle: number | string): Promise<number | undefined> {
 		const { userId, username } = (await this.#searchUser(userIdOrHandle)) ?? {};
 		if (userId == null) {
-			logger.info({ username: userIdOrHandle }, `Unable to find user with the provided username.`);
+			this.#logger.info({ username: userIdOrHandle }, `Unable to find user with the provided username.`);
 			return undefined;
 		}
 

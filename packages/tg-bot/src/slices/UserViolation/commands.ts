@@ -6,6 +6,8 @@ import { toNumber } from "../../utils/glideParsers.ts";
 import { getUserMentionFromMatchCtx } from "../../utils/parseUsername.ts";
 import { formatUser, isUser } from "../../utils/userUtils.ts";
 
+const scope = (name: string) => `user_violation::command::${name}`;
+
 const ALL_PERMISSIONS: Required<ChatPermissions> = {
 	can_send_messages: true,
 	can_send_audios: true,
@@ -25,7 +27,7 @@ const ALL_PERMISSIONS: Required<ChatPermissions> = {
 
 export const userViolationCommands = new CommandGroup()
 	.addAdminCommand("mute", "Toggle mutes on language violations on/off", async (ctx) => {
-		const { logger } = ctx;
+		const logger = ctx.getLogger(scope("mute"));
 		const userViolationService = ctx.container.userViolationService;
 		const newValue = !(await userViolationService.getMuteEnabled());
 		await userViolationService.setMuteEnabled(newValue);
@@ -33,7 +35,7 @@ export const userViolationCommands = new CommandGroup()
 		await ctx.reply(`Mute on language violations is now ${newValue ? "on" : "off"}`);
 	})
 	.addAdminCommand("pardon", "[@user] - Remove violations for specific user or all users", async (ctx) => {
-		const { logger } = ctx;
+		const logger = ctx.getLogger(scope("pardon"));
 		const userViolationService = ctx.container.userViolationService;
 		const [user, error] = attempt(() => getUserMentionFromMatchCtx(ctx));
 		if (error) {
@@ -73,7 +75,7 @@ export const userViolationCommands = new CommandGroup()
 			await ctx.reply(`Mute duration is ${formatDuration(duration)}`);
 			return;
 		}
-		const { logger } = ctx;
+		const logger = ctx.getLogger(scope("mute_duration"));
 		const duration = parseDuration(durationStr, "m");
 		if (Number.isNaN(duration) || duration <= 0) {
 			await ctx.reply(`Incorrect duration value "${durationStr}". Try something like "3", "10m", "1m30s", etc.`);
@@ -91,7 +93,7 @@ export const userViolationCommands = new CommandGroup()
 			await ctx.reply(`Warning expiry is ${formatDuration(duration)}`);
 			return;
 		}
-		const { logger } = ctx;
+		const logger = ctx.getLogger(scope("warnings_expiry"));
 		const duration = parseDuration(durationStr, "m");
 		if (Number.isNaN(duration) || duration <= 0) {
 			await ctx.reply(`Incorrect expiry value "${durationStr}". Try something like "3", "10m", "1m30s", etc.`);
@@ -109,7 +111,7 @@ export const userViolationCommands = new CommandGroup()
 			await ctx.reply(`Maximum number of warnings is ${value}`);
 			return;
 		}
-		const { logger } = ctx;
+		const logger = ctx.getLogger(scope("warnings_number"));
 		const value = toNumber(numStr);
 		if (value == null || !Number.isInteger(value) || value < 0) {
 			await ctx.reply(`Maximum number of warnings must be a non-negative integer!`);

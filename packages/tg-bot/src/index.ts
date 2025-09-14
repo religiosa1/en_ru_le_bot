@@ -3,8 +3,8 @@ import { Bot } from "grammy";
 import { BotContext } from "./BotContext.ts";
 import { configureDefaultContainer } from "./container.ts";
 import { logger } from "./logger.ts";
-import { targetChatOnly } from "./middlewares/targetChatOnly.ts";
-import { userJoined } from "./middlewares/userJoined.ts";
+import { targetChatMsgOnly } from "./middlewares/targetChatMsgOnly.ts";
+import { userJoinedTargetChat } from "./middlewares/userJoinedTargetChat.ts";
 import { AdminOnlyCommand } from "./models/Command.ts";
 import { getConfig } from "./models/config.ts";
 import * as scopes from "./scopes.ts";
@@ -46,12 +46,12 @@ if (chatId) {
 	bot.api.setMyCommands(allCommands.getAdminsCommandGroup().toBotCommands(), { scope: scopes.admins });
 }
 
-bot.on("chat_member", targetChatOnly, userJoined, onChatMemberCaptchaHandler);
-bot.on("chat_member", targetChatOnly, userJoined, onChatMemberProbationHandler);
+bot.on("chat_member", userJoinedTargetChat("captcha"), onChatMemberCaptchaHandler);
+bot.on("chat_member", userJoinedTargetChat("probation"), onChatMemberProbationHandler);
 
 bot.on(
 	"msg:text",
-	targetChatOnly,
+	targetChatMsgOnly,
 	captchaMiddleware,
 	checkMessageLanguage,
 	cooldownMiddleware,
@@ -65,6 +65,7 @@ bot.catch((err) => {
 logger.info("Preloading language models...");
 const duration = await withPerfMeasure(() => langDetection.loadLanguageModels());
 logger.info({ duration }, `Models loaded in ${duration.toFixed(2)}ms. Starting the bot now`);
+
 bot.start({
 	allowed_updates: ["message", "chat_member", "my_chat_member"],
 	onStart(getMeInfo) {

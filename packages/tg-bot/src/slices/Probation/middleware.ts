@@ -1,13 +1,13 @@
 import type { BotContext } from "../../BotContext.ts";
 import { Time } from "../../enums/Time.ts";
-import { getNewUserFromChatMemberEvent } from "../../middlewares/userJoined.ts";
+import { getNewUserFromChatMemberEvent } from "../../middlewares/userJoinedTargetChat.ts";
 import { formatDuration } from "../../utils/duration.ts";
 import { raise } from "../../utils/raise.ts";
 
 const PROBATION_DURATION = 1 * Time.Days;
 
 export async function onChatMemberProbationHandler(ctx: BotContext) {
-	const { logger } = ctx;
+	const logger = ctx.getLogger("probation::new_chat_member_handler");
 	const user =
 		getNewUserFromChatMemberEvent(ctx) ?? raise("user must be present in the event fo r probation handler to work");
 

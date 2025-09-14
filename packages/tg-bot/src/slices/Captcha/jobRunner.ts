@@ -25,7 +25,7 @@ export class CaptchaJobRunner implements Disposable {
 	}
 
 	async #runBackgroundJob() {
-		const logger = baseLogger.child({ jobId: Date.now() });
+		const logger = baseLogger.child({ jobId: Date.now(), scope: "captcha::job_runner" });
 		logger.trace("Background captcha job started");
 		try {
 			const maxVerificationAge = await this.#captchaService.getMaxVerificationAge();

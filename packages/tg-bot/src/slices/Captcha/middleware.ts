@@ -1,7 +1,7 @@
 import assert from "node:assert";
 import type { NextFunction } from "grammy";
 import type { BotContext } from "../../BotContext.ts";
-import { getNewUserFromChatMemberEvent } from "../../middlewares/userJoined.ts";
+import { getNewUserFromChatMemberEvent } from "../../middlewares/userJoinedTargetChat.ts";
 import { raise } from "../../utils/raise.ts";
 import { makeQuestionAnswer } from "./makeQuestionAnswer.ts";
 import { getCaptchaMessage, getCaptchaSuccessMessage } from "./messages.ts";
@@ -9,7 +9,7 @@ import { getCaptchaMessage, getCaptchaSuccessMessage } from "./messages.ts";
 const MAX_ATTEMPTS = 7;
 
 export async function captchaMiddleware(ctx: BotContext, next: NextFunction): Promise<void> {
-	const { logger } = ctx;
+	const logger = ctx.getLogger("captcha::middleware");
 	const { captchaService, chatId } = ctx.container;
 
 	const userId = ctx.message?.from.id;
@@ -42,7 +42,7 @@ export async function captchaMiddleware(ctx: BotContext, next: NextFunction): Pr
 	logger.info({ text, expectedAnswer: verificationResult.expectedAnswer }, "Captcha verification failed");
 	if (verificationResult.attemptsMade >= MAX_ATTEMPTS) {
 		logger.info("Too many failed verification attempts, banning them for good.");
-		await ctx.banChatMember(userId);
+		await ctx.api.banChatMember(chatId, userId);
 		await captchaService.removeUserVerificationCheck(userId);
 	} else if (verificationResult.attemptsMade % 3 === 0) {
 		const question = await captchaService.getVerificationQuestion(userId);
@@ -56,8 +56,8 @@ export async function captchaMiddleware(ctx: BotContext, next: NextFunction): Pr
 }
 
 export async function onChatMemberCaptchaHandler(ctx: BotContext): Promise<void> {
-	const { logger } = ctx;
-	const { captchaService } = ctx.container;
+	const logger = ctx.getLogger("captcha::new_chat_member_handler");
+	const { captchaService, chatId } = ctx.container;
 
 	const user = getNewUserFromChatMemberEvent(ctx) ?? raise("User must be present for captcha handler to work");
 
@@ -71,7 +71,7 @@ export async function onChatMemberCaptchaHandler(ctx: BotContext): Promise<void>
 		logger.info({ user }, "New joined user is a bot");
 		const areBotsAllowed = await captchaService.getBotsAllowed();
 		if (!areBotsAllowed) {
-			await ctx.banChatMember(user.id);
+			await ctx.api.banChatMember(chatId, user.id);
 		}
 	} else {
 		const [question, answer] = makeQuestionAnswer();

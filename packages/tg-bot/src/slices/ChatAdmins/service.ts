@@ -1,13 +1,14 @@
 import type { Api } from "grammy";
 import type { DIContainerInternal } from "../../container.ts";
 import { Time } from "../../enums/Time.ts";
-import { logger } from "../../logger.ts";
+import { logger as baseLogger } from "../../logger.ts";
 
 type ChatAdminRepoParams = Pick<DIContainerInternal, "api" | "chatId">;
 export class ChatAdminRepo {
 	readonly #api: Api;
 	readonly #chatId: number;
 	readonly #admins = new Set<number>();
+	readonly #logger = baseLogger.child({ scope: "chat_admins::service" });
 
 	#refreshedAt: number | undefined;
 	#ttl = 3 * Time.Hours;
@@ -30,10 +31,13 @@ export class ChatAdminRepo {
 
 	async getAdminsIds(signal?: AbortSignal): Promise<number[]> {
 		if (!this.isCacheValid()) {
-			logger.debug({ validUntil: this.getValidUntil() }, "Admin cache invalid, refreshing admins list");
+			this.#logger.debug({ validUntil: this.getValidUntil() }, "Admin cache invalid, refreshing admins list");
 			await this.refreshAdminsList(signal);
 		} else {
-			logger.trace({ validUntil: this.getValidUntil(), admins: Array.from(this.#admins) }, "Using cached admins list");
+			this.#logger.trace(
+				{ validUntil: this.getValidUntil(), admins: Array.from(this.#admins) },
+				"Using cached admins list",
+			);
 		}
 		return Array.from(this.#admins);
 	}
@@ -41,7 +45,7 @@ export class ChatAdminRepo {
 	async refreshAdminsList(signal?: AbortSignal) {
 		const admins = await this.#api.getChatAdministrators(this.#chatId, signal);
 		this.#refreshedAt = Date.now();
-		logger.trace({ admins }, "Admins list fetched");
+		this.#logger.trace({ admins }, "Admins list fetched");
 		this.#admins.clear();
 		for (const admin of admins) {
 			this.#admins.add(admin.user.id);

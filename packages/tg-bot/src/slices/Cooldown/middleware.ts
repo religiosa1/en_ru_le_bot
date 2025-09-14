@@ -3,7 +3,7 @@ import type { BotContext } from "../../BotContext.ts";
 
 /** Cooldown middleware. Will abort the next middleware in the chain, if we're still in cooldown */
 export async function cooldownMiddleware(ctx: BotContext, next?: NextFunction) {
-	const { logger } = ctx;
+	const logger = ctx.getLogger("cooldown::middleware");
 	const { cooldownService } = ctx.container;
 
 	if (cooldownService.isCoolingDown()) {

@@ -1,7 +1,7 @@
 import { CommandGroup } from "../models/CommandGroup.ts";
 
 export const retranslateCommands = new CommandGroup().addHiddenAdminCommand("rt", async (ctx) => {
-	const { logger } = ctx;
+	const logger = ctx.getLogger("rt::command");
 	logger.info("Retranslate command received");
 	const text = ctx.match?.toString();
 	if (text) {

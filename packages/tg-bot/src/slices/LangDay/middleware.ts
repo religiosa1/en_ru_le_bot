@@ -21,7 +21,7 @@ const MESSAGE_AGE_THRESHOLD = 5 * Time.Minutes;
  * If a mismatch encountered, it routes request to the next middleware, otherwise it aborts the chain.
  */
 export async function checkMessageLanguage(ctx: BotContext, next?: NextFunction) {
-	const { logger } = ctx;
+	const logger = ctx.getLogger("lang_day::middleware::check_message_lang");
 	logger.debug(
 		{
 			text: ctx.message?.text,
@@ -71,7 +71,13 @@ export async function checkMessageLanguage(ctx: BotContext, next?: NextFunction)
 	}
 	(ctx as BotContextWithMsgLanguage).language = language;
 
-	if (await detectLanguageOutsideOfEnRu(logger, textWithoutDigitsOrPunctuation, language)) {
+	if (
+		await detectLanguageOutsideOfEnRu(
+			logger.child({ scope: "lang_day::middleware::other_langs" }),
+			textWithoutDigitsOrPunctuation,
+			language,
+		)
+	) {
 		logger.info("Decided it's a bad language");
 		(ctx as BotContextWithMsgLanguage).msgLanguage = "other";
 	} else {

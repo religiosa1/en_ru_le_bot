@@ -6,6 +6,8 @@ import { formatUser, isUser } from "../../utils/userUtils.ts";
 import { makeQuestionAnswer } from "./makeQuestionAnswer.ts";
 import { getCaptchaMessage, getCaptchaSuccessMessage } from "./messages.ts";
 
+const scope = (name: string) => `captcha::command::${name}`;
+
 export const captchaCommands = new CommandGroup()
 	.addAdminCommand("trust", "@username remove captcha check for a user", async (ctx) => {
 		const [user, error] = attempt(() => getUserMentionFromMatchCtx(ctx));
@@ -17,14 +19,14 @@ export const captchaCommands = new CommandGroup()
 			ctx.reply("username is required in this command");
 			return;
 		}
-		const { logger } = ctx;
+		const logger = ctx.getLogger(scope("trust"));
 		const { captchaService } = ctx.container;
 		await captchaService.removeUserVerificationCheck(isUser(user) ? user.id : user);
 		logger.info({ userName: user }, "Trusted user");
 		await ctx.reply(`Ok, user @${formatUser(user)} is now trusted`);
 	})
 	.addAdminCommand("captcha", "toggle captcha check for newcomers on/off", async (ctx) => {
-		const { logger } = ctx;
+		const logger = ctx.getLogger(scope("captcha"));
 		const { captchaService } = ctx.container;
 		const enabled = await captchaService.toggleEnabled();
 		logger.info({ enabled }, "Toggle captcha");
@@ -34,7 +36,7 @@ export const captchaCommands = new CommandGroup()
 		"captcha_time",
 		"[duration] show or set time in which members must pass captcha check",
 		async (ctx) => {
-			const { logger } = ctx;
+			const logger = ctx.getLogger(scope("captcha_time"));
 			const { captchaService } = ctx.container;
 			const durationStr = ctx.match?.toString();
 			if (!durationStr) {
@@ -53,10 +55,11 @@ export const captchaCommands = new CommandGroup()
 		},
 	)
 	.addAdminCommand("captcha_bots", "toggle bots allowed on/off", async (ctx) => {
-		const { logger } = ctx;
+		const logger = ctx.getLogger(scope("captcha_bots"));
 		const { captchaService } = ctx.container;
 		const value = await captchaService.toggleBotsAllowed();
 		logger.info({ value }, "Bots allowed toggled ");
+		await ctx.reply(value ? "Bots can join now" : "Bots are forbidden to join now");
 	})
 	// hidden command for testing captcha messages (as formatting can be tricky)
 	.addHiddenAdminCommand("captcha_msg", async (ctx) => {
@@ -70,7 +73,7 @@ export const captchaCommands = new CommandGroup()
 	})
 	// Hidden command to nuke captcha storage
 	.addHiddenAdminCommand("captcha_clear", async (ctx) => {
-		const { logger } = ctx;
+		const logger = ctx.getLogger(scope("captcha_clear"));
 		const { captchaService } = ctx.container;
 		await captchaService.clearAllVerifications();
 		logger.info("Cleared all captcha verifications");

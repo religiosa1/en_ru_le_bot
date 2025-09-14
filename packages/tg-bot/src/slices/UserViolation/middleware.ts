@@ -26,7 +26,8 @@ export async function userViolationMiddleware(ctx: BotContext, next?: NextFuncti
 		throw new Error("Message is not present in the context");
 	}
 	const userViolationService = ctx.container.userViolationService;
-	const { logger, language } = ctx;
+	const { language } = ctx;
+	const logger = ctx.getLogger("user_violation::middleware");
 	const { chatId } = ctx.container;
 
 	const userId = ctx.message.from.id;

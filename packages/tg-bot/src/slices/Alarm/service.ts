@@ -4,7 +4,7 @@ import { match } from "ts-pattern";
 import type { DIContainerInternal } from "../../container.ts";
 import { LanguageEnum } from "../../enums/Language.ts";
 import { Time } from "../../enums/Time.ts";
-import { logger } from "../../logger.ts";
+import { logger as baseLogger } from "../../logger.ts";
 import type { LangDayService } from "../LangDay/service.ts";
 
 const DEFAULT_ON = true;
@@ -16,6 +16,7 @@ export class AlarmService implements Disposable {
 	readonly #langDayService: LangDayService;
 	readonly #api: Api;
 	readonly #chatId: number;
+	readonly #logger = baseLogger.child({ scope: "alarm::service" });
 
 	constructor({ langDayService, api, chatId }: AlarmServiceParams) {
 		this.#langDayService = langDayService;
@@ -53,7 +54,7 @@ export class AlarmService implements Disposable {
 	// 			.otherwise(() => "The day will change in 5 minutes.");
 	// 		await this.#api.sendMessage(this.#chatId, msg);
 	// 	} catch (error) {
-	// 		logger.error({ error }, "Error while trying to issue before-hand day change warning");
+	// 		this.#logger.error({ error }, "Error while trying to issue before-hand day change warning");
 	// 	}
 	// }
 
@@ -71,7 +72,7 @@ export class AlarmService implements Disposable {
 				.exhaustive();
 			await this.#api.sendMessage(this.#chatId, msg);
 		} catch (error) {
-			logger.error({ error }, "Error while trying to issue day change warning");
+			this.#logger.error({ error }, "Error while trying to issue day change warning");
 		}
 	}
 }
