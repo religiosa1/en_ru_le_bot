@@ -3,23 +3,21 @@ import type { ChatMember, User } from "grammy/types";
 import type { BotContext } from "../BotContext.ts";
 
 /** Middleware for filtering new user joined in the target chat */
-export function userJoinedTargetChat(scope: string): (ctx: BotContext, next: NextFunction) => Promise<void> {
-	return async (ctx: BotContext, next: NextFunction): Promise<void> => {
-		const logger = ctx.getLogger(scope);
-		const { chatId } = ctx.container;
-		const currentChatId = ctx.update.chat_member?.chat.id;
-		if (currentChatId !== chatId) {
-			logger.debug(
-				{ actualChatId: currentChatId, targetChatId: chatId },
-				`Wrong chat, aborting following checks in middleware`,
-			);
-			return;
-		}
-		const user = getNewUserFromChatMemberEvent(ctx);
-		if (user) {
-			await next();
-		}
-	};
+export async function userJoinedTargetChat(ctx: BotContext, next: NextFunction): Promise<void> {
+	const logger = ctx.getLogger("userJoinedTargetChat");
+	const { chatId } = ctx.container;
+	const currentChatId = ctx.update.chat_member?.chat.id;
+	if (currentChatId !== chatId) {
+		logger.debug(
+			{ actualChatId: currentChatId, targetChatId: chatId },
+			`Wrong chat, aborting following checks in middleware`,
+		);
+		return;
+	}
+	const user = getNewUserFromChatMemberEvent(ctx);
+	if (user) {
+		await next();
+	}
 }
 
 const ALLOWED_OLD_STATUSES: ChatMember["status"][] = ["left", "kicked"];

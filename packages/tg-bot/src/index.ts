@@ -46,8 +46,7 @@ if (chatId) {
 	bot.api.setMyCommands(allCommands.getAdminsCommandGroup().toBotCommands(), { scope: scopes.admins });
 }
 
-bot.on("chat_member", userJoinedTargetChat("captcha"), onChatMemberCaptchaHandler);
-bot.on("chat_member", userJoinedTargetChat("probation"), onChatMemberProbationHandler);
+bot.on("chat_member", userJoinedTargetChat, onChatMemberProbationHandler, onChatMemberCaptchaHandler);
 
 bot.on(
 	"msg:text",
