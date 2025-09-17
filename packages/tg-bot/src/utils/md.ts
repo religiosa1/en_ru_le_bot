@@ -1,6 +1,12 @@
+import type { User } from "grammy/types";
 import { dedent } from "ts-dedent";
 
 const mdContSymbol = Symbol.for("markdownString");
+
+/** Make a markdown user mention (disregarding if they have a username or not) */
+export function makeMdMention(member: User): MarkdownString {
+	return rawMd`[@${member.username || member.first_name}](tg://user?id=${member.id})`;
+}
 
 /** Markdown string is a boxed string with an additional symbol brand. */
 export type MarkdownString = string & { [mdContSymbol]: true };

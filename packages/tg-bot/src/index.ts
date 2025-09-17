@@ -15,6 +15,7 @@ import { cooldownMiddleware } from "./slices/Cooldown/middleware.ts";
 import { checkMessageLanguage } from "./slices/LangDay/middleware.ts";
 import { onChatMemberProbationHandler } from "./slices/Probation/middleware.ts";
 import { userViolationMiddleware } from "./slices/UserViolation/middleware.ts";
+import { registerMessageBetweenWelcomes } from "./slices/WelcomeMessage/middleware.ts";
 import { withPerfMeasure } from "./utils/withPerfMeasure.ts";
 
 const config = getConfig();
@@ -52,6 +53,7 @@ bot.on(
 	"msg:text",
 	targetChatMsgOnly,
 	captchaMiddleware,
+	registerMessageBetweenWelcomes,
 	checkMessageLanguage,
 	cooldownMiddleware,
 	userViolationMiddleware,

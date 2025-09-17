@@ -4,13 +4,13 @@ import type { BotContext } from "../../BotContext.ts";
 import { getNewUserFromChatMemberEvent } from "../../middlewares/userJoinedTargetChat.ts";
 import { raise } from "../../utils/raise.ts";
 import { makeQuestionAnswer } from "./makeQuestionAnswer.ts";
-import { getCaptchaMessage, getCaptchaSuccessMessage } from "./messages.ts";
+import { getCaptchaMessage } from "./messages.ts";
 
 const MAX_ATTEMPTS = 7;
 
 export async function captchaMiddleware(ctx: BotContext, next: NextFunction): Promise<void> {
 	const logger = ctx.getLogger("captcha::middleware");
-	const { captchaService, chatId } = ctx.container;
+	const { captchaService, chatId, welcomeService } = ctx.container;
 
 	const userId = ctx.message?.from.id;
 
@@ -30,11 +30,9 @@ export async function captchaMiddleware(ctx: BotContext, next: NextFunction): Pr
 
 	const verificationResult = await captchaService.verifyUserAnswer(userId, text);
 	if (verificationResult.correct) {
-		logger.info("Captcha verification passed");
+		logger.info({ user: ctx.message.from }, "Captcha verification passed");
 		await captchaService.removeUserVerificationCheck(userId);
-		await ctx.reply(getCaptchaSuccessMessage(ctx.message.from), {
-			parse_mode: "MarkdownV2",
-		});
+		await welcomeService.welcomeUser(ctx.message.from);
 		// we're not calling the next handler, as captcha verification doesn't require any following lang checks
 		return;
 	}

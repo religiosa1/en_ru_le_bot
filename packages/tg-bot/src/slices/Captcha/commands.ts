@@ -4,7 +4,7 @@ import { formatDuration, parseDuration } from "../../utils/duration.ts";
 import { getUserMentionFromMatchCtx } from "../../utils/parseUsername.ts";
 import { formatUser, isUser } from "../../utils/userUtils.ts";
 import { makeQuestionAnswer } from "./makeQuestionAnswer.ts";
-import { getCaptchaMessage, getCaptchaSuccessMessage } from "./messages.ts";
+import { getCaptchaMessage } from "./messages.ts";
 
 const scope = (name: string) => `captcha::command::${name}`;
 
@@ -64,11 +64,11 @@ export const captchaCommands = new CommandGroup()
 	// hidden command for testing captcha messages (as formatting can be tricky)
 	.addHiddenAdminCommand("captcha_msg", async (ctx) => {
 		const [question] = makeQuestionAnswer();
-		const { captchaService } = ctx.container;
+		const { captchaService, welcomeService } = ctx.container;
 		if (!ctx.from) return;
 		const captchaMsg = getCaptchaMessage(question, ctx.from, await captchaService.getMaxVerificationAge());
 		await ctx.reply(captchaMsg, { parse_mode: "MarkdownV2" });
-		const successMsg = getCaptchaSuccessMessage(ctx.from);
+		const successMsg = welcomeService.getWelcomeMessage(ctx.from);
 		await ctx.reply(successMsg, { parse_mode: "MarkdownV2" });
 	})
 	// Hidden command to nuke captcha storage

@@ -7,14 +7,16 @@ import { ChatAdminRepo } from "./slices/ChatAdmins/service.ts";
 import { type CooldownService, cooldownServiceFactory } from "./slices/Cooldown/factory.ts";
 import { LangDayService } from "./slices/LangDay/service.ts";
 import { type UserViolationService, userViolationServiceFactory } from "./slices/UserViolation/factory.ts";
+import { WelcomeService } from "./slices/WelcomeMessage/service.ts";
 
 /** The exposed part of the container, this is what available in ctx*/
 export interface DIContainer {
 	chatId: number;
 	chatAdminRepo: ChatAdminRepo;
-	cooldownService: CooldownService;
 	langDayService: LangDayService;
+	cooldownService: CooldownService;
 	userViolationService: UserViolationService;
+	welcomeService: WelcomeService;
 	captchaService: CaptchaService;
 	alarmService: AlarmService;
 }
@@ -45,19 +47,22 @@ export async function configureDefaultContainer(api: Api, chatId: number): Promi
 		injectionMode: "PROXY",
 	});
 	container.register({
-		chatId: asValue(chatId),
 		api: asValue(api),
 		valkeyClient: asValue(client),
+		chatId: asValue(chatId),
 		chatAdminRepo: asClass(ChatAdminRepo, {
 			lifetime: Lifetime.SCOPED,
 		}),
 		langDayService: asClass(LangDayService, {
 			lifetime: Lifetime.SCOPED,
 		}),
+		cooldownService: asFunction(cooldownServiceFactory, {
+			lifetime: Lifetime.SCOPED,
+		}),
 		userViolationService: asFunction(userViolationServiceFactory, {
 			lifetime: Lifetime.SCOPED,
 		}),
-		cooldownService: asFunction(cooldownServiceFactory, {
+		welcomeService: asClass(WelcomeService, {
 			lifetime: Lifetime.SCOPED,
 		}),
 		captchaService: asFunction(captchaServiceFactory, {
