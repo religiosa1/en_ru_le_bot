@@ -62,7 +62,10 @@ export class WelcomeService {
 
 		Monday, Wednesday and Friday — Russian days
 		Tuesday, Thursday and Saturday — English days.
-		Sunday — free day. 
+		Sunday — free day.
+
+		To prevent spam, newcomers are not allowed to post gifs and such for a short
+		period of time after they join.
 
 		* DO NOT WRITE TO OTHER MEMBERS DIRECTLY BEFORE YOU AT LEAST KNOW THEM. *
 		Write to the admins if someone is bothering you, so the admins may settle the situation.
@@ -73,6 +76,9 @@ export class WelcomeService {
 		Понедельник, среда, пятница — русский день. 
 		Вторник, четверг и суббота — английский. 
 		Воскресенье — свободный день.
+
+		В целях предотвращения спама, новым участникам запрещено отправлять гифки
+		и т.п. в течение короткого времени после присоединения.
 
 		* НЕ ПИШИТЕ ДРУГИМ УЧАСТНИКАМ В ЛИЧКУ ПОКА ВЫ С НИМИ ХОТЯ БЫ НЕ ПОЗНАКОМИТЕСЬ. *
 		Если вам кто-то докучает, пишите админам, чтобы они могли урегулировать ситуацию.
