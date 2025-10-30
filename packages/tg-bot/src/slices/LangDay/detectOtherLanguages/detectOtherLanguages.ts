@@ -2,7 +2,7 @@ import { detectAllLanguagesFast } from "@en-ru-le/language-detection";
 import type { Logger } from "pino";
 import { LanguageEnum } from "../../../enums/Language.ts";
 import { stripNonLetterOrWhitespaceChars } from "../utils.ts";
-import { detectByCharset } from "./detectByCharset.ts";
+import { detectBadLangByCharset } from "./detectBadLangByCharset.ts";
 import { mostCommonWordsInEnglish } from "./mostCommonWordsInEnglish.ts";
 import { mostCommonWordsInRussian } from "./mostCommonWordsInRussian.ts";
 
@@ -16,12 +16,12 @@ const UNKNOWN_WORDS_THRESHOLD = 0.6;
 export async function detectLanguageOutsideOfEnRu(
 	logger: Logger,
 	text: string,
-	targetLanguage: LanguageEnum,
+	targetLanguage: LanguageEnum
 ): Promise<boolean> {
 	const cleanedText = stripNonLetterOrWhitespaceChars(text);
 
 	// Initially trying to filter out clearly bad languages, which use wrong script, such as chinese
-	if (detectByCharset(cleanedText)) {
+	if (detectBadLangByCharset(cleanedText)) {
 		logger.debug("Language mismatch by charset");
 		return true;
 	}
@@ -51,7 +51,7 @@ export async function detectLanguageOutsideOfEnRu(
 	if (lang.confidence < TARGET_CONFIDENCE_LEVEL) {
 		logger.info(
 			{ language: lang.language, confidence: lang.confidence },
-			"Language detected as NOT Russian or English, but confidence level is too low",
+			"Language detected as NOT Russian or English, but confidence level is too low"
 		);
 		return false;
 	}
@@ -75,7 +75,7 @@ export async function detectLanguageOutsideOfEnRu(
 			totalWords: words.length,
 			totalUnrecognized: nonRecognizedWords.length,
 		},
-		"Language mismatch, checking against dicts to filter out false-positives",
+		"Language mismatch, checking against dicts to filter out false-positives"
 	);
 	return hasPlentyUnknownWords;
 }
