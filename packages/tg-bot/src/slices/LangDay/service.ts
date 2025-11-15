@@ -13,6 +13,7 @@ type DayResponse =
 export class LangDayService {
 	#langDayDisabled = false;
 	#forcedLanguage: LanguageEnum | undefined = undefined;
+	#isOtherLangCheckDisabled = false;
 
 	getDaySettings(dayNumber: number = new Date().getDay()): DayResponse | undefined {
 		if (this.#langDayDisabled) return undefined;
@@ -21,11 +22,11 @@ export class LangDayService {
 			? {
 					value: this.#forcedLanguage,
 					forced: true,
-				}
+			  }
 			: {
 					value: this.determineDay(dayNumber),
 					forced: false,
-				};
+			  };
 	}
 
 	determineDay(dayNumber: number = new Date().getDay()): LanguageEnum | undefined {
@@ -55,6 +56,14 @@ export class LangDayService {
 
 	setLangDayDisabled(value: boolean): void {
 		this.#langDayDisabled = !!value;
+	}
+
+	isOtherLangCheckDisabled(): boolean {
+		return this.#isOtherLangCheckDisabled;
+	}
+
+	setOtherLangCheckDisabled(value: boolean) {
+		this.#isOtherLangCheckDisabled = value;
 	}
 
 	getForcedLanguage(): LanguageEnum | undefined {

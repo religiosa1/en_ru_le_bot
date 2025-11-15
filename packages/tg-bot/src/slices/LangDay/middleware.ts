@@ -65,22 +65,23 @@ export async function checkMessageLanguage(ctx: BotContext, next?: NextFunction)
 	}
 
 	const language = langDayService.getDaySettings()?.value;
-	if (!language) {
-		logger.debug({ language }, "No specific language is set, aborting");
-		return;
-	}
 	(ctx as BotContextWithMsgLanguage).language = language;
 
 	if (
-		await detectLanguageOutsideOfEnRu(
+		!langDayService.isOtherLangCheckDisabled() &&
+		(await detectLanguageOutsideOfEnRu(
 			logger.child({ scope: "lang_day::middleware::other_langs" }),
 			textWithoutDigitsOrPunctuation,
 			language,
-		)
+		))
 	) {
 		logger.info("Decided it's a bad language");
 		(ctx as BotContextWithMsgLanguage).msgLanguage = "other";
 	} else {
+		if (!language) {
+			logger.debug({ language }, "No specific language is set for the explicit check, aborting");
+			return;
+		}
 		const msgLanguages = await langDetection.isRussianOrEnglish(textWithoutDigitsOrPunctuation);
 		logger.debug({ msgLanguages }, "Language detection result");
 

@@ -52,17 +52,23 @@ with a unit suffix. For example:
 
   With alarm on, bot will notify about English/Russian day changes.
 
-- /langchecks Toggle language checks on/off
+- /langchecks Toggle en/ru language checks on/off
 
-  If langchecks are disabled, bot won't check message language, or send 
-  notifications about day changes. This basically disables the bot, outside of
-  settings commands, or displaying rules.
+  Enables/disables checks of usage of english on russian days and vice versa.
+
+- /otherlang Toggle checks for languages outside en/ru on/off
+
+  Enables/Disables check for message language being outside of en or ru
+
+  If both langchecks and otherlang are disabled, bot won't check message language, or send notifications about day changes. The bot, will continue to do captcha
+  checks, display rules, accept commands, etc.
 
 - /forcelang ["en"|"ru"] Force a specific language
 
   Used to override the standard schedule. Without arguments removes forced 
   language. With an argument, allows to set the forced language, e.g. 
   `/forcelang ru`
+
 - /mute Toggle mutes on language violations on/off
 
   With mutes off, bot will give warnings to users, but will never restrict their

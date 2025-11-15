@@ -16,7 +16,7 @@ const UNKNOWN_WORDS_THRESHOLD = 0.6;
 export async function detectLanguageOutsideOfEnRu(
 	logger: Logger,
 	text: string,
-	targetLanguage: LanguageEnum
+	targetLanguage: LanguageEnum | undefined,
 ): Promise<boolean> {
 	const cleanedText = stripNonLetterOrWhitespaceChars(text);
 
@@ -51,7 +51,7 @@ export async function detectLanguageOutsideOfEnRu(
 	if (lang.confidence < TARGET_CONFIDENCE_LEVEL) {
 		logger.info(
 			{ language: lang.language, confidence: lang.confidence },
-			"Language detected as NOT Russian or English, but confidence level is too low"
+			"Language detected as NOT Russian or English, but confidence level is too low",
 		);
 		return false;
 	}
@@ -75,7 +75,7 @@ export async function detectLanguageOutsideOfEnRu(
 			totalWords: words.length,
 			totalUnrecognized: nonRecognizedWords.length,
 		},
-		"Language mismatch, checking against dicts to filter out false-positives"
+		"Language mismatch, checking against dicts to filter out false-positives",
 	);
 	return hasPlentyUnknownWords;
 }
