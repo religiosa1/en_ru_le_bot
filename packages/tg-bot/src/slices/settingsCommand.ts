@@ -10,6 +10,7 @@ export const settingsCommands = new CommandGroup().addAdminCommand(
 		const { langDayService, userViolationService, cooldownService, captchaService } = ctx.container;
 		let msg = d`
 		language checks: ${onOff(!langDayService.isLangDayDisabled())}
+		other lang checks: ${onOff(!langDayService.isOtherLangCheckDisabled())}
 		mute capacity: ${onOff(await userViolationService.getMuteEnabled())}
 		forced language: ${langDayService.getForcedLanguage() ?? "none"}
 		mute duration: ${formatDuration(await userViolationService.getMuteDuration())}
@@ -29,7 +30,7 @@ export const settingsCommands = new CommandGroup().addAdminCommand(
 		}
 
 		await ctx.reply(msg);
-	},
+	}
 );
 
 function onOff(value: boolean): string {
