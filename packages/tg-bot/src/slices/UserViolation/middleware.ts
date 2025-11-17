@@ -49,9 +49,9 @@ export async function userViolationMiddleware(ctx: BotContext, next?: NextFuncti
 	if (warningsLeft >= 0) {
 		await ctx.reply(
 			[getWarningMessage(language), geViolationWarningMessage(language, violationStats.value, warningsLeft)].join(
-				"\n\n",
+				"\n\n"
 			),
-			replyParams,
+			replyParams
 		);
 		return;
 	}
@@ -73,20 +73,20 @@ export async function userViolationMiddleware(ctx: BotContext, next?: NextFuncti
 			},
 			{
 				until_date: (Date.now() + muteDuration) / Time.Seconds,
-			},
+			}
 		);
 		logger.info(
 			{
 				nWarnings: violationStats.value,
 				maxViolations: violationStats.maxViolations,
 			},
-			"Temporarily restricting member",
+			"Temporarily restricting member"
 		);
 		await ctx.reply(
 			language === LanguageEnum.English
 				? "Ты временно замьючен за неоднократные нарушения."
 				: "You're temporarily muted for repeated violations.",
-			replyParams,
+			replyParams
 		);
 	} catch (err) {
 		logger.error({ err, userId }, "Error while restricting a member");
@@ -94,30 +94,36 @@ export async function userViolationMiddleware(ctx: BotContext, next?: NextFuncti
 			language === LanguageEnum.English
 				? "Ничего, в следующий раз тебя ещё достану."
 				: "You're in luck, pal. I'll get to you next time.",
-			replyParams,
+			replyParams
 		);
 	}
 	await next?.();
 }
 
-export function getWarningMessage(language: LanguageEnum): string {
+export function getWarningMessage(language: LanguageEnum | undefined): string {
 	switch (language) {
 		case LanguageEnum.English:
 			return `Эй, сегодня день английского. Пытайся говорить на английском!`;
 		case LanguageEnum.Russian:
 			return `Hey, today is Russian Day. Try to speak Russian!`;
+		case undefined:
+			return `Hey, speak either Russian or English!\nЭй, говори на русском или английском!`;
 		default:
 			assertNever(language, `Unsupported language code value: ${language}`);
 	}
 }
 
-function geViolationWarningMessage(language: LanguageEnum, nWarnings: number, warningsLeft: number): string {
+function geViolationWarningMessage(
+	language: LanguageEnum | undefined,
+	nWarnings: number,
+	warningsLeft: number
+): string {
 	return match(language)
 		.with(LanguageEnum.English, () =>
-			warningsLeft === 0 ? `Это последнее предупреждение` : `Это ${nWarnings}-e предупреждение.`,
+			warningsLeft === 0 ? `Это последнее предупреждение` : `Это ${nWarnings}-e предупреждение.`
 		)
-		.with(LanguageEnum.Russian, () =>
-			warningsLeft === 0 ? `This is your last warning.` : `This is your ${ordinalEn(nWarnings)} warning.`,
+		.with(LanguageEnum.Russian, undefined, () =>
+			warningsLeft === 0 ? `This is your last warning.` : `This is your ${ordinalEn(nWarnings)} warning.`
 		)
 		.exhaustive();
 }
