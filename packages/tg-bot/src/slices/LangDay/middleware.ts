@@ -67,15 +67,18 @@ export async function checkMessageLanguage(ctx: BotContext, next?: NextFunction)
 	const language = langDayService.getDaySettings()?.value;
 	(ctx as BotContextWithMsgLanguage).language = language;
 
-	if (
-		!langDayService.isOtherLangCheckDisabled() &&
-		(await detectLanguageOutsideOfEnRu(
-			logger.child({ scope: "lang_day::middleware::other_langs" }),
-			textWithoutDigitsOrPunctuation,
-			language,
-		))
-	) {
-		logger.info("Decided it's a bad language");
+	const otherLanguageDetectionResult = langDayService.isOtherLangCheckDisabled()
+		? undefined
+		: await detectLanguageOutsideOfEnRu(
+				logger.child({ scope: "lang_day::middleware::other_langs" }),
+				textWithoutDigitsOrPunctuation,
+				language,
+			);
+	if (otherLanguageDetectionResult) {
+		logger.info(
+			{ msgText: ctx.message.text, otherLanguageDetectionResult, language },
+			"Decided it's a bad language",
+		);
 		(ctx as BotContextWithMsgLanguage).msgLanguage = "other";
 	} else {
 		if (!language) {
@@ -94,7 +97,10 @@ export async function checkMessageLanguage(ctx: BotContext, next?: NextFunction)
 			logger.debug({ language }, "Correct language, nothing to do here");
 			return;
 		} else {
-			logger.info({ msgLang, language }, "Language mismatch, proceeding with a warning or a general notice");
+			logger.info(
+				{ msgLang, language },
+				"Language mismatch, proceeding with a warning or a general notice",
+			);
 		}
 
 		(ctx as BotContextWithMsgLanguage).msgLanguage = msgLang;
@@ -106,7 +112,9 @@ export async function checkMessageLanguage(ctx: BotContext, next?: NextFunction)
 /** Rate of one language over the other, when we start considering "it's written in language A"! */
 const REQUIRED_LANGUAGE_RATE = 1.7;
 
-function determineMainLanguage(languages: langDetection.DetectedLanguage[]): LanguageEnum | undefined {
+function determineMainLanguage(
+	languages: langDetection.DetectedLanguage[],
+): LanguageEnum | undefined {
 	const fragsByLang = Object.groupBy(languages, (i) => {
 		if (!isLangEnumValue(i.language)) {
 			throw new Error(`Unexpected language in the detection result: ${i.language}`);
