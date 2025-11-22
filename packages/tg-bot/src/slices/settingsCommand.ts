@@ -9,9 +9,10 @@ export const settingsCommands = new CommandGroup().addAdminCommand(
 	async (ctx) => {
 		const { langDayService, userViolationService, cooldownService, captchaService } = ctx.container;
 		let msg = d`
-		language checks: ${onOff(!langDayService.isLangDayDisabled())}
+		en/ru days checks: ${onOff(!(await langDayService.isLangDayDisabled()))}
+	  other lang checks: ${onOff(!(await langDayService.isOtherLangChecksDisabled()))}
+		forced language: ${(await langDayService.getForcedLanguage()) ?? "none"}
 		mute capacity: ${onOff(await userViolationService.getMuteEnabled())}
-		forced language: ${langDayService.getForcedLanguage() ?? "none"}
 		mute duration: ${formatDuration(await userViolationService.getMuteDuration())}
 		warnings number: ${await userViolationService.getMaxViolationNumber()}
 		warnings expiry: ${formatDuration(await userViolationService.getWarningsExpiry())}

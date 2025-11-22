@@ -10,10 +10,13 @@ export const langDayCommands = new CommandGroup()
 		const { langDayService } = ctx.container;
 
 		logger.info("Today command called");
-		const day = langDayService.getDaySettings();
+		const day = await langDayService.getDaySettings();
 		const msg = match(day)
 			.with(undefined, () =>
-				["Language checks are disabled by admins", "Проверка языка выключена администраторами."].join("\n\n"),
+				[
+					"Language checks are disabled by admins",
+					"Проверка языка выключена администраторами.",
+				].join("\n\n"),
 			)
 			.with({ forced: true }, ({ value }) =>
 				value === LanguageEnum.English
@@ -40,20 +43,24 @@ export const langDayCommands = new CommandGroup()
 		const logger = ctx.getLogger(scope("langchecks"));
 		const { langDayService } = ctx.container;
 
-		const disabled = !langDayService.isLangDayDisabled();
-		langDayService.setLangDayDisabled(disabled);
+		const disabled = !(await langDayService.isLangDayDisabled());
+		await langDayService.setLangDayDisabled(disabled);
 		logger.info(`Language checks disabled status changed: ${disabled}`);
 		await ctx.reply(`Language checks are now ${formatDisabled(disabled)}`);
 	})
-	.addAdminCommand("otherlang", "Toggle check for message language outside of en/ru on/off", async (ctx) => {
-		const logger = ctx.getLogger(scope("langchecks"));
-		const { langDayService } = ctx.container;
+	.addAdminCommand(
+		"otherlang",
+		"Toggle check for message language outside of en/ru on/off",
+		async (ctx) => {
+			const logger = ctx.getLogger(scope("langchecks"));
+			const { langDayService } = ctx.container;
 
-		const disabled = !langDayService.isOtherLangCheckDisabled();
-		langDayService.setOtherLangCheckDisabled(disabled);
-		logger.info(`Other language checks disabled status changed: ${disabled}`);
-		await ctx.reply(`Language checks are now ${formatDisabled(disabled)}`);
-	})
+			const disabled = !(await langDayService.isOtherLangChecksDisabled());
+			await langDayService.setOtherLangChecksDisabled(disabled);
+			logger.info(`Other language checks disabled status changed: ${disabled}`);
+			await ctx.reply(`Language checks are now ${formatDisabled(disabled)}`);
+		},
+	)
 	.addAdminCommand("forcelang", "[en|ru] Force a specific language", async (ctx) => {
 		const logger = ctx.getLogger(scope("forcelang"));
 		const { langDayService } = ctx.container;
@@ -61,7 +68,7 @@ export const langDayCommands = new CommandGroup()
 		const langStr = ctx.match?.toString();
 		if (!langStr) {
 			logger.info(`Forced language day disabled`);
-			langDayService.setForcedLanguage(undefined);
+			await langDayService.setForcedLanguage(undefined);
 			await ctx.reply("Forced day is now disabled.");
 			return;
 		}
@@ -74,7 +81,7 @@ export const langDayCommands = new CommandGroup()
 			await ctx.reply(`Unknown language "${langStr}"`);
 			return;
 		}
-		langDayService.setForcedLanguage(langValue);
+		await langDayService.setForcedLanguage(langValue);
 		logger.info(`Forced language day set to ${langValue}`);
 		await ctx.reply(`Language is now forced to ${langValue}`);
 	});

@@ -61,7 +61,7 @@ export class AlarmService implements Disposable {
 	async #handleDayChange(): Promise<void> {
 		try {
 			// Just in case of some mishaps shifting current 30 minutes ahead
-			const day = this.#langDayService.getDaySettings(new Date(Date.now() + 30 * Time.Minutes).getDay());
+			const day = await this.#langDayService.getDaySettings(new Date(Date.now() + 30 * Time.Minutes).getDay());
 			if (!day || day.forced) {
 				return;
 			}

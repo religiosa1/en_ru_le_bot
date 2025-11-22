@@ -1,4 +1,5 @@
 import { LanguageEnum } from "../../enums/Language.ts";
+import type { LangdaySettingsRepository } from "./repository.ts";
 
 type DayResponse =
 	| {
@@ -11,16 +12,21 @@ type DayResponse =
 	  };
 
 export class LangDayService {
-	#langDayDisabled = false;
-	#forcedLanguage: LanguageEnum | undefined = undefined;
-	#isOtherLangCheckDisabled = false;
+	#settings: LangdaySettingsRepository;
 
-	getDaySettings(dayNumber: number = new Date().getDay()): DayResponse | undefined {
-		if (this.#langDayDisabled) return undefined;
+	constructor({ langdaySettingsRepository }: { langdaySettingsRepository: LangdaySettingsRepository }) {
+		this.#settings = langdaySettingsRepository;
+	}
 
-		return this.#forcedLanguage
+	async getDaySettings(dayNumber: number = new Date().getDay()): Promise<DayResponse | undefined> {
+		const isDisabled = await this.#settings.getLangDayDisabled();
+		if (isDisabled) return undefined;
+
+		const forcedLanguage = await this.#settings.getForcedLang();
+
+		return forcedLanguage
 			? {
-					value: this.#forcedLanguage,
+					value: forcedLanguage,
 					forced: true,
 			  }
 			: {
@@ -50,30 +56,29 @@ export class LangDayService {
 		}
 	}
 
-	isLangDayDisabled(): boolean {
-		return this.#langDayDisabled;
+	async isLangDayDisabled(): Promise<boolean> {
+		const isDisabled = await this.#settings.getLangDayDisabled();
+		return !!isDisabled;
 	}
 
-	setLangDayDisabled(value: boolean): void {
-		this.#langDayDisabled = !!value;
+	async setLangDayDisabled(value: boolean): Promise<void> {
+		await this.#settings.setLangDayDisabled(value);
 	}
 
-	isOtherLangCheckDisabled(): boolean {
-		return this.#isOtherLangCheckDisabled;
+	async isOtherLangChecksDisabled(): Promise<boolean> {
+		const value = await this.#settings.getOtherLangChecksDisabled();
+		return !!value;
 	}
 
-	setOtherLangCheckDisabled(value: boolean) {
-		this.#isOtherLangCheckDisabled = value;
+	async setOtherLangChecksDisabled(value: boolean): Promise<void> {
+		return await this.#settings.setOtherLangChecksDisabled(value);
 	}
 
-	getForcedLanguage(): LanguageEnum | undefined {
-		return this.#forcedLanguage;
+	async getForcedLanguage(): Promise<LanguageEnum | undefined> {
+		return await this.#settings.getForcedLang();
 	}
 
-	setForcedLanguage(value: LanguageEnum | undefined): void {
-		if (value !== undefined && !Object.values(LanguageEnum).includes(value)) {
-			value = undefined;
-		}
-		this.#forcedLanguage = value;
+	async setForcedLanguage(value: LanguageEnum | undefined): Promise<void> {
+		return await this.#settings.setForcedLang(value);
 	}
 }

@@ -5,7 +5,7 @@ import { AlarmService } from "./slices/Alarm/service.ts";
 import { type CaptchaService, captchaServiceFactory } from "./slices/Captcha/factory.ts";
 import { ChatAdminRepo } from "./slices/ChatAdmins/service.ts";
 import { type CooldownService, cooldownServiceFactory } from "./slices/Cooldown/factory.ts";
-import { LangDayService } from "./slices/LangDay/service.ts";
+import { langDayServiceFactory, type LangDayService } from "./slices/LangDay/factory.ts";
 import { type UserViolationService, userViolationServiceFactory } from "./slices/UserViolation/factory.ts";
 import { WelcomeService } from "./slices/WelcomeMessage/service.ts";
 
@@ -53,7 +53,7 @@ export async function configureDefaultContainer(api: Api, chatId: number): Promi
 		chatAdminRepo: asClass(ChatAdminRepo, {
 			lifetime: Lifetime.SCOPED,
 		}),
-		langDayService: asClass(LangDayService, {
+		langDayService: asFunction(langDayServiceFactory, {
 			lifetime: Lifetime.SCOPED,
 		}),
 		cooldownService: asFunction(cooldownServiceFactory, {
