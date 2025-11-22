@@ -5,38 +5,40 @@ Telegram bot for an en-ru language exchange group chat.
 Enforces the usage of one of those two languages on different days of the week.
 
 Consists of two packages:
-- [language detection](./packages/language-detection/) ([napi-rs](https://napi.rs/) 
+
+- [language detection](./packages/language-detection/) ([napi-rs](https://napi.rs/)
   rust wrapper around [lingua-rs](https://github.com/pemistahl/lingua-rs))
 - the actual [telegram bot](./packages/tg-bot/), written in nodejs using
-  [grammy](https://grammy.dev/). Requires node v24 or higher, as well as 
+  [grammy](https://grammy.dev/). Requires node v24 or higher, as well as
   [valkey](https://valkey.io/) instance for storage.
 
-## List of commands available to bot.
+## List of commands available to bot
 
 Commands are just messages in the chat, starting with a `/` character.
-A command must be first part of the message and may be followed by bot user 
-handle (e.g. `/help@en_ru_le_bot`) and/or arguments  (e.g. `/help members`).
+A command must be first part of the message and may be followed by bot user
+handle (e.g. `/help@en_ru_le_bot`) and/or arguments (e.g. `/help members`).
 
-List of commands is also accessible in the bot menu (by going to direct 
+List of commands is also accessible in the bot menu (by going to direct
 messages with the bot and clicking on "Menu" button). Menu for regular users
 displays common commands, while for chat admins it will display admin commands
 as well.
 
-All of the commands can be sent in the chat or in DM with the bot (if you don't 
+All of the commands can be sent in the chat or in DM with the bot (if you don't
 want other users to see them being executed).
 
-The bot logs who executed which command internally, so this information is 
+The bot logs who executed which command internally, so this information is
 available in the logs.
 
 Some commands expect duration as their argument. Duration can be supplied as an
-integer number (e.g. `20`) in this case it will be interpreted in minutes, or 
+integer number (e.g. `20`) in this case it will be interpreted in minutes, or
 with a unit suffix. For example:
-- `30s` -- 30 seconds 
+
+- `30s` -- 30 seconds
 - `5m30s` -- 5 minutes 30 seconds
-- `1h` -- one hour 
+- `1h` -- one hour
 - `1.5d` -- 1.5 days (aka 36 hours)
 
-###  Public Commands (Available to all users)
+### Public Commands (Available to all users)
 
 - /today check current day: whether it's English, Russian, or Free
   It accounts for forced days as well.
@@ -46,6 +48,7 @@ with a unit suffix. For example:
   is supplied.
 
 ### Admin-Only Commands
+
 - /settings display current bot settings
 
 - /alarm Toggle notifications about day change on/off
@@ -60,135 +63,140 @@ with a unit suffix. For example:
 
   Enables/Disables check for message language being outside of en or ru
 
-  If both langchecks and otherlang are disabled, bot won't check message language, or send notifications about day changes. The bot, will continue to do captcha
-  checks, display rules, accept commands, etc.
+  If both langchecks and otherlang are disabled, bot won't check message
+  language, or send notifications about day changes. The bot, will continue to
+  do captcha checks, display rules, accept commands, etc.
 
 - /forcelang ["en"|"ru"] Force a specific language
 
-  Used to override the standard schedule. Without arguments removes forced 
-  language. With an argument, allows to set the forced language, e.g. 
+  Used to override the standard schedule. Without arguments removes forced
+  language. With an argument, allows to set the forced language, e.g.
   `/forcelang ru`
 
 - /mute Toggle mutes on language violations on/off
 
   With mutes off, bot will give warnings to users, but will never restrict their
   permissions (posting messages,photos, etc.) or count the amount of warnings.
+
 - /pardon [@user] - Clears violations counter for a specific user or all users.
 
-  Without arguments removes all counters for all users. Can receive username 
-  mention as argument, to clear restrictions for a specific user, e.g. 
+  Without arguments removes all counters for all users. Can receive username
+  mention as argument, to clear restrictions for a specific user, e.g.
   `/pardon @john`.
-  
+
 - /mute_duration [duration] - Set or view mute duration
-  
-  Without arguments displays the current mute duration value -- for how long 
-  users' permissions will be restricted so they can't post, after repeated 
+
+  Without arguments displays the current mute duration value -- for how long
+  users' permissions will be restricted so they can't post, after repeated
   violations. With the argument sets this value.
 
 - /warnings_number [int] - Set or view number of warnings before mute
 
-  The amount of warnings user must receive before his permissions are 
-  temporarily restricted. If set to 0, they will be muted immediately on the 
+  The amount of warnings user must receive before his permissions are
+  temporarily restricted. If set to 0, they will be muted immediately on the
   first violation. Without arguments shows the current settings value, with
   an argument -- sets it.
 
 - /warnings_expiry [duration] - Set or view warnings expiration time
 
-  Warnings automatically expire after predefined amount of time (3 hours 
+  Warnings automatically expire after predefined amount of time (3 hours
   by default) -- meaning if a user hasn't performed any more violations in this
-  time their transgressions are absolved. Without an argument it shows the 
+  time their transgressions are absolved. Without an argument it shows the
   current expiry duration, with an argument -- sets it.
 
 - /cooldown [duration] Set cooldown value for wrong language warnings
 
-  If a bot issued a warning, it won't do so for some time. This time is common 
-  for all users, meaning if user A got a warning, and user B started to write in 
+  If a bot issued a warning, it won't do so for some time. This time is common
+  for all users, meaning if user A got a warning, and user B started to write in
   a wrong language he still won't receive a warning until this cooldown time will
   pass.
-  
-  Our goal isn't to ban everyone or spam with warnings and threats, but to 
+
+  Our goal isn't to ban everyone or spam with warnings and threats, but to
   stimulate the language exchange.
 
   Without an argument displays the current cooldown value, with a value sets it.
 
 - /captcha Toggle captcha check for newcomers on/off
 
-  When enabled, new members must solve an arithmetic question to prove they're 
-  not bots. Users who fail to answer within the time limit or fail 7 attempts 
+  When enabled, new members must solve an arithmetic question to prove they're
+  not bots. Users who fail to answer within the time limit or fail 7 attempts
   are banned.
 
 - /captcha_time [duration] - Set or view time in which members must pass captcha
 
-  Without arguments displays the current captcha verification time limit. With 
-  duration argument sets the time limit for new members to solve the captcha 
+  Without arguments displays the current captcha verification time limit. With
+  duration argument sets the time limit for new members to solve the captcha
   question (default: 20 minutes).
 
 - /trust @username - Remove captcha check for a specific user
 
-  Immediately removes captcha verification requirement for the specified user, 
-  marking them as trusted. Useful for legitimate users who may have trouble 
+  Immediately removes captcha verification requirement for the specified user,
+  marking them as trusted. Useful for legitimate users who may have trouble
   with the captcha system.
 
 - /captcha_bots Toggle bots allowed on/off
 
-  When disabled, all bots attempting to join the chat are automatically banned. 
-  When enabled, bots are allowed to join without captcha verification. 
-  
+  When disabled, all bots attempting to join the chat are automatically banned.
+  When enabled, bots are allowed to join without captcha verification.
 
 ### Hidden admin commands
 
 These commands are not displayed in the menu or help text. Know what you're doing
 if you're using them.
 
-- /flush_admins Invalidate admins cache. Admin list is cached for 3 hours. In 
-  case you just added or removed an admin, and don't want to wait for his 
-  permissions to be updated, you can force cache invalidation with this 
+- /flush_admins Invalidate admins cache. Admin list is cached for 3 hours. In
+  case you just added or removed an admin, and don't want to wait for his
+  permissions to be updated, you can force cache invalidation with this
   command.
 
-- /rt <text> - Retranslate text to chat (for fun and comedic purposes -- like 
+- /rt &lt;text> - Retranslate text to chat (for fun and comedic purposes -- like
   the bot says it).
 
 ## Language detection
 
-The bot uses a two-tier language detection system built on the 
-[lingua-rs](https://github.com/pemistahl/lingua-rs) library through 
+The bot uses a two-tier language detection system built on the
+[lingua-rs](https://github.com/pemistahl/lingua-rs) library through
 a custom Rust/NAPI wrapper:
 
 ### Detection Methods
 
 1. **Russian/English Detection** (`isRussianOrEnglish`)
-  - Primary method for language policy enforcement
-  - Only detects Russian and English languages (basically, anything 
-    non-cyrillic will be treated as English)
-  - Optimized for detecting direct policy violations
-  - Used to determine if users are writing in the wrong language on 
-    language-specific days
+
+- Primary method for language policy enforcement
+- Only detects Russian and English languages (basically, anything
+  non-cyrillic will be treated as English)
+- Optimized for detecting direct policy violations
+- Used to determine if users are writing in the wrong language on
+  language-specific days
 
 2. **Other Language Detection** (`detectLanguageOutsideOfEnRu`)
-  - Multi-layered approach combining regex and ML detection for non-Russian/English text
-  - **Layer 1 - Character Set Detection**: Regex-based quick check for characters outside 
-    Cyrillic and Latin scripts (e.g., Chinese, Arabic)
-  - **Layer 2 - ML Language Detection**: Uses lingua-rs via `detectAllLanguagesFast` 
-    for comprehensive language identification with 0.7 confidence threshold
-  - **Layer 3 - Dictionary Validation**: Cross-references detected words against 
-    5000 most common English and Russian words to reduce false positives
-  - Requires >40% unknown words to confirm non-English/Russian classification
-  - When triggered, message language is marked as "other" without further processing
+
+- Multi-layered approach combining regex and ML detection for
+  non-Russian/English text
+- **Layer 1 - Character Set Detection**: Regex-based quick check for characters outside
+  Cyrillic and Latin scripts (e.g., Chinese, Arabic)
+- **Layer 2 - ML Language Detection**: Uses lingua-rs via `detectAllLanguagesFast`
+  for comprehensive language identification with 0.7 confidence threshold
+- **Layer 3 - Dictionary Validation**: Cross-references detected words against
+  5000 most common English and Russian words to reduce false positives
+- Requires >40% unknown words to confirm non-English/Russian classification
+- When triggered, message language is marked as "other" without further processing
 
 ### Multi-Language Message Handling
 
-When messages contain both Russian and English text, the bot uses a 
+When messages contain both Russian and English text, the bot uses a
 **rate-based approach** to determine the primary language -- based on the amount
 of characters in each language in a message.
 
 - **Language Rate Threshold**: 1.7x ratio required (`REQUIRED_LANGUAGE_RATE`)
-- **Mixed Language Logic**: If neither language dominates by the required rate, 
+- **Mixed Language Logic**: If neither language dominates by the required rate,
   the message is considered "mixed language" and **no violation is triggered**
 - **Calculation**: Based on character length of each language fragment in the message
 
 **Examples**:
+
 - Russian text 3x longer than English → Classified as Russian
-- English text 2x longer than Russian → Classified as English  
+- English text 2x longer than Russian → Classified as English
 - Russian and English roughly equal length → Mixed language (no violation)
 
 The idea behind it -- if someone explains/translates something in both languages
@@ -202,29 +210,30 @@ simultaneously, we shouldn't give them a warning.
   DMs aren't verified either
 - **Non-letter characters are removed for a check**
 - **Minimum Length**: Number of letter characters in a message be at least 5
-  characters to trigger language detection 
-- **Admin Immunity**: Chat administrators are exempt from language checks 
+  characters to trigger language detection
+- **Admin Immunity**: Chat administrators are exempt from language checks
   (this includes admin-bots as well)
-- **Age Filter**: Messages older than 5 minutes are ignored (handles missed 
+- **Age Filter**: Messages older than 5 minutes are ignored (handles missed
   updates, if bot was down for some reason)
 
-### Violation Process:
+### Violation Process
 
-1. When a user violates language rules (posts in wrong language on 
-  language-specific days), they get warnings
-2. Each warning triggers a cooldown process -- for the cooldown duration time 
-  no one will receive a new warning. (configurable with `/cooldown`)
+1. When a user violates language rules (posts in wrong language on
+   language-specific days), they get warnings
+2. Each warning triggers a cooldown process -- for the cooldown duration time
+   no one will receive a new warning. (configurable with `/cooldown`)
 3. Default: 3 warnings before mute (configurable with `/warnings_number`)
 4. After reaching warning limit, user gets temporarily muted
 
 Mute Details:
+
 - Duration: 15 minutes by default, configurable with `/mute_duration`
-- Restrictions: Can't send messages, media, polls, or other content (but can 
+- Restrictions: Can't send messages, media, polls, or other content (but can
   invite users)
-- Expiration: Violations expire after a set time -- 3 hours by default, 
+- Expiration: Violations expire after a set time -- 3 hours by default,
   configurable with `/warnings_expiry`
 
-The system only affects non-admin users and requires the mute capacity to be 
+The system only affects non-admin users and requires the mute capacity to be
 enabled.
 
 Given a cooldown time common for all violations, and 3 warnings, bot shouldn't
@@ -233,20 +242,24 @@ teeth (otherwise users just ignore the bot).
 
 ## Anti-Spam Systems
 
-The bot includes multiple anti-spam systems to prevent bot accounts and unwanted behavior:
+The bot includes multiple anti-spam systems to prevent bot accounts and
+unwanted behavior:
 
 ### Probation System
 
 All new members are automatically placed under a probation period when they join:
+
 - **Duration**: 1 day (24 hours)
 - **Restrictions**: New members can only send text messages during probation
-- **Disabled capabilities**: Photos, videos, documents, audio, polls, stickers, animations, voice notes, and web page previews
+- **Disabled capabilities**: Photos, videos, documents, audio, polls, stickers,
+  animations, voice notes, and web page previews
 - **Permissions retained**: Can invite other users and send basic text messages
 - **Automatic**: Applied to all new members without any manual intervention
 
 ### Captcha System
 
-The bot also includes an optional captcha system that can be enabled separately. When enabled, new members must solve a simple arithmetic question to
+The bot also includes an optional captcha system that can be enabled separately.
+When enabled, new members must solve a simple arithmetic question to
 prove they're human.
 
 ### How Captcha Works
@@ -268,13 +281,14 @@ prove they're human.
 - **Attempt Tracking**: Failed attempts are counted (max 7 attempts)
 - **Progressive Warnings**: Every 3rd failed attempt repeats the same question,
   in case user missed the original one.
-- **Timeout/Ban**: Users who exceed max attempts or don't respond in time are 
+- **Timeout/Ban**: Users who exceed max attempts or don't respond in time are
   banned
 - **Success**: Correct answers immediately remove verification requirement
 
 ### Technical Implementation
 
 Both anti-spam systems use:
+
 - **Enhanced user detection**: Improved middleware for detecting new chat members
   through Telegram's chat member events
 - **Modular architecture**: Separate middleware components for different functions
@@ -285,35 +299,44 @@ Both anti-spam systems use:
 - **Background jobs**: Periodic cleanup of expired verifications
 - **Error handling**: Graceful handling of message deletion failures
 
-The captcha system is disabled by default and must be explicitly enabled by admins.
-The probation system is always active for new members.
+The captcha system is disabled by default and must be explicitly enabled by
+admins. The probation system is always active for new members.
 
-## Storage:
+## Storage
 
-The bot uses a hybrid storage approach with different data stored in memory vs Valkey:
+The bot uses a hybrid storage approach with different data stored in memory
+vs Valkey:
 
-### In Memory:
-- **Chat Admin Cache** (`ChatAdminRepo`): Admin user IDs with 3-hour TTL, refreshed automatically when expired
+### In Memory
+
+- **Chat Admin Cache** (`ChatAdminRepo`): Admin user IDs with 3-hour TTL,
+  refreshed automatically when expired
 - **Language Detection Models**: Loaded once at startup for performance
-- **Forced language and disabled langday setting**
 - Current active cooldown value
 
-Data in memory doesn't survive bot re-deployments or start-stop cycles of 
+Data in memory doesn't survive bot re-deployments or start-stop cycles of
 course, it is ephemeral.
 
 ### In Valkey
+
+- Language check settings:
+  - disabled en/ru lang checks `enrule:langday:langday_checks_disabled`
+  - disabled other lang checks `enrule:langday:otherlang_checks_disabled`
+  - forced language `enrule:langday:forced_lang`
+
 - **User Violations**: Violation counters per user with configurable TTL
-  - Key pattern: `enrule:violations:counter:{userId}` 
+  - Key pattern: `enrule:violations:counter:{userId}`
   - Username mapping: `enrule:violations:username:{username}` → userId
   - Reverse mapping: `enrule:violations:userid:{userId}` → username
-  
-  Bidirectional mapping needed because Telegram's API doesn't allow 
-  username→userId lookup, but admins use `@username` in commands. 
+
+  Bidirectional mapping needed because Telegram's API doesn't allow
+  username→userId lookup, but admins use `@username` in commands.
   Reverse mapping for technical cleanup operations only.
 
 - **Bot Settings**: Persistent configuration with defaults
   - Mute enabled/disabled: `enrule:violation_settings:mute_enabled` (default: true)
-  - Max violations before mute: `enrule:violation_settings:max_violations` (default: 3)
+  - Max violations before mute: `enrule:violation_settings:max_violations`
+    (default: 3)
   - Mute duration: `enrule:violation_settings:mute_duration` (default: 15 minutes)
   - Warnings expiry: `enrule:violation_settings:warnings_expiry` (default: 3 hours)
   - Cooldown duration: `enrule:cooldown:duration` (default: 2 minutes)
@@ -322,7 +345,8 @@ course, it is ephemeral.
   - Settings:
     - Captcha enabled/disabled: `enrule:captcha_settings:enabled` (default: false)
     - Bots allowed: `enrule:captcha_settings:bots_allowed` (default: false)
-    - Max verification time: `enrule:captcha_settings:max_verification_age` (default: 20 minutes)
+    - Max verification time: `enrule:captcha_settings:max_verification_age`
+      (default: 20 minutes)
   - Per-user verification data (expires after 1 day):
     - Question: `enrule:captcha:question:{userId}`
     - Expected answer: `enrule:captcha:answer:{userId}`
@@ -336,13 +360,14 @@ course, it is ephemeral.
 **Key Prefix**: All Valkey keys use `enrule:` prefix for namespace isolation.
 
 **Client**: Uses Valkey Glide client with configurable host/port via environment
- variables (`VALKEY_HOST`, `VALKEY_PORT`).
+variables (`VALKEY_HOST`, `VALKEY_PORT`).
 
-## Build process.
+## Build process
 
 ### Option 1: Docker
 
-The easiest way to run the bot is using Docker Compose, which handles both the bot and Valkey instance:
+The easiest way to run the bot is using Docker Compose, which handles both the
+bot and Valkey instance:
 
 ```sh
 # Create .env file with your bot configuration
@@ -378,7 +403,7 @@ yarn install
 yarn run build
 ```
 
-Now you can install dependencies 
+Now you can install dependencies
 
 ```sh
 cd ../../packages/tg-bot
@@ -386,6 +411,7 @@ npm i
 ```
 
 and launch the bot:
+
 ```sh
 npm run start
 # or for hot reload and extra logs (with pretty print with pino-pretty):
@@ -394,22 +420,28 @@ npm run dev | pino-pretty
 ```
 
 It requires a valkey instance, you can start one in docker:
+
 ```sh
-docker run --name enrule_valkey -p 6379:6379 -d valkey/valkey:8.1-alpine valkey-server --save 60 1 --loglevel warning
+docker run --name enrule_valkey \
+  -p 6379:6379 \
+  -d valkey/valkey:8.1-alpine valkey-server \
+  --save 60 1 --loglevel warning
 ```
 
-## Configuration.
+## Configuration
 
-Bot can be configured through the environment variables, which can also be 
+Bot can be configured through the environment variables, which can also be
 supplied through `.env` file.
 
 At the very least, you must supply to variables:
+
 - TOKEN Containing a bot token, as supplied by the [BotFather](https://t.me/BotFather)
 - CHAT_ID Id of your chat/supergroup
 
-Please refer to [env.d.ts](./packages/tg-bot/types/env.d.ts) file definitions 
+Please refer to [env.d.ts](./packages/tg-bot/types/env.d.ts) file definitions
 for the full list of available options.
 
 ## License
 
 EnRuLeBot is MIT Licensed.
+
