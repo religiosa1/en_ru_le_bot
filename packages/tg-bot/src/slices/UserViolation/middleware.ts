@@ -100,23 +100,29 @@ export async function userViolationMiddleware(ctx: BotContext, next?: NextFuncti
 	await next?.();
 }
 
-export function getWarningMessage(language: LanguageEnum): string {
+export function getWarningMessage(language: LanguageEnum | undefined): string {
 	switch (language) {
 		case LanguageEnum.English:
 			return `Эй, сегодня день английского. Пытайся говорить на английском!`;
 		case LanguageEnum.Russian:
 			return `Hey, today is Russian Day. Try to speak Russian!`;
+		case undefined:
+			return `Only Russian or English are allowed in this chat.`;
 		default:
 			assertNever(language, `Unsupported language code value: ${language}`);
 	}
 }
 
-function geViolationWarningMessage(language: LanguageEnum, nWarnings: number, warningsLeft: number): string {
+function geViolationWarningMessage(
+	language: LanguageEnum | undefined,
+	nWarnings: number,
+	warningsLeft: number,
+): string {
 	return match(language)
 		.with(LanguageEnum.English, () =>
 			warningsLeft === 0 ? `Это последнее предупреждение` : `Это ${nWarnings}-e предупреждение.`,
 		)
-		.with(LanguageEnum.Russian, () =>
+		.with(LanguageEnum.Russian, undefined, () =>
 			warningsLeft === 0 ? `This is your last warning.` : `This is your ${ordinalEn(nWarnings)} warning.`,
 		)
 		.exhaustive();
