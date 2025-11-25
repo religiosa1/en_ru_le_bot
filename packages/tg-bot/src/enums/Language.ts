@@ -5,5 +5,5 @@ export const LanguageEnum = {
 export type LanguageEnum = (typeof LanguageEnum)[keyof typeof LanguageEnum];
 
 export function isLangEnum(value: unknown): value is LanguageEnum {
-	return Object.values(LanguageEnum).includes(value as any);
+	return (Object.values(LanguageEnum) as unknown[]).includes(value);
 }

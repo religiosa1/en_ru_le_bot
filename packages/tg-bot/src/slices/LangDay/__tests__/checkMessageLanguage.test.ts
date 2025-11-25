@@ -1,16 +1,16 @@
 /** biome-ignore-all lint/style/noNonNullAssertion: used on env supplied in tests configuration */
 /** biome-ignore-all lint/suspicious/noExplicitAny: used in mocks  */
 import { after, before, beforeEach, describe, it, mock } from "node:test";
+import { type StartedValkeyContainer, ValkeyContainer } from "@testcontainers/valkey";
+import { GlideClient } from "@valkey/valkey-glide";
 import type { BotContext } from "../../../BotContext.ts";
 import { LanguageEnum } from "../../../enums/Language.ts";
 import { Time } from "../../../enums/Time.ts";
 import { logger } from "../../../logger.ts";
 import type { BotContextWithMsgLanguage } from "../../../models/BotContextWithMsgLanguage.ts";
 import type { ChatAdminRepo } from "../../ChatAdmins/service.ts";
-import { checkMessageLanguage } from "../middleware.ts";
-import { ValkeyContainer, type StartedValkeyContainer } from "@testcontainers/valkey";
-import { GlideClient } from "@valkey/valkey-glide";
 import { langDayServiceFactory } from "../factory.ts";
+import { checkMessageLanguage } from "../middleware.ts";
 
 const RU_TEXT = "что-то на русском тут написано";
 const EN_TEXT = "something in english here";
@@ -92,10 +92,7 @@ describe("checkMessageLanguage", () => {
 		await checkMessageLanguage(await makeMockContext(client, [EN_TEXT + RU_TEXT].join(" ")), nextFn);
 		t.assert.equal(nextFn.mock.callCount(), 0, "no next for bilingual messages");
 
-		await checkMessageLanguage(
-			await makeMockContext(client, [EN_TEXT, EN_TEXT, RU_TEXT].join(" ")),
-			nextFn,
-		);
+		await checkMessageLanguage(await makeMockContext(client, [EN_TEXT, EN_TEXT, RU_TEXT].join(" ")), nextFn);
 		t.assert.equal(nextFn.mock.callCount(), 1, "More english than russian -- next called");
 	});
 
@@ -126,10 +123,7 @@ describe("checkMessageLanguage", () => {
 	});
 
 	it("doesn't check old messages", async (t) => {
-		await checkMessageLanguage(
-			await makeMockContext(client, EN_TEXT, { date: new Date("2020-01-02") }),
-			nextFn,
-		);
+		await checkMessageLanguage(await makeMockContext(client, EN_TEXT, { date: new Date("2020-01-02") }), nextFn);
 		t.assert.equal(nextFn.mock.callCount(), 0, "No next for old messages");
 		await checkMessageLanguage(await makeMockContext(client, EN_TEXT), nextFn);
 		t.assert.equal(nextFn.mock.callCount(), 1, "next called for a fresh one");

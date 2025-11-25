@@ -74,7 +74,7 @@ export async function checkMessageLanguage(ctx: BotContext, next?: NextFunction)
 				logger.child({ scope: "lang_day::middleware::other_langs" }),
 				textWithoutDigitsOrPunctuation,
 				language,
-		  );
+			);
 	if (otherLanguageDetectionResult) {
 		logger.info({ msgText: ctx.message.text, otherLanguageDetectionResult, language }, "Decided it's a bad language");
 		(ctx as BotContextWithMsgLanguage).msgLanguage = "other";

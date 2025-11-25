@@ -28,11 +28,11 @@ export class LangDayService {
 			? {
 					value: forcedLanguage,
 					forced: true,
-			  }
+				}
 			: {
 					value: this.determineDay(dayNumber),
 					forced: false,
-			  };
+				};
 	}
 
 	determineDay(dayNumber: number = new Date().getDay()): LanguageEnum | undefined {

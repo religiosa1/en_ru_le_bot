@@ -6,9 +6,7 @@ export type { LangDayService };
 
 type LangdayServiceFactoryParams = Pick<DIContainerInternal, "valkeyClient">;
 
-export function langDayServiceFactory({
-	valkeyClient,
-}: LangdayServiceFactoryParams): LangDayService {
+export function langDayServiceFactory({ valkeyClient }: LangdayServiceFactoryParams): LangDayService {
 	const langdaySettingsRepository = new LangdaySettingsRepository({ valkeyClient });
 	return new LangDayService({ langdaySettingsRepository });
 }

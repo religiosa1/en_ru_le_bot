@@ -1,8 +1,8 @@
 import type { GlideClient } from "@valkey/valkey-glide";
 import { COMMON_KEY_PREFIX } from "../../constants.ts";
 import type { DIContainerInternal } from "../../container.ts";
+import { isLangEnum, type LanguageEnum } from "../../enums/Language.ts";
 import { toBool } from "../../utils/glideParsers.ts";
-import { isLangEnum, LanguageEnum } from "../../enums/Language.ts";
 
 const LANGDAY_CHECKS_DISABLED_KEY = `${COMMON_KEY_PREFIX}langday:langday_checks_disabled`;
 const OTHERLANG_CHECKS_DISABLED_KEY = `${COMMON_KEY_PREFIX}langday:otherlang_checks_disabled`;

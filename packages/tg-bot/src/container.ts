@@ -5,7 +5,7 @@ import { AlarmService } from "./slices/Alarm/service.ts";
 import { type CaptchaService, captchaServiceFactory } from "./slices/Captcha/factory.ts";
 import { ChatAdminRepo } from "./slices/ChatAdmins/service.ts";
 import { type CooldownService, cooldownServiceFactory } from "./slices/Cooldown/factory.ts";
-import { langDayServiceFactory, type LangDayService } from "./slices/LangDay/factory.ts";
+import { type LangDayService, langDayServiceFactory } from "./slices/LangDay/factory.ts";
 import { type UserViolationService, userViolationServiceFactory } from "./slices/UserViolation/factory.ts";
 import { WelcomeService } from "./slices/WelcomeMessage/service.ts";
 

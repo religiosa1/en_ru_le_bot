@@ -60,10 +60,7 @@ export async function detectLanguageOutsideOfEnRu(
 	}
 
 	if (lang.language === LanguageEnum.Russian || lang.language === LanguageEnum.English) {
-		logger.debug(
-			{ language: lang.language, confidence: lang.confidence },
-			"Language detected as Russian or English",
-		);
+		logger.debug({ language: lang.language, confidence: lang.confidence }, "Language detected as Russian or English");
 		return undefined;
 	}
 	if (lang.confidence < TARGET_CONFIDENCE_LEVEL) {
@@ -84,9 +81,7 @@ export async function detectLanguageOutsideOfEnRu(
 		logger.info({ cleanedText }, "No words detected");
 		return undefined;
 	}
-	const nonRecognizedWords = words.filter(
-		(w) => !mostCommonWordsInEnglish.has(w) && !mostCommonWordsInRussian.has(w),
-	);
+	const nonRecognizedWords = words.filter((w) => !mostCommonWordsInEnglish.has(w) && !mostCommonWordsInRussian.has(w));
 	const hasPlentyUnknownWords = nonRecognizedWords.length / words.length > UNKNOWN_WORDS_THRESHOLD;
 	const mismatchResult: MlLangMismatchResult = {
 		nonRecognizedWords,
@@ -96,9 +91,6 @@ export async function detectLanguageOutsideOfEnRu(
 		mechanism: "ml",
 		cleanedTextLength: cleanedText.length,
 	};
-	logger.info(
-		mismatchResult,
-		"Language mismatch, checking against dicts to filter out false-positives",
-	);
+	logger.info(mismatchResult, "Language mismatch, checking against dicts to filter out false-positives");
 	return hasPlentyUnknownWords ? mismatchResult : undefined;
 }
