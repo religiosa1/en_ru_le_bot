@@ -1,7 +1,8 @@
 const nonLettersRe = /[^\p{L}]/gu;
 const allowedScriptRe = /[\p{Script=Cyrillic}a-zA-ZïëöÏËÖ]/gu;
 
-// List of common kaomoji (e.g. "") chars, which we filter out as well.
+// List of common kaomoji (e.g. "") chars, which we filter out as well as
+// non-letter characters (though they technically are)
 const kaomojiChars = new Set("ツシシノººノㅇㅅㅇㅠㅠㅜㅜωツʘʘ");
 
 /**
@@ -12,15 +13,28 @@ const kaomojiChars = new Set("ツシシノººノㅇㅅㅇㅠㅠㅜㅜωツʘʘ"
  * @returns true if non English or Russian, false otherwise
  */
 export function detectBadLangByCharset(text: string): boolean {
+	return !(isInTheCharset(text, allowedScriptRe) ?? true);
+}
+
+const cyrillicScriptRe = /[\p{Script=Cyrillic}]/gu;
+export function checkTextIsMostlyCyrillic(text: string): boolean {
+	return isInTheCharset(text, cyrillicScriptRe) ?? true;
+}
+
+interface IsInTheCharsetOpts {
+	matchRate?: number;
+}
+function isInTheCharset(
+	text: string,
+	charsetRe: RegExp,
+	{ matchRate = 0.95 }: IsInTheCharsetOpts = {},
+): boolean | undefined {
 	const onlyLetters = Iterator.from(text.replaceAll(nonLettersRe, ""))
 		.filter((i) => !kaomojiChars.has(i))
 		.toArray()
 		.join("");
-	if (onlyLetters.length === 0) return false;
-
-	const nGoodChars = Iterator.from(onlyLetters).reduce((acc, c) => (c.match(allowedScriptRe) ? acc + 1 : acc), 0);
-
+	if (onlyLetters.length === 0) return undefined;
+	const nGoodChars = Iterator.from(onlyLetters).reduce((acc, c) => (c.match(charsetRe) ? acc + 1 : acc), 0);
 	const goodCharsRate = nGoodChars / onlyLetters.length;
-	// 95% of the text letters must be good, but no more than 5 bad chars
-	return !(goodCharsRate > 0.9 && onlyLetters.length - nGoodChars < 5);
+	return goodCharsRate >= matchRate;
 }

@@ -2,7 +2,7 @@ import { detectAllLanguagesFast } from "@en-ru-le/language-detection";
 import type { Logger } from "pino";
 import { LanguageEnum } from "../../../enums/Language.ts";
 import { stripNonLetterOrWhitespaceChars } from "../utils.ts";
-import { detectBadLangByCharset } from "./detectBadLangByCharset.ts";
+import { detectBadLangByCharset, checkTextIsMostlyCyrillic } from "./detectBadLangByCharset.ts";
 import { mostCommonWordsInEnglish } from "./mostCommonWordsInEnglish.ts";
 import { mostCommonWordsInRussian } from "./mostCommonWordsInRussian.ts";
 
@@ -41,14 +41,21 @@ export async function detectLanguageOutsideOfEnRu(
 		return { mechanism: "charset" };
 	}
 
-	if (cleanedText.length < MIN_LENGTH) {
-		logger.info({ cleanedText, text }, "Text too short for ML recognition");
+	// If target language is russian or the message is in cyrillic with unset target language
+	// we're not doing any other checks outside of charset, as Russian morphology system makes
+	// it tricky to filter out false positives. Being written in cyrillic should be good enough
+	if (targetLanguage === LanguageEnum.Russian) {
+		return undefined;
+	}
+	// skipping both true and undefined return values here, the later means we
+	// can't find any letters in the message at all.
+	if (targetLanguage === undefined && checkTextIsMostlyCyrillic(cleanedText)) {
+		logger.debug("Free day and message is mostly in cyrillic, skipping ML check");
 		return undefined;
 	}
 
-	// If target language is russian, we're not doing any other checks outside of charset, as Russian
-	// morphology system makes it tricky to filter out false positives. Being written in cyrillic should be good enough
-	if (targetLanguage === LanguageEnum.Russian) {
+	if (cleanedText.length < MIN_LENGTH) {
+		logger.info({ cleanedText, text }, "Text too short for ML recognition");
 		return undefined;
 	}
 
