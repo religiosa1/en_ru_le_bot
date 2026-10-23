@@ -47,41 +47,27 @@
 		"lint": "oxlint .",
 		"prepublishOnly": "napi prepublish -t npm",
 		"test": "ava",
-		"version": "napi version",
-		"prepare": "husky"
+		"version": "napi version"
 	},
 	"devDependencies": {
-		"@emnapi/core": "^1.4.5",
-		"@emnapi/runtime": "^1.4.5",
-		"@napi-rs/cli": "^3.0.3",
-		"@oxc-node/core": "^0.0.32",
+		"@emnapi/core": "^1.11.3",
+		"@emnapi/runtime": "^1.11.3",
+		"@napi-rs/cli": "^3.10.9",
+		"@oxc-node/core": "^1.0.0",
 		"@taplo/cli": "^0.7.0",
-		"@tybys/wasm-util": "^0.10.0",
-		"ava": "^6.4.1",
-		"chalk": "^5.4.1",
-		"husky": "^9.1.7",
-		"lint-staged": "^16.1.2",
-		"npm-run-all2": "^8.0.4",
-		"oxlint": "^1.8.0",
-		"prettier": "^3.6.2",
-		"tinybench": "^5.0.0",
-		"typescript": "^5.8.3"
-	},
-	"lint-staged": {
-		"*.@(js|ts|tsx)": [
-			"oxlint --fix"
-		],
-		"*.@(js|ts|tsx|yml|yaml|md|json)": [
-			"prettier --write"
-		],
-		"*.toml": [
-			"taplo format"
-		]
+		"@tybys/wasm-util": "^0.10.4",
+		"ava": "^8.1.1",
+		"chalk": "^6.0.1",
+		"npm-run-all2": "^9.0.4",
+		"oxlint": "^1.89.0",
+		"prettier": "^3.9.10",
+		"tinybench": "^6.2.2",
+		"typescript": "^5.9.3"
 	},
 	"ava": {
-		"extensions": {
-			"ts": "module"
-		},
+		"extensions": [
+			"ts"
+		],
 		"timeout": "2m",
 		"workerThreads": false,
 		"environmentVariables": {
@@ -98,6 +84,5 @@
 		"trailingComma": "all",
 		"singleQuote": true,
 		"arrowParens": "always"
-	},
-	"packageManager": "yarn@4.9.3"
+	}
 }

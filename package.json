@@ -1,6 +1,6 @@
 {
 	"name": "en-ru-le",
-	"version": "0.3.0",
+	"version": "0.3.1",
 	"description": "Eng/Ru language exchange moderation Telegram bot monorepo",
 	"license": "MIT",
 	"author": "Viacheslav Azarov <public@religiosa.ru>",

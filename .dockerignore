@@ -1,11 +1,7 @@
 # Dependencies
 node_modules/
 packages/*/node_modules/
-.yarn/cache/
-.yarn/unplugged/
 npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
 
 # Build artifacts
 packages/language-detection/target/

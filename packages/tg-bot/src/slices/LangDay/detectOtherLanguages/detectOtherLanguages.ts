@@ -2,7 +2,7 @@ import { detectAllLanguagesFast } from "@en-ru-le/language-detection";
 import type { Logger } from "pino";
 import { LanguageEnum } from "../../../enums/Language.ts";
 import { stripNonLetterOrWhitespaceChars } from "../utils.ts";
-import { detectBadLangByCharset, checkTextIsMostlyCyrillic } from "./detectBadLangByCharset.ts";
+import { checkTextIsMostlyCyrillic, detectBadLangByCharset } from "./detectBadLangByCharset.ts";
 import { mostCommonWordsInEnglish } from "./mostCommonWordsInEnglish.ts";
 import { mostCommonWordsInRussian } from "./mostCommonWordsInRussian.ts";
 

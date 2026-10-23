@@ -1,27 +1,24 @@
 # Stage 1: Build language-detection (Rust/NAPI)
 FROM rust:1.88 AS language-detection-builder
 
-# Install Node.js and yarn
+# Install Node.js
 RUN curl -fsSL https://deb.nodesource.com/setup_26.x | bash - && \
-    apt-get install -y nodejs=26.12.1-1nodesource1 && \
-    npm install -g corepack && \
-    corepack enable
+    apt-get install -y nodejs=26.12.1-1nodesource1
 
-# Set working directory for language-detection
-WORKDIR /app/packages/language-detection
+WORKDIR /app
 
-# Copy language-detection package files
-COPY packages/language-detection/package.json packages/language-detection/yarn.lock* ./
-COPY packages/language-detection/.yarnrc.yml ./
-COPY packages/language-detection/.yarn ./.yarn
-COPY packages/language-detection/Cargo.toml packages/language-detection/Cargo.lock ./
-COPY packages/language-detection/build.rs ./
-COPY packages/language-detection/src ./src
-COPY packages/language-detection/.cargo ./.cargo
+# Workspace manifests, so npm ci can validate the root lockfile
+COPY package.json package-lock.json ./
+COPY packages/tg-bot/package.json ./packages/tg-bot/
+COPY packages/language-detection/package.json ./packages/language-detection/
+RUN npm ci -w packages/language-detection
 
-# Install dependencies and build
-RUN yarn install --frozen-lockfile
-RUN yarn build
+# Copy language-detection sources
+COPY packages/language-detection/Cargo.toml packages/language-detection/Cargo.lock packages/language-detection/build.rs ./packages/language-detection/
+COPY packages/language-detection/src ./packages/language-detection/src
+COPY packages/language-detection/.cargo ./packages/language-detection/.cargo
+
+RUN npm run build -w packages/language-detection
 
 # Stage 2: Node.js dependencies installation
 FROM node:26.12.1-slim AS deps

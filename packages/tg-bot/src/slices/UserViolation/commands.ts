@@ -23,6 +23,8 @@ const ALL_PERMISSIONS: Required<ChatPermissions> = {
 	can_invite_users: true,
 	can_pin_messages: true,
 	can_manage_topics: true,
+	can_react_to_messages: true,
+	can_edit_tag: true,
 };
 
 export const userViolationCommands = new CommandGroup()
