@@ -2,8 +2,9 @@
 FROM rust:1.88 AS language-detection-builder
 
 # Install Node.js and yarn
-RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - && \
-    apt-get install -y nodejs && \
+RUN curl -fsSL https://deb.nodesource.com/setup_26.x | bash - && \
+    apt-get install -y nodejs=26.12.1-1nodesource1 && \
+    npm install -g corepack && \
     corepack enable
 
 # Set working directory for language-detection
@@ -23,7 +24,7 @@ RUN yarn install --frozen-lockfile
 RUN yarn build
 
 # Stage 2: Node.js dependencies installation
-FROM node:24-slim AS deps
+FROM node:26.12.1-slim AS deps
 
 # Create app directory
 WORKDIR /app
@@ -36,7 +37,7 @@ COPY packages/tg-bot/package.json ./packages/tg-bot/
 RUN npm ci --only=production && npm cache clean --force
 
 # Stage 3: Final distroless production image
-FROM gcr.io/distroless/nodejs24-debian12:nonroot AS production
+FROM gcr.io/distroless/nodejs26-debian13:nonroot AS production
 LABEL org.opencontainers.image.source=https://github.com/religiosa1/en_ru_le_bot
 LABEL org.opencontainers.image.description="Node.js Telegram bot for a language exchange chat."
 LABEL org.opencontainers.image.licenses=MIT

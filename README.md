@@ -9,7 +9,7 @@ Consists of two packages:
 - [language detection](./packages/language-detection/) ([napi-rs](https://napi.rs/)
   rust wrapper around [lingua-rs](https://github.com/pemistahl/lingua-rs))
 - the actual [telegram bot](./packages/tg-bot/), written in nodejs using
-  [grammy](https://grammy.dev/). Requires node v24 or higher, as well as
+  [grammy](https://grammy.dev/). Requires node v26.12.1 or higher, as well as
   [valkey](https://valkey.io/) instance for storage.
 
 ## List of commands available to bot
