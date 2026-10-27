@@ -12,6 +12,7 @@ import { allCommands } from "./slices/allCommands.ts";
 import { captchaMiddleware, onChatMemberCaptchaHandler } from "./slices/Captcha/middleware.ts";
 import { adminOnly } from "./slices/ChatAdmins/middleware.ts";
 import { cooldownMiddleware } from "./slices/Cooldown/middleware.ts";
+import { loadTongue } from "./slices/LangDay/detectors.ts";
 import { checkMessageLanguage } from "./slices/LangDay/middleware.ts";
 import { onChatMemberProbationHandler } from "./slices/Probation/middleware.ts";
 import { userViolationMiddleware } from "./slices/UserViolation/middleware.ts";
@@ -64,7 +65,7 @@ bot.catch((err) => {
 });
 
 logger.info("Preloading language models...");
-const duration = await withPerfMeasure(() => langDetection.loadLanguageModels());
+const duration = await withPerfMeasure(() => Promise.all([langDetection.loadLanguageModels(), loadTongue()]));
 logger.info({ duration }, `Models loaded in ${duration.toFixed(2)}ms. Starting the bot now`);
 
 bot.start({

@@ -152,6 +152,13 @@ if you're using them.
 - /rt &lt;text> - Retranslate text to chat (for fun and comedic purposes -- like
   the bot says it).
 
+- /langdetector ["lingua"|"tongue"] - View or set the active language detector.
+
+  See [Detector shadow testing](#detector-shadow-testing). Lingua by default.
+
+- /langshadow [days] - Lingua vs tongue comparison stats for the last N days
+  (7 by default, up to 30).
+
 ## Language detection
 
 The bot uses a two-tier language detection system built on the
@@ -198,6 +205,25 @@ of characters in each language in a message.
 - Russian text 3x longer than English → Classified as Russian
 - English text 2x longer than Russian → Classified as English
 - Russian and English roughly equal length → Mixed language (no violation)
+
+### Detector shadow testing
+
+[Tongue](https://desertant.com/models/tongue/) is evaluated as a lingua
+replacement. Both detectors run the same heuristics above on every checked
+message, only the detector set by `/langdetector` decides on warnings. With
+tongue:
+
+- ML detection uses tongue instead of `detectAllLanguagesFast` (top candidate
+  probability against the same 0.7 threshold)
+- Russian/English split is computed from Cyrillic vs Latin letters count, with
+  the same rate threshold, as tongue has no multi-language detection
+
+Outcomes of both detectors are counted per day in valkey (kept for 30 days),
+and viewable with `/langshadow`. Each comparison is logged (`info` level for
+disagreements, `debug` for agreements), with raw output of both detectors.
+
+Language detection by [Desert Ant Labs](https://desertant.com) Tongue, used
+under the [Desert Ant Labs Source-Available License 1.0](https://license.desertant.com/1.0).
 
 The idea behind it -- if someone explains/translates something in both languages
 simultaneously, we shouldn't give them a warning.

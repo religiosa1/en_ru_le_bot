@@ -3,10 +3,12 @@ import { COMMON_KEY_PREFIX } from "../../constants.ts";
 import type { DIContainerInternal } from "../../container.ts";
 import { isLangEnum, type LanguageEnum } from "../../enums/Language.ts";
 import { toBool } from "../../utils/glideParsers.ts";
+import { DetectorName, isDetectorName } from "./detectors.ts";
 
 const LANGDAY_CHECKS_DISABLED_KEY = `${COMMON_KEY_PREFIX}langday:langday_checks_disabled`;
 const OTHERLANG_CHECKS_DISABLED_KEY = `${COMMON_KEY_PREFIX}langday:otherlang_checks_disabled`;
 const FORCED_LANG_KEY = `${COMMON_KEY_PREFIX}langday:forced_lang`;
+const DETECTOR_KEY = `${COMMON_KEY_PREFIX}langday:detector`;
 
 type LangdaySettingsRepositoryParams = Pick<DIContainerInternal, "valkeyClient">;
 
@@ -48,5 +50,14 @@ export class LangdaySettingsRepository {
 		} else {
 			await this.#client.set(FORCED_LANG_KEY, lang);
 		}
+	}
+
+	async getDetector(): Promise<DetectorName> {
+		const value = await this.#client.get(DETECTOR_KEY);
+		return isDetectorName(value) ? value : DetectorName.Lingua;
+	}
+
+	async setDetector(detector: DetectorName): Promise<void> {
+		await this.#client.set(DETECTOR_KEY, detector);
 	}
 }

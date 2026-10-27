@@ -1,5 +1,7 @@
 import { LanguageEnum } from "../../enums/Language.ts";
+import type { DetectorName } from "./detectors.ts";
 import type { LangdaySettingsRepository } from "./repository.ts";
+import type { Comparison, ShadowStats, ShadowStatsRepository } from "./shadowStatsRepository.ts";
 
 type DayResponse =
 	| {
@@ -13,9 +15,17 @@ type DayResponse =
 
 export class LangDayService {
 	#settings: LangdaySettingsRepository;
+	#shadowStats: ShadowStatsRepository;
 
-	constructor({ langdaySettingsRepository }: { langdaySettingsRepository: LangdaySettingsRepository }) {
+	constructor({
+		langdaySettingsRepository,
+		shadowStatsRepository,
+	}: {
+		langdaySettingsRepository: LangdaySettingsRepository;
+		shadowStatsRepository: ShadowStatsRepository;
+	}) {
 		this.#settings = langdaySettingsRepository;
+		this.#shadowStats = shadowStatsRepository;
 	}
 
 	async getDaySettings(dayNumber: number = new Date().getDay()): Promise<DayResponse | undefined> {
@@ -80,5 +90,21 @@ export class LangDayService {
 
 	async setForcedLanguage(value: LanguageEnum | undefined): Promise<void> {
 		return await this.#settings.setForcedLang(value);
+	}
+
+	async getDetector(): Promise<DetectorName> {
+		return await this.#settings.getDetector();
+	}
+
+	async setDetector(value: DetectorName): Promise<void> {
+		return await this.#settings.setDetector(value);
+	}
+
+	async recordShadowComparison(comparison: Comparison): Promise<void> {
+		return await this.#shadowStats.record(comparison);
+	}
+
+	async getShadowStats(days: number): Promise<ShadowStats> {
+		return await this.#shadowStats.getStats(days);
 	}
 }

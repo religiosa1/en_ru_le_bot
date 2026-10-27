@@ -33,6 +33,10 @@ COPY packages/tg-bot/package.json ./packages/tg-bot/
 # Install only production dependencies
 RUN npm ci --only=production && npm cache clean --force
 
+# Tongue weights ship inside its npm package, so they're baked into the image.
+# Loading them once here fails the build, rather than the bot startup, if they're broken.
+RUN node --input-type=module -e "const { Tongue } = await import('@desert-ant-labs/tongue'); await Tongue.load();"
+
 # Stage 3: Final distroless production image
 FROM gcr.io/distroless/nodejs26-debian13:nonroot AS production
 LABEL org.opencontainers.image.source=https://github.com/religiosa1/en_ru_le_bot

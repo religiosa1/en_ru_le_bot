@@ -1,6 +1,6 @@
-import { detectAllLanguagesFast } from "@en-ru-le/language-detection";
 import type { Logger } from "pino";
 import { LanguageEnum } from "../../../enums/Language.ts";
+import type { LanguageDetector } from "../detectors.ts";
 import { stripNonLetterOrWhitespaceChars } from "../utils.ts";
 import { checkTextIsMostlyCyrillic, detectBadLangByCharset } from "./detectBadLangByCharset.ts";
 import { mostCommonWordsInEnglish } from "./mostCommonWordsInEnglish.ts";
@@ -32,6 +32,7 @@ export async function detectLanguageOutsideOfEnRu(
 	logger: Logger,
 	text: string,
 	targetLanguage: LanguageEnum | undefined,
+	detector: LanguageDetector,
 ): Promise<OtherLanguageDetectionResult | undefined> {
 	const cleanedText = stripNonLetterOrWhitespaceChars(text);
 
@@ -59,8 +60,8 @@ export async function detectLanguageOutsideOfEnRu(
 		return undefined;
 	}
 
-	// If it's strictly latin/cyrillic -- going for lingua-rs detection
-	const lang = await detectAllLanguagesFast(cleanedText);
+	// If it's strictly latin/cyrillic -- going for ML detection
+	const lang = await detector.detectAnyLanguage(cleanedText);
 	if (lang == null) {
 		logger.warn({ cleanedText, text }, "Couldn't determine the language with ML, aborting");
 		return undefined;
@@ -71,10 +72,7 @@ export async function detectLanguageOutsideOfEnRu(
 		return undefined;
 	}
 	if (lang.confidence < TARGET_CONFIDENCE_LEVEL) {
-		logger.info(
-			{ language: lang.language, confidence: lang.confidence },
-			"Language detected as NOT Russian or English, but confidence level is too low",
-		);
+		logger.info({ detection: lang }, "Language detected as NOT Russian or English, but confidence level is too low");
 		return undefined;
 	}
 

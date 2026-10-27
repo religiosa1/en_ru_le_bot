@@ -14,6 +14,7 @@
 		"test": "NODE_ENV=test node --env-file .env.test --test **/*.test.{js,ts}"
 	},
 	"dependencies": {
+		"@desert-ant-labs/tongue": "4.2.1",
 		"@en-ru-le/language-detection": "^1.0.0",
 		"@valkey/valkey-glide": "^2.5.3",
 		"awilix": "^13.0.5",
