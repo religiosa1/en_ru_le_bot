@@ -164,6 +164,36 @@ messages of up to 5 words (`MAX_NAME_LIST_WORDS`), so it can't be abused with
 long capitalized texts: 2026 flags 157 → 122, English among them 40 → 16,
 ~81% of all flags right.
 
+### Recall on other-language messages
+
+The random sample has only 10 real `other` messages, too few to judge misses.
+2026 has ~300 of them in total (~0.5% of messages); all 259 labelled ones
+(none used in training) were run through the full pipeline of each detector,
+as if on an English day:
+
+| Detector | All (259) | ≥10 letters (165) | <10 letters (94) |
+|---|---|---|---|
+| tongue | 119 (46%) | 104 (63%) | 15 (16%) |
+| lingua | 91 (35%) | 80 (48%) | 11 (12%) |
+| chat model | 132 (51%) | 114 (69%) | 18 (19%) |
+
+- 29 are caught by every detector through the charset check (Arabic,
+  Devanagari, etc.); the rest is the ML part.
+- Messages under 10 letters ("Hallo", "Salam", "Chera?") never reach the ML
+  check by design, so they're caught only by the charset check.
+- 94 messages are missed by all three. The chat model's own misses (among
+  ≥10 letters) are mostly romanized Persian and Hindi/Urdu ("Chera irania hame
+  ja hastan", "Piche chalo"), which Tatoeba barely has, and greetings mixed
+  with English ("Assalamu alaikum everyone"). 10 more are skipped by the
+  capitalized names rule ("Salam Aleykum"), as intended.
+- Caveat: the labelled set comes from reviewing tongue's non-English verdicts,
+  the pipeline's flags and the random samples, so other-language messages no
+  detector ever flagged aren't in it. Recall is overestimated for all three,
+  and the set somewhat favors tongue.
+
+Idea: romanized Persian and Hindi/Urdu training data would address most of the
+remaining ML misses.
+
 ## Review status and cost
 
 | Batches | Format | Haiku tokens |
