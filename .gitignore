@@ -1,2 +1,6 @@
 node_modules
 .env
+/target
+/data
+/messages*.html
+/eval
