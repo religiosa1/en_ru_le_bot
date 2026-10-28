@@ -28,14 +28,17 @@ pub struct Attempt {
     pub question: String,
 }
 
+/// Adds a pending captcha, keeping bot messages of a previous one (e.g. the user left and rejoined) for cleanup.
 pub fn add(state: &mut State, user: &User, question: String, answer: String, msg_id: MessageId, now: u64) {
+    let mut msg_ids = state.captchas.remove(&user.id.0).map_or_else(Vec::new, |c| c.msg_ids);
+    msg_ids.push(msg_id.0);
     let captcha = Captcha {
         question,
         answer,
         username: user.username.clone(),
         asked_at: now,
         attempts: 0,
-        msg_ids: vec![msg_id.0],
+        msg_ids,
     };
     state.captchas.insert(user.id.0, captcha);
 }
@@ -146,27 +149,36 @@ pub async fn on_message(bot: &Bot, app: &App, msg: &Message, user: &User) -> any
 }
 
 /// Removes a pending captcha with its bot messages, if there's one.
+///
+/// Deleting the messages is best-effort, so a failure doesn't stop what follows, e.g. a ban.
 pub async fn remove_check(bot: &Bot, app: &App, user: &UserRef) -> anyhow::Result<()> {
     let msg_ids = app.store.update(|s| remove(s, user))?.unwrap_or_default();
-    if !msg_ids.is_empty() {
-        bot.delete_messages(app.chat_id, msg_ids.into_iter().map(MessageId).collect::<Vec<_>>()).await?;
+    if !msg_ids.is_empty()
+        && let Err(err) = bot.delete_messages(app.chat_id, msg_ids.into_iter().map(MessageId).collect::<Vec<_>>()).await
+    {
+        error!(%err, "Failed to delete captcha messages");
     }
     Ok(())
 }
 
 /// Bans users who didn't solve their captcha in time, runs forever.
+///
+/// With captcha disabled, their messages aren't checked anymore, so stale captchas are just dropped.
 pub async fn sweep(bot: Bot, app: Arc<App>) {
     let mut interval = tokio::time::interval(SWEEP_INTERVAL);
     loop {
         interval.tick().await;
-        let max_age = app.settings().captcha_max_age.as_millis() as u64;
+        let settings = app.settings();
+        let max_age = settings.captcha_max_age.as_millis() as u64;
         let stale_ids = app.store.read(|s| stale(s, now_ms().saturating_sub(max_age)));
         for user_id in stale_ids {
-            info!(user_id, "Stale captcha verification, banning");
+            info!(user_id, ban = settings.captcha_enabled, "Stale captcha verification");
             // Removing the record first, so a failing ban doesn't retry forever
             let result = async {
                 remove_check(&bot, &app, &UserRef::Id(user_id)).await?;
-                bot.ban_chat_member(app.chat_id, UserId(user_id)).await?;
+                if settings.captcha_enabled {
+                    bot.ban_chat_member(app.chat_id, UserId(user_id)).await?;
+                }
                 anyhow::Ok(())
             };
             if let Err(err) = result.await {
@@ -215,6 +227,15 @@ mod tests {
         add(&mut state, &user(1, None), "q".into(), "a".into(), MessageId(1), 1000);
         add(&mut state, &user(2, None), "q".into(), "a".into(), MessageId(2), 5000);
         assert_eq!(stale(&state, 2000), [1]);
+    }
+
+    #[test]
+    fn keeps_messages_of_a_previous_captcha() {
+        let mut state = State::default();
+        add(&mut state, &user(1, None), "1 + 1".into(), "2".into(), MessageId(1), 0);
+        add(&mut state, &user(1, None), "2 + 2".into(), "4".into(), MessageId(2), 10);
+        assert_eq!(state.captchas[&1].msg_ids, [1, 2]);
+        assert_eq!(state.captchas[&1].answer, "4");
     }
 
     #[test]

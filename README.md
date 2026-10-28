@@ -81,11 +81,15 @@ with a unit suffix. For example:
   mention as argument, to clear restrictions for a specific user, e.g.
   `/pardon @john`.
 
+  Pardoned users get all chat permissions restored, even if they were only
+  warned. This also lifts the newcomers' probation restrictions.
+
 - /mute_duration [duration] - Set or view mute duration
 
   Without arguments displays the current mute duration value -- for how long
   users' permissions will be restricted so they can't post, after repeated
-  violations. With the argument sets this value.
+  violations. With the argument sets this value, between 30 seconds and 366
+  days (Telegram makes shorter or longer restrictions permanent).
 
 - /warnings_number [int] - Set or view number of warnings before mute
 
@@ -99,7 +103,7 @@ with a unit suffix. For example:
   Warnings automatically expire after predefined amount of time (3 hours
   by default) -- meaning if a user hasn't performed any more violations in this
   time their transgressions are absolved. Without an argument it shows the
-  current expiry duration, with an argument -- sets it.
+  current expiry duration, with an argument -- sets it (1 minute to 366 days).
 
 - /cooldown [duration] Set cooldown value for wrong language warnings
 
@@ -124,7 +128,7 @@ with a unit suffix. For example:
 
   Without arguments displays the current captcha verification time limit. With
   duration argument sets the time limit for new members to solve the captcha
-  question (default: 20 minutes).
+  question (default: 20 minutes, 1 minute to 1 day).
 
 - /trust @username - Remove captcha check for a specific user
 

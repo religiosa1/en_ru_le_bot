@@ -1,5 +1,6 @@
 //! Bot commands, "/name[@bot] [args]", working both in the chat and in DMs.
 
+use std::ops::RangeInclusive;
 use std::time::Duration;
 
 use teloxide::payloads::setters::*;
@@ -14,6 +15,12 @@ use crate::state::{Settings, UserRef, now_ms};
 use crate::{captcha, members, violations};
 
 const MAX_COOLDOWN: Duration = Duration::from_secs(3 * 60 * 60);
+const MINUTE: Duration = Duration::from_secs(60);
+const DAY: Duration = Duration::from_secs(24 * 60 * 60);
+/// Telegram treats restrictions shorter than 30s or longer than 366 days as permanent
+const MUTE_DURATION_RANGE: RangeInclusive<Duration> = Duration::from_secs(30)..=Duration::from_secs(366 * 24 * 60 * 60);
+const WARNINGS_EXPIRY_RANGE: RangeInclusive<Duration> = MINUTE..=Duration::from_secs(366 * 24 * 60 * 60);
+const CAPTCHA_TIME_RANGE: RangeInclusive<Duration> = MINUTE..=DAY;
 /// Remaining cooldown is shown in /settings only if it's longer than this
 const MIN_SHOWN_COOLDOWN: Duration = Duration::from_secs(3);
 const DURATION_HINT: &str = r#"Try something like "3", "10m", "1m30s", etc."#;
@@ -150,9 +157,13 @@ async fn run(bot: &Bot, app: &App, msg: &Message, user: &User, name: &str, args:
                 None => "Forced day is now disabled.".into(),
             }
         }
-        "mute_duration" => duration_setting(app, args, "Mute duration", |s| &mut s.mute_duration)?,
-        "warnings_expiry" => duration_setting(app, args, "Warning expiry", |s| &mut s.warnings_expiry)?,
-        "captcha_time" => duration_setting(app, args, "Captcha verification time", |s| &mut s.captcha_max_age)?,
+        "mute_duration" => duration_setting(app, args, "Mute duration", MUTE_DURATION_RANGE, |s| &mut s.mute_duration)?,
+        "warnings_expiry" => {
+            duration_setting(app, args, "Warning expiry", WARNINGS_EXPIRY_RANGE, |s| &mut s.warnings_expiry)?
+        }
+        "captcha_time" => {
+            duration_setting(app, args, "Captcha verification time", CAPTCHA_TIME_RANGE, |s| &mut s.captcha_max_age)?
+        }
         "warnings_number" => match (args, args.parse::<u32>()) {
             ("", _) => format!("Maximum number of warnings is {}", app.settings().max_violations),
             (_, Err(_)) => "Maximum number of warnings must be a non-negative integer!".into(),
@@ -240,15 +251,32 @@ fn on_off(value: bool) -> &'static str {
 }
 
 /// Shows a duration setting without args, or sets it.
-fn duration_setting(app: &App, args: &str, label: &str, field: fn(&mut Settings) -> &mut Duration) -> anyhow::Result<String> {
+fn duration_setting(
+    app: &App,
+    args: &str,
+    label: &str,
+    range: RangeInclusive<Duration>,
+    field: fn(&mut Settings) -> &mut Duration,
+) -> anyhow::Result<String> {
     if args.is_empty() {
         return Ok(format!("{label} is {}", format_duration(*field(&mut app.settings()))));
     }
-    let Some(duration) = parse_duration(args).filter(|d| !d.is_zero()) else {
-        return Ok(format!(r#"Incorrect value "{args}". {DURATION_HINT}"#));
+    let duration = match parse_bounded_duration(args, &range) {
+        Ok(duration) => duration,
+        Err(reply) => return Ok(reply),
     };
     app.store.update(|s| *field(&mut s.settings) = duration)?;
     Ok(format!("{label} is now {}", format_duration(duration)))
+}
+
+/// Parses a duration within the range, or returns a reply explaining what's wrong.
+fn parse_bounded_duration(args: &str, range: &RangeInclusive<Duration>) -> Result<Duration, String> {
+    let duration = parse_duration(args).ok_or_else(|| format!(r#"Incorrect value "{args}". {DURATION_HINT}"#))?;
+    if !range.contains(&duration) {
+        let (min, max) = (format_duration(*range.start()), format_duration(*range.end()));
+        return Err(format!("The value must be between {min} and {max}"));
+    }
+    Ok(duration)
 }
 
 fn settings(app: &App) -> String {
@@ -386,6 +414,16 @@ mod tests {
         let admin_menu = names(menu(true));
         assert!(admin_menu.contains(&"today".into()) && admin_menu.contains(&"settings".into()));
         assert!(!admin_menu.contains(&"rt".into()), "hidden commands aren't listed");
+    }
+
+    #[test]
+    fn bounds_durations() {
+        assert_eq!(parse_bounded_duration("15", &MUTE_DURATION_RANGE), Ok(Duration::from_secs(15 * 60)));
+        assert!(parse_bounded_duration("10s", &MUTE_DURATION_RANGE).is_err(), "Telegram makes it permanent");
+        assert!(parse_bounded_duration("400d", &MUTE_DURATION_RANGE).is_err());
+        assert!(parse_bounded_duration("99999999999d", &WARNINGS_EXPIRY_RANGE).is_err(), "no overflow");
+        assert!(parse_bounded_duration("0", &CAPTCHA_TIME_RANGE).is_err());
+        assert!(parse_bounded_duration("nope", &CAPTCHA_TIME_RANGE).is_err());
     }
 
     #[test]
