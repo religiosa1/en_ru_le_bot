@@ -129,6 +129,8 @@ words and names from the chat.
 | lingua | 921 |
 | chat model, no reviews | 199 |
 | chat model + review wave 1 | 175 |
+| chat model, all reviews | 157 |
+| + capitalized names rule | 122 |
 
 Not yet retrained on review wave 2 (pass-008–024).
 
@@ -154,7 +156,10 @@ examples. Precision of the pipeline's own 2026 flags (`pass-025`, all reviewed):
 and loanwords ("Harley Quinn", "Campinas - Brazil", "Cappuccino"). Raising the
 confidence threshold trades about one true flag per false one removed. Skipping
 ML when every word is capitalized would cut false flags 39 → 16 and lose 9 true
-ones (all greetings like "Guten Morgen"): precision 73% → 86%. Not applied yet.
+ones (all greetings like "Guten Morgen"): precision 73% → 86%. Applied, for
+messages of up to 5 words (`MAX_NAME_LIST_WORDS`), so it can't be abused with
+long capitalized texts: 2026 flags 157 → 122, English among them 40 → 16,
+~81% of all flags right.
 
 ## Review status and cost
 
@@ -175,7 +180,8 @@ New exports only need batches for messages not in `eval/review-labels.tsv`.
 
 ## Known issues and ideas
 
-- Lone names/places and heavy slang are the main remaining false positives.
+- Lone names/places and heavy slang are the main remaining false positives;
+  the capitalized names rule handles most of them.
 - The common-words filter in `langday.rs` still helps (removing it adds false
   positives); the 0.7 confidence threshold is untuned.
 - `ru-latin` isn't used by the bot yet: transliterated Russian passes on

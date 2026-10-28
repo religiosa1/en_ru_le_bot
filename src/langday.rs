@@ -99,6 +99,8 @@ static EN_WORDS: LazyLock<HashSet<&str>> = LazyLock::new(|| include_str!("../wor
 static RU_WORDS: LazyLock<HashSet<&str>> = LazyLock::new(|| include_str!("../words/ru.txt").lines().collect());
 
 const ML_MIN_LENGTH: usize = 10;
+/// Longer messages are checked even if every word is capitalized, so the rule can't be abused.
+const MAX_NAME_LIST_WORDS: usize = 5;
 const ML_TARGET_CONFIDENCE: f32 = 0.7;
 /// Share of words outside the common en/ru vocab, required to confirm an ML detection.
 const UNKNOWN_WORDS_THRESHOLD: f64 = 0.6;
@@ -128,6 +130,11 @@ pub fn detect_other_language(lid: &Lid, raw_text: &str, target: Option<Lang>) ->
 
     if text.chars().count() < ML_MIN_LENGTH {
         info!(text, "Text too short for ML recognition");
+        return None;
+    }
+
+    if is_name_list(text) {
+        debug!(text, "Looks like a list of names, skipping ML check");
         return None;
     }
 
@@ -162,6 +169,15 @@ pub fn detect_other_language(lid: &Lid, raw_text: &str, target: Option<Lang>) ->
         unknown_words: unknown.len(),
         total_words: words.len(),
     })
+}
+
+/// Short texts with every word capitalized, e.g. "Harley Quinn" or "Campinas Brazil".
+///
+/// The model often takes names, places and brands for another language, and they're fine on
+/// English days. Foreign greetings like "Guten Morgen" slip through as well, which is acceptable.
+fn is_name_list(text: &str) -> bool {
+    let words: Vec<&str> = text.split_whitespace().collect();
+    words.len() <= MAX_NAME_LIST_WORDS && words.iter().all(|w| w.chars().next().is_some_and(char::is_uppercase))
 }
 
 #[cfg(test)]
@@ -248,6 +264,11 @@ mod tests {
         assert_eq!(detect("Ich weiß nicht, ob das heute noch klappt", Some(Lang::Ru)), None, "only charset on ru days");
         assert_eq!(detect("Привет, как дела у всех сегодня вечером", None), None, "cyrillic on free days");
         assert_eq!(detect("Hallo du", Some(Lang::En)), None, "too short");
+        assert_eq!(detect("Campinas, SP - Brazil", Some(Lang::En)), None, "names");
+        assert!(
+            detect("Ich Weiß Nicht, Ob Das Heute Noch Klappt", Some(Lang::En)).is_some(),
+            "capitalized, but too long for a list of names"
+        );
         assert!(matches!(
             detect("Ich weiß nicht, ob das heute noch klappt", Some(Lang::En)),
             Some(OtherLang::Ml { .. })

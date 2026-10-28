@@ -151,9 +151,27 @@ if you're using them.
 
 ## Language detection
 
-The bot uses a two-tier language detection system, with the
-[tongue](https://desertant.com/models/tongue/) on-device language
-identification model for the ML part:
+The bot uses a two-tier language detection system, with its own small
+fastText model (~1.3 MiB), trained on the chat history, for the ML part. How it's
+trained and evaluated is described in
+[docs/language-detection.md](docs/language-detection.md).
+
+### Accuracy
+
+Measured on 2000 random messages from 2026 (not used in training), labelled
+by an LLM reviewer that never saw any detector's verdict. Each message is checked
+as if it were sent on an English day:
+
+| Detector | English wrongly flagged as other language | Russian wrongly flagged | Real other-language messages caught |
+|---|---|---|---|
+| [tongue](https://desertant.com/models/tongue/) | 6 / 1396 (0.4%) | 3 / 552 | 4 / 10 |
+| [lingua-rs](https://github.com/pemistahl/lingua-rs) | 11 / 1396 (0.8%) | 9 / 552 | 4 / 10 |
+| **this bot's model** | **1 / 1396 (0.07%)** | **0 / 552** | **7 / 10** |
+
+Of all "other language" verdicts over the whole of 2026 (61.7k checked
+messages), ~81% are right; most of the wrong ones are lone names or places.
+For comparison, the same pipeline flags 591 messages with tongue and 921 with
+lingua, against 122 with this model.
 
 ### Detection Methods
 
@@ -172,11 +190,13 @@ identification model for the ML part:
   non-Russian/English text
 - **Layer 1 - Character Set Detection**: Regex-based quick check for characters outside
   Cyrillic and Latin scripts (e.g., Chinese, Arabic)
-- **Layer 2 - ML Language Detection**: Uses tongue via `detectAnyLanguage`
-  for comprehensive language identification with 0.7 confidence threshold
+- **Layer 2 - ML Language Detection**: the chat model classifies the message as
+  English, Russian, transliterated Russian or other, "other" needs 0.7
+  confidence. Messages of up to 5 words that are all capitalized are skipped,
+  as they're usually names or places ("Harley Quinn", "Campinas - Brazil")
 - **Layer 3 - Dictionary Validation**: Cross-references detected words against
   5000 most common English and Russian words to reduce false positives
-- Requires >40% unknown words to confirm non-English/Russian classification
+- Requires >60% unknown words to confirm non-English/Russian classification
 - When triggered, message language is marked as "other" without further processing
 
 ### Multi-Language Message Handling
