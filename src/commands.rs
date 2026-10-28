@@ -356,7 +356,7 @@ async fn restore_permissions(bot: &Bot, app: &App, user_id: u64) {
 const RULES: &str = "This chat is made for English and Russian practice.
 On Monday, Wednesday and Friday Russian is spoken. On Tuesday, Thursday and Saturday English is spoken. On Sunday you can speak any of these two languages. It is expected from native speakers to correct other people's mistakes.
 
-The day is changed at 00:00 CET (Berlin).
+The day is changed at 00:00 UTC.
 
 DO NOT WRITE TO OTHER MEMBERS DIRECTLY BEFORE YOU AT LEAST KNOW THEM. Better don't write them at all until you're pretty confident you're not bugging them. This is highly discouraged and will be punished.
 
@@ -371,7 +371,7 @@ IMPORTANT: Language Exchange implies that you can understand most of what is wri
 
 В понедельник, среду и пятницу говорим по-русски. Во вторник, четверг и субботу -- по-английски. В воскресенье допустимо использование любого из этих языков. От носителей ожидаются исправления ошибок у других людей.
 
-Смена дня происходит в 00:00 Центральноевропейского времени (Берлин).
+Смена дня происходит в 00:00 по UTC.
 
 НЕ ПИШИТЕ ДРУГИМ УЧАСТНИКАМ В ЛИЧКУ ПОКА ВЫ С НИМИ ХОТЯ БЫ НЕ ПОЗНАКОМИТЕСЬ. Лучше вообще им не пишите, пока вы не достаточно уверены, что вы им не докучаете. Такое поведение крайне неодобряется и будет караться.
 

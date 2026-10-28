@@ -3,6 +3,7 @@
 Telegram bot for an en-ru language exchange group chat.
 
 Enforces the usage of one of those two languages on different days of the week.
+Days change at 00:00 UTC.
 
 Written in Rust using [teloxide](https://github.com/teloxide/teloxide), with
 its own small [fastText](https://fasttext.cc/) language detection model,
@@ -50,7 +51,7 @@ with a unit suffix. For example:
 
 - /alarm Toggle notifications about day change on/off
 
-  With alarm on, bot will notify about English/Russian day changes.
+  With alarm on, bot will notify about English/Russian day changes, at 00:00 UTC.
 
 - /langchecks Toggle en/ru language checks on/off
 
