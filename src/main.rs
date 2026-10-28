@@ -26,9 +26,16 @@ impl Config {
         Ok(Self {
             token: env::var("TOKEN").context("TOKEN env variable is required")?,
             chat_id: ChatId(chat_id.parse().with_context(|| format!("CHAT_ID {chat_id:?} isn't a valid chat id"))?),
-            state_path: env::var("STATE_PATH").unwrap_or_else(|_| "data/state.json".into()),
+            state_path: state_path(),
         })
     }
+}
+
+/// STATE_PATH, or state.json in the systemd StateDirectory=, or in ./data.
+fn state_path() -> String {
+    env::var("STATE_PATH")
+        .or_else(|_| env::var("STATE_DIRECTORY").map(|dir| format!("{dir}/state.json")))
+        .unwrap_or_else(|_| "data/state.json".into())
 }
 
 #[tokio::main]

@@ -4,10 +4,10 @@ Telegram bot for an en-ru language exchange group chat.
 
 Enforces the usage of one of those two languages on different days of the week.
 
-Written in nodejs using [grammy](https://grammy.dev/), with
-[tongue](https://desertant.com/models/tongue/) for language detection.
-Requires node v26.12.1 or higher, as well as [valkey](https://valkey.io/)
-instance for storage.
+Written in Rust using [teloxide](https://github.com/teloxide/teloxide), with
+its own small [fastText](https://fasttext.cc/) language detection model,
+trained on the chat history. It's a single ~13 MiB binary (the model is
+compiled in) keeping its state in one JSON file, no database required.
 
 ## List of commands available to bot
 
@@ -111,7 +111,8 @@ with a unit suffix. For example:
   Our goal isn't to ban everyone or spam with warnings and threats, but to
   stimulate the language exchange.
 
-  Without an argument displays the current cooldown value, with a value sets it.
+  Without an argument resets the cooldown to its default value (2 minutes) and
+  ends the current one, with a value sets it (up to 3 hours).
 
 - /captcha Toggle captcha check for newcomers on/off
 
@@ -149,6 +150,11 @@ if you're using them.
 - /rt &lt;text> - Retranslate text to chat (for fun and comedic purposes -- like
   the bot says it).
 
+- /captcha_msg Show the captcha and welcome messages in the current chat, to
+  check their formatting.
+
+- /captcha_clear Remove all pending captcha checks.
+
 ## Language detection
 
 The bot uses a two-tier language detection system, with its own small
@@ -175,7 +181,7 @@ lingua, against 122 with this model.
 
 ### Detection Methods
 
-1. **Russian/English Detection** (`detectEnRu`)
+1. **Russian/English Detection** (`detect_en_ru`)
 
 - Primary method for language policy enforcement
 - Only detects Russian and English languages, by counting Cyrillic and Latin
@@ -184,7 +190,7 @@ lingua, against 122 with this model.
 - Used to determine if users are writing in the wrong language on
   language-specific days
 
-2. **Other Language Detection** (`detectLanguageOutsideOfEnRu`)
+2. **Other Language Detection** (`detect_other_language`)
 
 - Multi-layered approach combining regex and ML detection for
   non-Russian/English text
@@ -221,7 +227,7 @@ simultaneously, we shouldn't give them a warning.
 
 ### Message Processing Rules
 
-- **Target chat filtering**: The bot now uses improved middleware to ensure all
+- **Target chat filtering**: The bot ensures all
   processing (language detection, captcha, probation) only occurs in the configured
   target chat. If someone adds the bot to other chats it won't do anything there,
   DMs aren't verified either
@@ -239,7 +245,7 @@ simultaneously, we shouldn't give them a warning.
    language-specific days), they get warnings
 2. Each warning triggers a cooldown process -- for the cooldown duration time
    no one will receive a new warning. (configurable with `/cooldown`)
-3. Default: 3 warnings before mute (configurable with `/warnings_number`)
+3. Default: 2 warnings before mute (configurable with `/warnings_number`)
 4. After reaching warning limit, user gets temporarily muted
 
 Mute Details:
@@ -253,7 +259,7 @@ Mute Details:
 The system only affects non-admin users and requires the mute capacity to be
 enabled.
 
-Given a cooldown time common for all violations, and 3 warnings, bot shouldn't
+Given a cooldown time common for all violations, and 2 warnings, bot shouldn't
 really mute anyone all that often, it's more of a scare-tactic to show it has
 teeth (otherwise users just ignore the bot).
 
@@ -302,155 +308,53 @@ prove they're human.
   banned
 - **Success**: Correct answers immediately remove verification requirement
 
-### Technical Implementation
-
-Both anti-spam systems use:
-
-- **Enhanced user detection**: Improved middleware for detecting new chat members
-  through Telegram's chat member events
-- **Modular architecture**: Separate middleware components for different functions
-  (probation, captcha, chat targeting) that can be combined
-- **Automatic cleanup**: Old verification data expires after 1 day
-- **Message tracking**: Captcha messages are tracked and can be cleaned up
-- **Username mapping**: Bidirectional username↔userId mapping for admin commands
-- **Background jobs**: Periodic cleanup of expired verifications
-- **Error handling**: Graceful handling of message deletion failures
-
-The captcha system is disabled by default and must be explicitly enabled by
-admins. The probation system is always active for new members.
+Captcha checks are on by default, `/captcha` toggles them. The probation
+system is always active for new members.
 
 ## Storage
 
-The bot uses a hybrid storage approach with different data stored in memory
-vs Valkey:
+All persistent data lives in a single JSON file (`STATE_PATH`), rewritten
+atomically on every change:
 
-### In Memory
+- settings, with defaults for anything missing, so the file can be edited by
+  hand (durations are strings like `"15m"`);
+- violation counters per user, with usernames, so admins can `/pardon @user`;
+- pending captcha checks.
 
-- **Chat Admin Cache** (`ChatAdminRepo`): Admin user IDs with 3-hour TTL,
-  refreshed automatically when expired
-- **Language Detection Model**: Loaded once at startup for performance
-- Current active cooldown value
+Violations and captcha checks carry an expiry timestamp and are dropped once
+expired. Admin list cache (3 hours), the current cooldown and the welcome
+message counter are kept in memory only.
 
-Data in memory doesn't survive bot re-deployments or start-stop cycles of
-course, it is ephemeral.
-
-### In Valkey
-
-- Language check settings:
-  - disabled en/ru lang checks `enrule:langday:langday_checks_disabled`
-  - disabled other lang checks `enrule:langday:otherlang_checks_disabled`
-  - forced language `enrule:langday:forced_lang`
-
-- **User Violations**: Violation counters per user with configurable TTL
-  - Key pattern: `enrule:violations:counter:{userId}`
-  - Username mapping: `enrule:violations:username:{username}` → userId
-  - Reverse mapping: `enrule:violations:userid:{userId}` → username
-
-  Bidirectional mapping needed because Telegram's API doesn't allow
-  username→userId lookup, but admins use `@username` in commands.
-  Reverse mapping for technical cleanup operations only.
-
-- **Bot Settings**: Persistent configuration with defaults
-  - Mute enabled/disabled: `enrule:violation_settings:mute_enabled` (default: true)
-  - Max violations before mute: `enrule:violation_settings:max_violations`
-    (default: 3)
-  - Mute duration: `enrule:violation_settings:mute_duration` (default: 15 minutes)
-  - Warnings expiry: `enrule:violation_settings:warnings_expiry` (default: 3 hours)
-  - Cooldown duration: `enrule:cooldown:duration` (default: 2 minutes)
-
-- **Captcha System**: Anti-spam verification for new members
-  - Settings:
-    - Captcha enabled/disabled: `enrule:captcha_settings:enabled` (default: false)
-    - Bots allowed: `enrule:captcha_settings:bots_allowed` (default: false)
-    - Max verification time: `enrule:captcha_settings:max_verification_age`
-      (default: 20 minutes)
-  - Per-user verification data (expires after 1 day):
-    - Question: `enrule:captcha:question:{userId}`
-    - Expected answer: `enrule:captcha:answer:{userId}`
-    - Attempts counter: `enrule:captcha:attempts_counter:{userId}`
-    - Message IDs (set): `enrule:captcha:msg_ids:{userId}`
-    - First asked timestamp: `enrule:captcha:first_asked_at:{userId}`
-    - Username bidirectional mapping:
-      - `enrule:captcha:userid:{username}` → userId
-      - `enrule:captcha:username:{userId}` → username
-
-**Key Prefix**: All Valkey keys use `enrule:` prefix for namespace isolation.
-
-**Client**: Uses Valkey Glide client with configurable host/port via environment
-variables (`VALKEY_HOST`, `VALKEY_PORT`).
-
-## Build process
-
-### Option 1: Docker
-
-The easiest way to run the bot is using Docker Compose, which handles both the
-bot and Valkey instance:
+## Building and running
 
 ```sh
-# Create .env file with your bot configuration
-cp .env.example .env  # if you have one, or create manually
-# Edit .env with your TOKEN and CHAT_ID
-
-# Build and run the entire stack
-docker compose up --build
-
-# Or run in background
-docker compose up --build -d
+cargo build --release
+TOKEN=... CHAT_ID=... ./target/release/en_ru_le_bot
 ```
 
-You can also build just the Docker image:
+Requires a recent stable Rust (2024 edition). `cargo test` runs the test suite.
 
-```sh
-# Build the bot image
-docker build -t en-ru-le-bot .
+- **systemd**: see [docs/systemd.md](docs/systemd.md) for a hardened unit.
+- **Docker**: `docker compose up --build -d`, with `TOKEN` and `CHAT_ID` in
+  `.env`. The state is kept in the `bot_data` volume.
 
-# Run with external Valkey instance
-docker run -e TOKEN=123321 -e CHAT_ID=32167 -e VALKEY_HOST=localhost ghcr.io/religiosa1/en_ru_le_bot
-```
-
-### Option 2: Manual Build
-
-Install dependencies
-
-```sh
-npm i
-```
-
-and launch the bot:
-
-```sh
-npm run start
-# or for hot reload and extra logs (with pretty print with pino-pretty):
-# npm install -g pino-pretty # you need to install it once
-npm run dev | pino-pretty
-```
-
-It requires a valkey instance, you can start one in docker:
-
-```sh
-docker run --name enrule_valkey \
-  -p 6379:6379 \
-  -d valkey/valkey:8.1-alpine valkey-server \
-  --save 60 1 --loglevel warning
-```
+The bot shuts down gracefully on SIGINT.
 
 ## Configuration
 
-Bot can be configured through the environment variables, which can also be
-supplied through `.env` file.
+Environment variables (see [env.example](env.example)):
 
-At the very least, you must supply to variables:
-
-- TOKEN Containing a bot token, as supplied by the [BotFather](https://t.me/BotFather)
-- CHAT_ID Id of your chat/supergroup
-
-Please refer to [env.d.ts](./types/env.d.ts) file definitions
-for the full list of available options.
+- `TOKEN` bot token, as supplied by the [BotFather](https://t.me/BotFather)
+- `CHAT_ID` id of your chat/supergroup
+- `STATE_PATH` state file, defaults to `$STATE_DIRECTORY/state.json` when run
+  with systemd's `StateDirectory=`, and to `data/state.json` otherwise
+- `LOG_LEVEL` log filter, `info` by default (e.g. `debug`, or
+  `en_ru_le_bot=debug,warn`); logs are JSON lines on stdout
 
 ## License
 
 EnRuLeBot is MIT Licensed.
 
-Language detection by [Desert Ant Labs](https://desertant.com) tongue, used
-under the [Desert Ant Labs Source-Available License 1.0](https://license.desertant.com/1.0).
+The `other` class of the language model is trained on
+[Tatoeba](https://tatoeba.org) sentences (CC-BY 2.0 FR).
 

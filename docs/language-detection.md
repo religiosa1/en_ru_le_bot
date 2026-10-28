@@ -50,8 +50,9 @@ full `lid-chat.bin` (~80 MiB) isn't.
 
    tongue is reliable when it says English (~99.8% in a reviewed sample) and
    unreliable otherwise, so only its non-English verdicts are reviewed.
-   NOTE: tongue lives in the TS code; once that's removed, check out a commit
-   with it to relabel a new export.
+   NOTE: tongue lived in the TS version of the bot, removed since; this script
+   and `scripts/lid-baseline.ts` are available in commit `51069e9`. A new
+   export could also be pre-labelled with the chat model itself instead.
 
 3. **Review.** `scripts/make-review-batches.py` splits tongue's non-English
    Latin messages into 1000-line batches (`eval/review/pass-NNN.tsv`), skipping
@@ -117,7 +118,8 @@ full `lid-chat.bin` (~80 MiB) isn't.
 
    Runs the full other-language check (`langday::detect_other_language`) as if
    every day were an English day, and lists every verdict change. Baselines:
-   `scripts/lid-baseline.ts` (tongue pipeline), or any earlier `--save` output.
+   `scripts/lid-baseline.ts` (tongue pipeline, see the NOTE in step 2), or any
+   earlier `--save` output.
 
 ## Results so far
 
