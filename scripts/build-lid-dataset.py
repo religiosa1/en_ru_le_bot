@@ -10,7 +10,7 @@ Labels: en, ru, ru-latin, other. Sources:
 - synthetic ru-latin: chat Cyrillic-only messages, transliterated with randomized schemes
 - other: Tatoeba sentences (scripts/fetch-tatoeba.sh)
 
-Chat messages from TEST_YEAR, as well as the reviewed random pilot sample (batch*), go to the test set.
+Chat messages from TEST_YEAR, as well as reviewed random samples (batch*, sample-*), go to the test set.
 Output: eval/lid/{train,test}.jsonl, one {"label", "source", "text"} per line.
 """
 
@@ -67,7 +67,8 @@ def review_labels() -> tuple[dict[str, str], set[str]]:
     when the review batches are gone.
     """
     labels, pilot = {}, set()
-    batches = glob.glob("eval/review/*.tsv")
+    # Sorted, so later batches (pass-*, sample-*) override earlier labels (batch*)
+    batches = sorted(glob.glob("eval/review/*.tsv"))
     if not batches and os.path.exists(REVIEW_LABELS):
         for line in open(REVIEW_LABELS, encoding="utf-8"):
             id, label, is_pilot = line.rstrip("\n").split("\t")
@@ -81,7 +82,10 @@ def review_labels() -> tuple[dict[str, str], set[str]]:
         out = tsv.removesuffix(".tsv") + ".out.jsonl"
         out_by_line = tsv.removesuffix(".tsv") + ".out.tsv"
         if os.path.exists(out_by_line):
-            labels.update(read_labels_by_line(tsv, out_by_line))
+            batch_labels = read_labels_by_line(tsv, out_by_line)
+            labels.update(batch_labels)
+            if os.path.basename(tsv).startswith("sample"):
+                pilot.update(batch_labels)
             continue
         if not os.path.exists(out):
             continue
@@ -102,7 +106,8 @@ def review_labels() -> tuple[dict[str, str], set[str]]:
 def read_labels_by_line(tsv: str, out: str) -> dict[str, str]:
     """Reviews listing only non-English messages by line number, so everything else is "en".
 
-    Lines whose copied detector class doesn't match the batch are misaligned and skipped.
+    Lines whose copied second column (detector class or check code) doesn't match the batch
+    are misaligned and skipped.
     """
     rows = [line.split("\t", 2)[:2] for line in open(tsv, encoding="utf-8")]
     labels = {id: "en" for id, _ in rows}

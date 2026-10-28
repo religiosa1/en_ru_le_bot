@@ -61,6 +61,11 @@ words and names from the chat.
    `eval/review/pass-NNN.out.tsv`: only non-English lines, by line number, with
    the detector class copied as an alignment check.
 
+   `scripts/make-review-batch.py <name> <ids file>` builds a batch for any
+   message ids, with a text hash as the check column instead of a detector
+   guess, so reviewers aren't anchored. Batches named `sample-*` go to the test
+   set only.
+
    Review classes: `en`, `ru`, `ru-latin`, `other`, `mixed`, `unclear`.
    `mixed` and `unclear` are excluded from training.
 
@@ -131,6 +136,26 @@ Test set (quantized model, before review wave 2): `en` falsely flagged as
 `other` 0.1–0.3%, Tatoeba `other` recall 99.2%, synthetic `ru-latin` 98.7%.
 Real `ru-latin` reached 92% from synthetic training alone.
 
+### Unbiased measurement
+
+2000 random 2026 messages the bot would check (≥5 letters, any script),
+reviewed without showing any detector's guess (`sample-2026-*`, test set only).
+Scored with `scripts/score-verdicts.py`:
+
+| Detector | Flagged | en wrongly flagged | ru wrongly flagged | real `other` caught |
+|---|---|---|---|---|
+| tongue | 17 | 6/1396 (0.4%) | 3/552 | 4/10 |
+| lingua | 30 | 11/1396 (0.8%) | 9/552 | 4/10 |
+| chat model (all reviews) | 10 | 1/1396 (0.07%) | 0/552 | 7/10 |
+
+Only ~0.5% of chat messages are in another language, so recall rests on few
+examples. Precision of the pipeline's own 2026 flags (`pass-025`, all reviewed):
+~70% are right (other/mixed); the wrong ones are almost all lone names, places
+and loanwords ("Harley Quinn", "Campinas - Brazil", "Cappuccino"). Raising the
+confidence threshold trades about one true flag per false one removed. Skipping
+ML when every word is capitalized would cut false flags 39 → 16 and lose 9 true
+ones (all greetings like "Guten Morgen"): precision 73% → 86%. Not applied yet.
+
 ## Review status and cost
 
 | Batches | Format | Haiku tokens |
@@ -139,7 +164,9 @@ Real `ru-latin` reached 92% from synthetic training alone.
 | `pass-000`–`007` | `.out.jsonl`, all mismatches | 1.25M (~156k/batch) |
 | `pass-008`–`015` | `.out.tsv`, non-English only | 0.79M (~98k/batch) |
 | `pass-016`–`024` | `.out.tsv`, non-English only | 0.81M (~90k/batch) |
-| **total** | 25.5k labelled messages | **~2.9M** |
+| `pass-025` (model-uncertain + pipeline flags) | `.out.tsv`, check codes | 77k |
+| `sample-2026-0`, `-1` (random, unbiased) | `.out.tsv`, check codes | 166k |
+| **total** | ~28k labelled messages | **~3.2M** |
 
 All of tongue's non-English Latin-script verdicts (2019–2026) are reviewed.
 Label counts: en 16.1k, mixed 4.3k, other 2.0k, unclear 1.8k, ru-latin 1.0k,
