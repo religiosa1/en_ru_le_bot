@@ -6,3 +6,4 @@ node_modules
 /eval
 /models/*
 !/models/lid-chat.ftz
+__pycache__/
