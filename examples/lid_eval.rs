@@ -1,17 +1,17 @@
 //! Runs the other-language pipeline over a message corpus and compares it against a baseline.
 //!
-//! cargo run --release --example lid_eval -- eval/corpus.jsonl [--baseline eval/tongue.jsonl] [--save eval/current.jsonl]
+//! cargo run --release --example lid_eval -- eval/corpus.jsonl [--baseline eval/tongue.jsonl] [--save eval/current.jsonl] [--model models/lid-chat.ftz]
 //!
 //! Corpus comes from scripts/export-to-jsonl.py. Every message is checked as if it's an English day,
 //! as that exercises all detection paths (Russian days only use the charset check).
-//! Verdicts: "skip" (too short), "ok", "charset", "ml:<lang>".
+//! Verdicts: "skip" (too short), "ok", "charset", "ml:<confidence>".
 
 use std::collections::{BTreeMap, HashMap};
 use std::fs;
 
 use anyhow::Context;
 use en_ru_le_bot::langday::{Lang, OtherLang, detect_other_language, strip_non_letter_or_whitespace_chars};
-use en_ru_le_bot::lid::Lid;
+use en_ru_le_bot::lid::{Lid, load_dev_model};
 use serde::{Deserialize, Serialize};
 
 /// Same as the minimal message length in the language check middleware
@@ -35,7 +35,10 @@ fn main() -> anyhow::Result<()> {
     let corpus_path = args.first().filter(|a| !a.starts_with("--")).context("corpus path is required")?;
 
     let messages: Vec<Message> = read_jsonl(corpus_path)?;
-    let lid = Lid::load();
+    let lid = match flag("--model") {
+        Some(path) => Lid::load(path)?,
+        None => load_dev_model(),
+    };
     let decisions: Vec<Decision> = messages
         .iter()
         .map(|m| {
@@ -43,10 +46,10 @@ fn main() -> anyhow::Result<()> {
             let verdict = if cleaned.chars().count() < MIN_MSG_LENGTH {
                 "skip".into()
             } else {
-                match detect_other_language(&lid, &cleaned, Some(Lang::En)) {
+                match detect_other_language(&lid, &m.text, Some(Lang::En)) {
                     None => "ok".into(),
                     Some(OtherLang::Charset) => "charset".into(),
-                    Some(OtherLang::Ml { language, .. }) => format!("ml:{language}"),
+                    Some(OtherLang::Ml { confidence, .. }) => format!("ml:{confidence:.2}"),
                 }
             };
             Decision { id: m.id.clone(), verdict }

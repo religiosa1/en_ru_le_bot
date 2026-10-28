@@ -99,20 +99,19 @@ static EN_WORDS: LazyLock<HashSet<&str>> = LazyLock::new(|| include_str!("../wor
 static RU_WORDS: LazyLock<HashSet<&str>> = LazyLock::new(|| include_str!("../words/ru.txt").lines().collect());
 
 const ML_MIN_LENGTH: usize = 10;
-const ML_TARGET_CONFIDENCE: f64 = 0.7;
+const ML_TARGET_CONFIDENCE: f32 = 0.7;
 /// Share of words outside the common en/ru vocab, required to confirm an ML detection.
 const UNKNOWN_WORDS_THRESHOLD: f64 = 0.6;
 
 #[derive(Debug, PartialEq)]
 pub enum OtherLang {
     Charset,
-    Ml { language: String, unknown_words: usize, total_words: usize },
+    Ml { confidence: f32, unknown_words: usize, total_words: usize },
 }
 
 /// Detects a message written in a language other than en/ru.
-///
-/// `text` must be already cleaned with [strip_non_letter_or_whitespace_chars].
-pub fn detect_other_language(lid: &Lid, text: &str, target: Option<Lang>) -> Option<OtherLang> {
+pub fn detect_other_language(lid: &Lid, raw_text: &str, target: Option<Lang>) -> Option<OtherLang> {
+    let text = &strip_non_letter_or_whitespace_chars(raw_text);
     if detect_bad_lang_by_charset(text) {
         debug!("Language mismatch by charset");
         return Some(OtherLang::Charset);
@@ -132,11 +131,11 @@ pub fn detect_other_language(lid: &Lid, text: &str, target: Option<Lang>) -> Opt
         return None;
     }
 
-    let Some(detection) = lid.detect(text) else {
+    let Some(detection) = lid.detect(raw_text) else {
         info!(text, "Couldn't determine the language with ML, aborting");
         return None;
     };
-    if detection.language == "en" || detection.language == "ru" {
+    if detection.label != "other" {
         debug!(?detection, "Language detected as Russian or English");
         return None;
     }
@@ -158,8 +157,8 @@ pub fn detect_other_language(lid: &Lid, text: &str, target: Option<Lang>) -> Opt
         has_plenty_unknown_words,
         "Language mismatch, checking against dicts to filter out false-positives"
     );
-    has_plenty_unknown_words.then(|| OtherLang::Ml {
-        language: detection.language,
+    has_plenty_unknown_words.then_some(OtherLang::Ml {
+        confidence: detection.confidence,
         unknown_words: unknown.len(),
         total_words: words.len(),
     })
@@ -168,7 +167,7 @@ pub fn detect_other_language(lid: &Lid, text: &str, target: Option<Lang>) -> Opt
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::lid::Lid;
+    use crate::lid::load_dev_model;
 
     #[test]
     fn schedule() {
@@ -241,8 +240,8 @@ mod tests {
 
     #[test]
     fn other_language() {
-        let lid = Lid::load();
-        let detect = |text: &str, target| detect_other_language(&lid, &strip_non_letter_or_whitespace_chars(text), target);
+        let lid = load_dev_model();
+        let detect = |text: &str, target| detect_other_language(&lid, text, target);
 
         assert_eq!(detect("你们不能对 Eon 实施制裁！ 西方需要停止殖民", Some(Lang::Ru)), Some(OtherLang::Charset));
         assert_eq!(detect("I personally wouldn't bother unless he gets himself a ban hammer", Some(Lang::En)), None);
@@ -251,7 +250,7 @@ mod tests {
         assert_eq!(detect("Hallo du", Some(Lang::En)), None, "too short");
         assert!(matches!(
             detect("Ich weiß nicht, ob das heute noch klappt", Some(Lang::En)),
-            Some(OtherLang::Ml { language, .. }) if language == "de"
+            Some(OtherLang::Ml { .. })
         ));
     }
 }

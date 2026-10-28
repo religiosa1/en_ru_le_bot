@@ -15,6 +15,7 @@ struct Config {
     token: String,
     chat_id: ChatId,
     state_path: String,
+    model_path: String,
 }
 
 impl Config {
@@ -24,6 +25,7 @@ impl Config {
             token: env::var("TOKEN").context("TOKEN env variable is required")?,
             chat_id: ChatId(chat_id.parse().with_context(|| format!("CHAT_ID {chat_id:?} isn't a valid chat id"))?),
             state_path: env::var("STATE_PATH").unwrap_or_else(|_| "data/state.json".into()),
+            model_path: env::var("MODEL_PATH").unwrap_or_else(|_| "models/lid-chat.ftz".into()),
         })
     }
 }
@@ -46,8 +48,8 @@ async fn main() -> anyhow::Result<()> {
     let store = Store::load(&config.state_path)?;
 
     let started = Instant::now();
-    let lid = Lid::load();
-    info!(duration_ms = started.elapsed().as_millis() as u64, "Language models loaded");
+    let lid = Lid::load(&config.model_path)?;
+    info!(duration_ms = started.elapsed().as_millis() as u64, "Language model loaded");
 
     let app = Arc::new(App { store, lid, chat_id: config.chat_id });
     let bot = Bot::new(config.token);

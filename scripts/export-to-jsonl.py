@@ -3,7 +3,7 @@
 
 Usage: scripts/export-to-jsonl.py messages*.html > eval/corpus.jsonl
 
-One {"id", "from", "text"} object per line; bot messages and messages without text are skipped.
+One {"id", "date", "from", "text"} object per line; bot messages and messages without text are skipped.
 """
 
 import json
@@ -33,9 +33,13 @@ class ExportParser(HTMLParser):
         if "message" in classes and "default" in classes:
             if "joined" not in classes:
                 self.sender = None
-            self.message = {"id": dict(attrs)["id"].removeprefix("message"), "from": "", "text": ""}
+            self.message = {"id": dict(attrs)["id"].removeprefix("message"), "date": "", "from": "", "text": ""}
         elif self.message is not None and not self.capture:
-            if "from_name" in classes and not in_forward:
+            if "date" in classes and not self.message["date"] and not in_forward:
+                # title="28.05.2019 11:21:37 UTC+01:00" -> "2019-05-28"
+                day, month, year = dict(attrs)["title"].split()[0].split(".")
+                self.message["date"] = f"{year}-{month}-{day}"
+            elif "from_name" in classes and not in_forward:
                 self.capture = ("from", len(self.div_classes))
             elif "text" in classes and not self.message["text"]:
                 self.capture = ("text", len(self.div_classes))
