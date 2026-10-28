@@ -12,7 +12,6 @@ export const settingsCommands = new CommandGroup().addAdminCommand(
 		en/ru days checks: ${onOff(!(await langDayService.isLangDayDisabled()))}
 	  other lang checks: ${onOff(!(await langDayService.isOtherLangChecksDisabled()))}
 		forced language: ${(await langDayService.getForcedLanguage()) ?? "none"}
-		language detector: ${await langDayService.getDetector()}
 		mute capacity: ${onOff(await userViolationService.getMuteEnabled())}
 		mute duration: ${formatDuration(await userViolationService.getMuteDuration())}
 		warnings number: ${await userViolationService.getMaxViolationNumber()}

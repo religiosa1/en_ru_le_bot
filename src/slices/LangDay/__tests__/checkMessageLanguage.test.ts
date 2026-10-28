@@ -9,7 +9,6 @@ import { Time } from "../../../enums/Time.ts";
 import { logger } from "../../../logger.ts";
 import type { BotContextWithMsgLanguage } from "../../../models/BotContextWithMsgLanguage.ts";
 import type { ChatAdminRepo } from "../../ChatAdmins/service.ts";
-import { type DetectorName, DetectorName as Detectors } from "../detectors.ts";
 import { langDayServiceFactory } from "../factory.ts";
 import { checkMessageLanguage } from "../middleware.ts";
 
@@ -123,54 +122,6 @@ describe("checkMessageLanguage", () => {
 		t.assert.equal(nextFn.mock.callCount(), 1, "next called on longer english text");
 	});
 
-	it("works with tongue as the active detector", async (t) => {
-		const ctx = await makeMockContext(client, EN_TEXT, { detector: Detectors.Tongue });
-		await checkMessageLanguage(ctx, nextFn);
-		t.assert.equal(nextFn.mock.callCount(), 1);
-		t.assert.equal(ctx.msgLanguage, LanguageEnum.English);
-
-		await checkMessageLanguage(await makeMockContext(client, RU_TEXT, { detector: Detectors.Tongue }), nextFn);
-		t.assert.equal(nextFn.mock.callCount(), 1, "nextFn isn't called on correct language");
-
-		await checkMessageLanguage(
-			await makeMockContext(client, [EN_TEXT + RU_TEXT].join(" "), { detector: Detectors.Tongue }),
-			nextFn,
-		);
-		t.assert.equal(nextFn.mock.callCount(), 1, "no next for bilingual messages");
-	});
-
-	it("records both detectors outcome regardless of the active one", async (t) => {
-		const ctx = await makeMockContext(client, EN_TEXT, { detector: Detectors.Tongue });
-		await checkMessageLanguage(ctx, nextFn);
-		await checkMessageLanguage(await makeMockContext(client, RU_TEXT), nextFn);
-
-		const stats = await ctx.container.langDayService.getShadowStats(1);
-		t.assert.equal(stats.compared, 2);
-		t.assert.equal(stats.verdictsAgreed, 2);
-		t.assert.equal(stats.linguaActed, 1);
-		t.assert.equal(stats.tongueActed, 1);
-	});
-
-	it("aggregates shadow stats disagreements", async (t) => {
-		const { langDayService } = (await makeMockContext(client, EN_TEXT)).container;
-		const ru = LanguageEnum.Russian;
-		await langDayService.recordShadowComparison({ target: ru, lingua: "other", tongue: "en" });
-		await langDayService.recordShadowComparison({ target: ru, lingua: "mixed", tongue: "ru" });
-		await langDayService.recordShadowComparison({ target: ru, lingua: "mixed", tongue: "ru" });
-		await langDayService.recordShadowComparison({ target: undefined, lingua: "other", tongue: "other" });
-
-		const stats = await langDayService.getShadowStats(7);
-		t.assert.equal(stats.compared, 4);
-		t.assert.equal(stats.verdictsAgreed, 1);
-		t.assert.equal(stats.actionsAgreed, 4, "mixed and ru on a russian day are both no-op");
-		t.assert.equal(stats.linguaActed, 2);
-		t.assert.equal(stats.tongueActed, 2);
-		t.assert.deepEqual(stats.disagreements, [
-			{ target: ru, lingua: "mixed", tongue: "ru", count: 2 },
-			{ target: ru, lingua: "other", tongue: "en", count: 1 },
-		]);
-	});
-
 	it("doesn't check old messages", async (t) => {
 		await checkMessageLanguage(await makeMockContext(client, EN_TEXT, { date: new Date("2020-01-02") }), nextFn);
 		t.assert.equal(nextFn.mock.callCount(), 0, "No next for old messages");
@@ -185,7 +136,6 @@ interface MakeMockContextOpts {
 	adminsIds?: number[];
 	forcedLanguage?: LanguageEnum;
 	langDayDisabled?: boolean;
-	detector?: DetectorName;
 }
 
 // Mock context, only the bare minimum of fields is provided here
@@ -198,7 +148,6 @@ async function makeMockContext(
 		adminsIds = [],
 		forcedLanguage,
 		langDayDisabled,
-		detector = Detectors.Lingua,
 	}: MakeMockContextOpts = {},
 ): Promise<BotContext & Partial<BotContextWithMsgLanguage>> {
 	const mockAdminRepo = {
@@ -207,7 +156,6 @@ async function makeMockContext(
 	const langDayService = langDayServiceFactory({ valkeyClient });
 	await langDayService.setLangDayDisabled(!!langDayDisabled);
 	await langDayService.setForcedLanguage(forcedLanguage);
-	await langDayService.setDetector(detector);
 	return {
 		logger,
 		container: {

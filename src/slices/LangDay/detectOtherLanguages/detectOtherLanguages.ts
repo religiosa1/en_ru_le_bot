@@ -1,6 +1,6 @@
 import type { Logger } from "pino";
 import { LanguageEnum } from "../../../enums/Language.ts";
-import type { LanguageDetector } from "../detectors.ts";
+import { detectAnyLanguage } from "../languageDetection.ts";
 import { stripNonLetterOrWhitespaceChars } from "../utils.ts";
 import { checkTextIsMostlyCyrillic, detectBadLangByCharset } from "./detectBadLangByCharset.ts";
 import { mostCommonWordsInEnglish } from "./mostCommonWordsInEnglish.ts";
@@ -32,7 +32,6 @@ export async function detectLanguageOutsideOfEnRu(
 	logger: Logger,
 	text: string,
 	targetLanguage: LanguageEnum | undefined,
-	detector: LanguageDetector,
 ): Promise<OtherLanguageDetectionResult | undefined> {
 	const cleanedText = stripNonLetterOrWhitespaceChars(text);
 
@@ -61,7 +60,7 @@ export async function detectLanguageOutsideOfEnRu(
 	}
 
 	// If it's strictly latin/cyrillic -- going for ML detection
-	const lang = await detector.detectAnyLanguage(cleanedText);
+	const lang = await detectAnyLanguage(cleanedText);
 	if (lang == null) {
 		logger.warn({ cleanedText, text }, "Couldn't determine the language with ML, aborting");
 		return undefined;

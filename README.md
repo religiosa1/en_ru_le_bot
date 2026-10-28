@@ -1,16 +1,13 @@
-# EnRuLeBot monorepo
+# EnRuLeBot
 
 Telegram bot for an en-ru language exchange group chat.
 
 Enforces the usage of one of those two languages on different days of the week.
 
-Consists of two packages:
-
-- [language detection](./packages/language-detection/) ([napi-rs](https://napi.rs/)
-  rust wrapper around [lingua-rs](https://github.com/pemistahl/lingua-rs))
-- the actual [telegram bot](./packages/tg-bot/), written in nodejs using
-  [grammy](https://grammy.dev/). Requires node v26.12.1 or higher, as well as
-  [valkey](https://valkey.io/) instance for storage.
+Written in nodejs using [grammy](https://grammy.dev/), with
+[tongue](https://desertant.com/models/tongue/) for language detection.
+Requires node v26.12.1 or higher, as well as [valkey](https://valkey.io/)
+instance for storage.
 
 ## List of commands available to bot
 
@@ -152,26 +149,19 @@ if you're using them.
 - /rt &lt;text> - Retranslate text to chat (for fun and comedic purposes -- like
   the bot says it).
 
-- /langdetector ["lingua"|"tongue"] - View or set the active language detector.
-
-  See [Detector shadow testing](#detector-shadow-testing). Lingua by default.
-
-- /langshadow [days] - Lingua vs tongue comparison stats for the last N days
-  (7 by default, up to 30).
-
 ## Language detection
 
-The bot uses a two-tier language detection system built on the
-[lingua-rs](https://github.com/pemistahl/lingua-rs) library through
-a custom Rust/NAPI wrapper:
+The bot uses a two-tier language detection system, with the
+[tongue](https://desertant.com/models/tongue/) on-device language
+identification model for the ML part:
 
 ### Detection Methods
 
-1. **Russian/English Detection** (`isRussianOrEnglish`)
+1. **Russian/English Detection** (`detectEnRu`)
 
 - Primary method for language policy enforcement
-- Only detects Russian and English languages (basically, anything
-  non-cyrillic will be treated as English)
+- Only detects Russian and English languages, by counting Cyrillic and Latin
+  letters (basically, anything non-cyrillic will be treated as English)
 - Optimized for detecting direct policy violations
 - Used to determine if users are writing in the wrong language on
   language-specific days
@@ -182,7 +172,7 @@ a custom Rust/NAPI wrapper:
   non-Russian/English text
 - **Layer 1 - Character Set Detection**: Regex-based quick check for characters outside
   Cyrillic and Latin scripts (e.g., Chinese, Arabic)
-- **Layer 2 - ML Language Detection**: Uses lingua-rs via `detectAllLanguagesFast`
+- **Layer 2 - ML Language Detection**: Uses tongue via `detectAnyLanguage`
   for comprehensive language identification with 0.7 confidence threshold
 - **Layer 3 - Dictionary Validation**: Cross-references detected words against
   5000 most common English and Russian words to reduce false positives
@@ -198,32 +188,13 @@ of characters in each language in a message.
 - **Language Rate Threshold**: 1.7x ratio required (`REQUIRED_LANGUAGE_RATE`)
 - **Mixed Language Logic**: If neither language dominates by the required rate,
   the message is considered "mixed language" and **no violation is triggered**
-- **Calculation**: Based on character length of each language fragment in the message
+- **Calculation**: Based on the number of Cyrillic and Latin letters in the message
 
 **Examples**:
 
 - Russian text 3x longer than English → Classified as Russian
 - English text 2x longer than Russian → Classified as English
 - Russian and English roughly equal length → Mixed language (no violation)
-
-### Detector shadow testing
-
-[Tongue](https://desertant.com/models/tongue/) is evaluated as a lingua
-replacement. Both detectors run the same heuristics above on every checked
-message, only the detector set by `/langdetector` decides on warnings. With
-tongue:
-
-- ML detection uses tongue instead of `detectAllLanguagesFast` (top candidate
-  probability against the same 0.7 threshold)
-- Russian/English split is computed from Cyrillic vs Latin letters count, with
-  the same rate threshold, as tongue has no multi-language detection
-
-Outcomes of both detectors are counted per day in valkey (kept for 30 days),
-and viewable with `/langshadow`. Each comparison is logged (`info` level for
-disagreements, `debug` for agreements), with raw output of both detectors.
-
-Language detection by [Desert Ant Labs](https://desertant.com) Tongue, used
-under the [Desert Ant Labs Source-Available License 1.0](https://license.desertant.com/1.0).
 
 The idea behind it -- if someone explains/translates something in both languages
 simultaneously, we shouldn't give them a warning.
@@ -337,7 +308,7 @@ vs Valkey:
 
 - **Chat Admin Cache** (`ChatAdminRepo`): Admin user IDs with 3-hour TTL,
   refreshed automatically when expired
-- **Language Detection Models**: Loaded once at startup for performance
+- **Language Detection Model**: Loaded once at startup for performance
 - Current active cooldown value
 
 Data in memory doesn't survive bot re-deployments or start-stop cycles of
@@ -419,20 +390,9 @@ docker run -e TOKEN=123321 -e CHAT_ID=32167 -e VALKEY_HOST=localhost ghcr.io/rel
 
 ### Option 2: Manual Build
 
-Requires both rust and nodejs toolchains.
-
-First, build language-detection (napi-rs requires yarn instead of npm):
+Install dependencies
 
 ```sh
-cd packages/language-detection
-yarn install
-yarn run build
-```
-
-Now you can install dependencies
-
-```sh
-cd ../../packages/tg-bot
 npm i
 ```
 
@@ -464,10 +424,13 @@ At the very least, you must supply to variables:
 - TOKEN Containing a bot token, as supplied by the [BotFather](https://t.me/BotFather)
 - CHAT_ID Id of your chat/supergroup
 
-Please refer to [env.d.ts](./packages/tg-bot/types/env.d.ts) file definitions
+Please refer to [env.d.ts](./types/env.d.ts) file definitions
 for the full list of available options.
 
 ## License
 
 EnRuLeBot is MIT Licensed.
+
+Language detection by [Desert Ant Labs](https://desertant.com) tongue, used
+under the [Desert Ant Labs Source-Available License 1.0](https://license.desertant.com/1.0).
 

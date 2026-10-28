@@ -1,4 +1,3 @@
-import * as langDetection from "@en-ru-le/language-detection";
 import { Bot } from "grammy";
 import { BotContext } from "./BotContext.ts";
 import { configureDefaultContainer } from "./container.ts";
@@ -12,7 +11,7 @@ import { allCommands } from "./slices/allCommands.ts";
 import { captchaMiddleware, onChatMemberCaptchaHandler } from "./slices/Captcha/middleware.ts";
 import { adminOnly } from "./slices/ChatAdmins/middleware.ts";
 import { cooldownMiddleware } from "./slices/Cooldown/middleware.ts";
-import { loadTongue } from "./slices/LangDay/detectors.ts";
+import { loadTongue } from "./slices/LangDay/languageDetection.ts";
 import { checkMessageLanguage } from "./slices/LangDay/middleware.ts";
 import { onChatMemberProbationHandler } from "./slices/Probation/middleware.ts";
 import { userViolationMiddleware } from "./slices/UserViolation/middleware.ts";
@@ -64,9 +63,9 @@ bot.catch((err) => {
 	logger.error({ err }, `"An error has occurred: ${err}`);
 });
 
-logger.info("Preloading language models...");
-const duration = await withPerfMeasure(() => Promise.all([langDetection.loadLanguageModels(), loadTongue()]));
-logger.info({ duration }, `Models loaded in ${duration.toFixed(2)}ms. Starting the bot now`);
+logger.info("Preloading language model...");
+const duration = await withPerfMeasure(() => loadTongue());
+logger.info({ duration }, `Model loaded in ${duration.toFixed(2)}ms. Starting the bot now`);
 
 bot.start({
 	allowed_updates: ["message", "chat_member", "my_chat_member"],
