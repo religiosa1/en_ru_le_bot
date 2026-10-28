@@ -8,7 +8,8 @@ use regex::Regex;
 const SECOND: u64 = 1000;
 const MINUTE: u64 = 60 * SECOND;
 const HOUR: u64 = 60 * MINUTE;
-const DAY: u64 = 24 * HOUR;
+/// In ms
+pub const DAY: u64 = 24 * HOUR;
 
 /// Units in descending order, components of a duration string must follow it.
 const UNITS: [(&str, u64); 5] = [("d", DAY), ("h", HOUR), ("m", MINUTE), ("s", SECOND), ("ms", 1)];
@@ -33,10 +34,7 @@ fn format_components(duration: Duration, max_components: usize) -> String {
         if n_components > max_components {
             break;
         }
-        let value = remaining / unit_ms;
-        if value > 0 {
-            result += &format!("{value}{suffix}");
-        }
+        result += &format!("{}{suffix}", remaining / unit_ms);
         remaining %= unit_ms;
     }
     result

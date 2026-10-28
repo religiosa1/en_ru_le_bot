@@ -3,11 +3,12 @@
 use std::collections::HashSet;
 use std::sync::LazyLock;
 
+use chrono::{DateTime, Datelike};
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 use tracing::{debug, info};
 
-use crate::lid::Lid;
+use crate::lid::{Label, Lid, URL_OR_MENTION_RE};
 use crate::state::Settings;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -66,21 +67,17 @@ impl Day {
 
 /// UTC weekday of a unix ms timestamp, 0 = Sunday.
 pub fn weekday_utc(unix_ms: u64) -> u32 {
-    // 1970-01-01 was a Thursday
-    ((unix_ms / 86_400_000 + 4) % 7) as u32
+    DateTime::from_timestamp_millis(unix_ms as i64).expect("timestamp in range").weekday().num_days_from_sunday()
 }
 
-static URL_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"[A-Za-z0-9_]{2,8}://\S+").unwrap());
-static LATIN_LAUGH_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"(?i)\b(?:h[ae]h?-?)+\b").unwrap());
-static CYRILLIC_LAUGH_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"(?i)^(?:х[ае]х?-?)+$").unwrap());
+/// Latin or cyrillic "ha-ha"s
+static LAUGH_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"(?i)\b(?:[hх][aeае][hх]?-?)+\b").unwrap());
 static NON_LETTER_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"[^\p{L}\s]").unwrap());
 
-/// Strips urls, ha-ha-s and everything except letters, collapsing whitespace.
+/// Strips urls, mentions, ha-ha-s and everything except letters, collapsing whitespace.
 pub fn strip_non_letter_or_whitespace_chars(text: &str) -> String {
-    let text = URL_RE.replace_all(text, "");
-    let text = LATIN_LAUGH_RE.replace_all(&text, "");
-    // Word-level for cyrillic, as \b only treats ASCII letters as word chars in the original JS
-    let text = text.split_whitespace().filter(|w| !CYRILLIC_LAUGH_RE.is_match(w)).collect::<Vec<_>>().join(" ");
+    let text = URL_OR_MENTION_RE.replace_all(text, " ");
+    let text = LAUGH_RE.replace_all(&text, "");
     NON_LETTER_RE.replace_all(&text, "").split_whitespace().collect::<Vec<_>>().join(" ")
 }
 
@@ -144,7 +141,7 @@ const ML_TARGET_CONFIDENCE: f32 = 0.7;
 const UNKNOWN_WORDS_THRESHOLD: f64 = 0.6;
 
 /// Messages shorter than this (in letters) aren't checked at all.
-const MIN_MSG_LENGTH: usize = 5;
+pub const MIN_MSG_LENGTH: usize = 5;
 
 /// Message written in a wrong language.
 #[derive(Debug, Clone, PartialEq)]
@@ -163,7 +160,7 @@ pub fn check_message(lid: &Lid, settings: &Settings, text: &str, weekday: u32) -
         return None;
     }
     let day = Day::of(settings, weekday).lang();
-    if settings.otherlang_checks && detect_other_language(lid, text, day).is_some() {
+    if settings.otherlang_checks && detect_other_language(lid, text, &cleaned, day).is_some() {
         info!(text, ?day, "Decided it's a bad language");
         return Some(LangViolation { day, msg: None });
     }
@@ -191,8 +188,11 @@ pub enum OtherLang {
 }
 
 /// Detects a message written in a language other than en/ru.
-pub fn detect_other_language(lid: &Lid, raw_text: &str, target: Option<Lang>) -> Option<OtherLang> {
-    let text = &strip_non_letter_or_whitespace_chars(raw_text);
+///
+/// `cleaned` is `raw_text` after [strip_non_letter_or_whitespace_chars]; the model gets the raw text,
+/// as it has its own preprocessing.
+pub fn detect_other_language(lid: &Lid, raw_text: &str, cleaned: &str, target: Option<Lang>) -> Option<OtherLang> {
+    let text = cleaned;
     if detect_bad_lang_by_charset(text) {
         debug!("Language mismatch by charset");
         return Some(OtherLang::Charset);
@@ -221,7 +221,7 @@ pub fn detect_other_language(lid: &Lid, raw_text: &str, target: Option<Lang>) ->
         info!(text, "Couldn't determine the language with ML, aborting");
         return None;
     };
-    if detection.label != "other" {
+    if detection.label != Label::Other {
         debug!(?detection, "Language detected as Russian or English");
         return None;
     }
@@ -371,7 +371,8 @@ mod tests {
     #[test]
     fn other_language() {
         let lid = Lid::embedded().unwrap();
-        let detect = |text: &str, target| detect_other_language(&lid, text, target);
+        let detect =
+            |text: &str, target| detect_other_language(&lid, text, &strip_non_letter_or_whitespace_chars(text), target);
 
         assert_eq!(detect("你们不能对 Eon 实施制裁！ 西方需要停止殖民", Some(Lang::Ru)), Some(OtherLang::Charset));
         assert_eq!(detect("I personally wouldn't bother unless he gets himself a ban hammer", Some(Lang::En)), None);

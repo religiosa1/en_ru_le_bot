@@ -26,7 +26,7 @@ pub struct App {
     pub bot_username: String,
     admins: Mutex<Option<(Vec<UserId>, Instant)>>,
     /// Unix ms; no warnings are issued until then. In memory, as it's short-lived.
-    pub cooldown_until: Mutex<Option<u64>>,
+    cooldown_until: Mutex<Option<u64>>,
     pub welcome: Mutex<WelcomeState>,
 }
 
@@ -47,14 +47,14 @@ impl App {
         self.store.read(|s| s.settings.clone())
     }
 
-    /// Admins of the target chat, cached.
-    pub async fn admin_ids(&self, bot: &Bot) -> anyhow::Result<Vec<UserId>> {
+    /// Whether a user is an admin of the target chat, with admins cached.
+    pub async fn is_admin(&self, bot: &Bot, user_id: UserId) -> anyhow::Result<bool> {
         if let Some((ids, refreshed_at)) = &*self.admins.lock().unwrap()
             && refreshed_at.elapsed() < ADMINS_CACHE_TTL
         {
-            return Ok(ids.clone());
+            return Ok(ids.contains(&user_id));
         }
-        self.refresh_admins(bot).await
+        Ok(self.refresh_admins(bot).await?.contains(&user_id))
     }
 
     pub async fn refresh_admins(&self, bot: &Bot) -> anyhow::Result<Vec<UserId>> {
@@ -62,10 +62,6 @@ impl App {
         debug!(?ids, "Admins list fetched");
         *self.admins.lock().unwrap() = Some((ids.clone(), Instant::now()));
         Ok(ids)
-    }
-
-    pub async fn is_admin(&self, bot: &Bot, user_id: UserId) -> anyhow::Result<bool> {
-        Ok(self.admin_ids(bot).await?.contains(&user_id))
     }
 
     /// Starts the warnings cooldown, false if it's still active.
@@ -79,6 +75,29 @@ impl App {
         let cooldown = self.settings().cooldown.as_millis() as u64;
         *until = (cooldown > 0).then_some(now + cooldown);
         true
+    }
+
+    /// Time left until warnings are issued again.
+    pub fn remaining_cooldown(&self) -> Duration {
+        let until = self.cooldown_until.lock().unwrap().unwrap_or(0);
+        Duration::from_millis(until.saturating_sub(now_ms()))
+    }
+
+    /// Changes the cooldown value, adjusting the current cooldown to it.
+    pub fn set_cooldown(&self, cooldown: Duration) -> anyhow::Result<()> {
+        let old = self.store.update(|s| std::mem::replace(&mut s.settings.cooldown, cooldown))?;
+        if let Some(until) = self.cooldown_until.lock().unwrap().as_mut() {
+            *until = (*until + cooldown.as_millis() as u64).saturating_sub(old.as_millis() as u64);
+        }
+        Ok(())
+    }
+
+    /// Resets the cooldown value to the default one and ends the current cooldown.
+    pub fn reset_cooldown(&self) -> anyhow::Result<Duration> {
+        let default = Settings::default().cooldown;
+        self.store.update(|s| s.settings.cooldown = default)?;
+        *self.cooldown_until.lock().unwrap() = None;
+        Ok(default)
     }
 }
 

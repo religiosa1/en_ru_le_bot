@@ -7,10 +7,10 @@ use teloxide::prelude::*;
 use tracing::{error, info};
 
 use crate::bot::App;
+use crate::duration::DAY;
 use crate::langday::{Day, Lang, weekday_utc};
 use crate::state::now_ms;
 
-const DAY_MS: u64 = 24 * 60 * 60 * 1000;
 /// The day is determined a bit ahead, in case the timer fires slightly early
 const LOOKAHEAD_MS: u64 = 30 * 60 * 1000;
 
@@ -18,7 +18,7 @@ const LOOKAHEAD_MS: u64 = 30 * 60 * 1000;
 pub async fn run(bot: Bot, app: Arc<App>) {
     loop {
         let now = now_ms();
-        let next_midnight = (now / DAY_MS + 1) * DAY_MS;
+        let next_midnight = (now / DAY + 1) * DAY;
         tokio::time::sleep(Duration::from_millis(next_midnight - now)).await;
 
         let settings = app.settings();

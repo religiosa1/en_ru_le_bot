@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""Scores pipeline verdicts (examples/lid_eval.rs --save, scripts/lid-baseline.ts) against review labels.
+"""Scores pipeline verdicts (examples/lid_eval.rs --save) against review labels.
 
 Usage: scripts/score-verdicts.py <sample batch>... -- <verdicts.jsonl>...
 e.g.   scripts/score-verdicts.py sample-2026-0 sample-2026-1 -- eval/tongue-2026.jsonl eval/chat-2026.jsonl
 
-Labels come from eval/review/<batch>.tsv + .out.tsv (unlisted lines are "en"). A verdict of
+Labels come from eval/review/<batch>.tsv + .out.tsv. A verdict of
 "ml" or "charset" means the message was flagged as another language.
 """
 
@@ -12,22 +12,14 @@ import collections
 import json
 import sys
 
+from lid_data import read_review
+
 sep = sys.argv.index("--")
 batches, verdict_files = sys.argv[1:sep], sys.argv[sep + 1 :]
 
 truth = {}
 for batch in batches:
-    rows = [line.split("\t", 2)[:2] for line in open(f"eval/review/{batch}.tsv", encoding="utf-8")]
-    truth.update({id: "en" for id, _ in rows})
-    for line in open(f"eval/review/{batch}.out.tsv", encoding="utf-8"):
-        if not line.strip():
-            continue
-        number, check, label = line.rstrip("\n").split("\t")
-        index = int(number) - 1
-        if 0 <= index < len(rows) and rows[index][1] == check:
-            truth[rows[index][0]] = label
-        elif 0 <= index < len(rows):
-            del truth[rows[index][0]]  # misaligned, unknown label
+    truth.update(read_review(f"eval/review/{batch}.tsv", f"eval/review/{batch}.out.tsv"))
 
 counts = collections.Counter(truth.values())
 print(f"{len(truth)} labelled messages: {dict(counts.most_common())}\n")

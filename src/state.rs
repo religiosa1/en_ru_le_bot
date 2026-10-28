@@ -9,7 +9,7 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use anyhow::Context;
 use serde::{Deserialize, Serialize};
 
-use crate::duration;
+use crate::duration::{self, DAY};
 use crate::langday::Lang;
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -64,9 +64,10 @@ pub struct Captcha {
     pub attempts: u32,
     /// Bot messages to clean up after verification.
     pub msg_ids: Vec<i32>,
-    /// Unix ms
-    pub expires_at: u64,
 }
+
+/// Pending captchas are dropped after this, long after the sweep bans those who didn't solve them.
+const CAPTCHA_TTL_MS: u64 = DAY;
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Violation {
@@ -105,7 +106,7 @@ impl UserRef {
 
 impl State {
     fn prune(&mut self, now: u64) {
-        self.captchas.retain(|_, c| c.expires_at > now);
+        self.captchas.retain(|_, c| c.asked_at + CAPTCHA_TTL_MS > now);
         self.violations.retain(|_, v| v.expires_at > now);
     }
 }

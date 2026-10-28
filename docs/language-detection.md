@@ -41,8 +41,8 @@ full `lid-chat.bin` (~80 MiB) isn't.
    One `{"id", "date", "from", "text"}` per message, bot messages skipped.
 
 2. **Latin-script subset + tongue labels.** Messages with ≥5 letters and more
-   Latin than Cyrillic letters go to `eval/full-latin.jsonl` (done with an
-   inline python snippet; see `build-lid-dataset.py` for the same rule), then:
+   Latin than Cyrillic letters (`lid_data.is_latin_message`) go to
+   `eval/full-latin.jsonl`, then:
 
    ```sh
    node scripts/tongue-label.ts eval/full-latin.jsonl > eval/full-latin-tongue.jsonl
@@ -60,12 +60,13 @@ full `lid-chat.bin` (~80 MiB) isn't.
    /commands). Each batch is labelled by a Haiku subagent with
    `scripts/review-prompt.md` (replace `{BATCH}`), producing
    `eval/review/pass-NNN.out.tsv`: only non-English lines, by line number, with
-   the detector class copied as an alignment check.
+   the check column (a text hash) copied for alignment. Older batches have
+   tongue's guess in the check column.
 
    `scripts/make-review-batch.py <name> <ids file>` builds a batch for any
-   message ids, with a text hash as the check column instead of a detector
-   guess, so reviewers aren't anchored. Batches named `sample-*` go to the test
-   set only.
+   message ids. Batches named `sample-*` (including the random 1000-message
+   pilot, `sample-pilot`) go to the test set only. Shared helpers live in
+   `scripts/lid_data.py`.
 
    Review classes: `en`, `ru`, `ru-latin`, `other`, `mixed`, `unclear`.
    `mixed` and `unclear` are excluded from training.
@@ -93,7 +94,7 @@ full `lid-chat.bin` (~80 MiB) isn't.
      randomized scheme per message (60k)
    - `other`: reviewed labels + Tatoeba (90/10 split)
    - test set: messages from `TEST_YEAR` (2026), plus the random 1000-message
-     pilot review sample (`eval/review/batch0.*`)
+     pilot review sample (`eval/review/sample-pilot.*`)
 
 6. **Train and evaluate.**
 
@@ -167,8 +168,8 @@ long capitalized texts: 2026 flags 157 → 122, English among them 40 → 16,
 
 | Batches | Format | Haiku tokens |
 |---|---|---|
-| `batch0` (pilot, random sample) | `.out.jsonl`, all mismatches | 82k |
-| `pass-000`–`007` | `.out.jsonl`, all mismatches | 1.25M (~156k/batch) |
+| `sample-pilot` (random sample) | all mismatches, converted to `.out.tsv` | 82k |
+| `pass-000`–`007` | all mismatches, converted to `.out.tsv` | 1.25M (~156k/batch) |
 | `pass-008`–`015` | `.out.tsv`, non-English only | 0.79M (~98k/batch) |
 | `pass-016`–`024` | `.out.tsv`, non-English only | 0.81M (~90k/batch) |
 | `pass-025` (model-uncertain + pipeline flags) | `.out.tsv`, check codes | 77k |
@@ -179,6 +180,8 @@ All of tongue's non-English Latin-script verdicts (2019–2026) are reviewed.
 Label counts: en 16.1k, mixed 4.3k, other 2.0k, unclear 1.8k, ru-latin 1.0k,
 ru 0.2k (Cyrillic messages caught by the Latin filter because of long urls).
 New exports only need batches for messages not in `eval/review-labels.tsv`.
+NOTE: 752 of tongue's non-English verdicts (from never-reviewed pilot batches)
+are still unreviewed; `make-review-batches.py` picks them up as one batch.
 
 ## Known issues and ideas
 

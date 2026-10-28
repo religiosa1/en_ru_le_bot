@@ -10,7 +10,7 @@ use std::fs;
 use std::time::Instant;
 
 use anyhow::Context;
-use en_ru_le_bot::lid::normalize;
+use en_ru_le_bot::lid::{Label, Lid, normalize};
 use fasttext::FastText;
 use fasttext::args::{Args, LossName, ModelName};
 use serde::Deserialize;
@@ -30,8 +30,7 @@ struct Row {
 fn main() -> anyhow::Result<()> {
     let test = read_rows("eval/lid/test.jsonl")?;
     if let Some(path) = std::env::args().nth(1) {
-        let model = FastText::load_model(&path).map_err(|e| anyhow::anyhow!("load {path}: {e}"))?;
-        evaluate(&model, &test);
+        evaluate(&Lid::load(&path)?, &test);
         return Ok(());
     }
 
@@ -67,7 +66,7 @@ fn main() -> anyhow::Result<()> {
     fs::create_dir_all("models")?;
     model.save_model(MODEL_BIN).map_err(|e| anyhow::anyhow!("save: {e}"))?;
     println!("== full model");
-    evaluate(&model, &test);
+    evaluate(&Lid::load(MODEL_BIN)?, &test);
 
     let qargs = Args { cutoff: 50_000, qnorm: true, retrain: true, epoch: 3, ..args };
     model.quantize(&qargs).map_err(|e| anyhow::anyhow!("quantize: {e}"))?;
@@ -76,26 +75,25 @@ fn main() -> anyhow::Result<()> {
         println!("{path}: {:.1} MiB", fs::metadata(path)?.len() as f64 / 1048576.0);
     }
     println!("== quantized model");
-    evaluate(&model, &test);
+    evaluate(&Lid::load(MODEL_FTZ)?, &test);
     Ok(())
 }
 
 /// Prints label confusion per source, and "other" verdicts at several confidence thresholds.
-fn evaluate(model: &FastText, test: &[Row]) {
+///
+/// Goes through `Lid`, so it measures exactly what the bot runs.
+fn evaluate(lid: &Lid, test: &[Row]) {
     // source -> predicted label -> count
-    let mut confusion: BTreeMap<(&str, &str), BTreeMap<String, usize>> = BTreeMap::new();
+    let mut confusion: BTreeMap<(&str, &str), BTreeMap<&str, usize>> = BTreeMap::new();
     // source -> number of "other" verdicts per threshold
     let mut other_at: BTreeMap<(&str, &str), [usize; THRESHOLDS.len()]> = BTreeMap::new();
     for row in test {
         let key = (row.label.as_str(), source_group(&row.source));
-        let prediction = model.predict(&normalize(&row.text), 1, 0.0);
-        let (label, prob) = prediction
-            .first()
-            .map(|p| (p.label.trim_start_matches("__label__").to_string(), p.prob))
-            .unwrap_or(("none".into(), 0.0));
+        let detection = lid.detect(&row.text);
+        let label = detection.as_ref().map_or("none", |d| d.label.name());
         let counts = other_at.entry(key).or_default();
         for (i, threshold) in THRESHOLDS.iter().enumerate() {
-            if label == "other" && prob >= *threshold {
+            if detection.as_ref().is_some_and(|d| d.label == Label::Other && d.confidence >= *threshold) {
                 counts[i] += 1;
             }
         }

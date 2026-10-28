@@ -20,7 +20,6 @@ use crate::state::{Captcha, State, UserRef, now_ms};
 const MAX_ATTEMPTS: u32 = 7;
 /// The question is repeated every this many failed attempts
 const REPEAT_QUESTION_EVERY: u32 = 3;
-const RECORD_TTL_MS: u64 = 24 * 60 * 60 * 1000;
 const SWEEP_INTERVAL: Duration = Duration::from_secs(60);
 
 pub struct Attempt {
@@ -37,7 +36,6 @@ pub fn add(state: &mut State, user: &User, question: String, answer: String, msg
         asked_at: now,
         attempts: 0,
         msg_ids: vec![msg_id.0],
-        expires_at: now + RECORD_TTL_MS,
     };
     state.captchas.insert(user.id.0, captcha);
 }
@@ -53,10 +51,10 @@ pub fn attempt(state: &mut State, user_id: u64, answer: &str) -> Option<Attempt>
     })
 }
 
-/// Removes a pending captcha, returning the user id and bot messages to clean up.
-pub fn remove(state: &mut State, user: &UserRef) -> Option<(u64, Vec<i32>)> {
+/// Removes a pending captcha, returning bot messages to clean up.
+pub fn remove(state: &mut State, user: &UserRef) -> Option<Vec<i32>> {
     let id = user.find(&state.captchas, |c| c.username.as_deref())?;
-    state.captchas.remove(&id).map(|c| (id, c.msg_ids))
+    state.captchas.remove(&id).map(|c| c.msg_ids)
 }
 
 /// Users who didn't solve their captcha since `asked_before` (unix ms).
@@ -112,7 +110,8 @@ pub async fn on_join(bot: &Bot, app: &App, user: &User) -> anyhow::Result<()> {
 
 /// Handles a message of a user with a pending captcha, false if there's no captcha for them.
 pub async fn on_message(bot: &Bot, app: &App, msg: &Message, user: &User) -> anyhow::Result<bool> {
-    if !app.settings().captcha_enabled {
+    // Checked first, as updating means rewriting the state file
+    if !app.settings().captcha_enabled || !app.store.read(|s| s.captchas.contains_key(&user.id.0)) {
         return Ok(false);
     }
     let text = msg.text().unwrap_or_default();
@@ -146,15 +145,13 @@ pub async fn on_message(bot: &Bot, app: &App, msg: &Message, user: &User) -> any
     Ok(true)
 }
 
-/// Removes a pending captcha with its bot messages, false if there's none.
-pub async fn remove_check(bot: &Bot, app: &App, user: &UserRef) -> anyhow::Result<bool> {
-    let Some((_, msg_ids)) = app.store.update(|s| remove(s, user))? else {
-        return Ok(false);
-    };
+/// Removes a pending captcha with its bot messages, if there's one.
+pub async fn remove_check(bot: &Bot, app: &App, user: &UserRef) -> anyhow::Result<()> {
+    let msg_ids = app.store.update(|s| remove(s, user))?.unwrap_or_default();
     if !msg_ids.is_empty() {
         bot.delete_messages(app.chat_id, msg_ids.into_iter().map(MessageId).collect::<Vec<_>>()).await?;
     }
-    Ok(true)
+    Ok(())
 }
 
 /// Bans users who didn't solve their captcha in time, runs forever.
@@ -208,7 +205,7 @@ mod tests {
         let right = attempt(&mut state, 1, " 5 ").unwrap();
         assert!(right.correct);
         assert_eq!(right.attempts, 2);
-        assert_eq!(remove(&mut state, &UserRef::Username("newbie".into())), Some((1, vec![10])));
+        assert_eq!(remove(&mut state, &UserRef::Username("newbie".into())), Some(vec![10]));
         assert!(state.captchas.is_empty());
     }
 

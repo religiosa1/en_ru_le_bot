@@ -33,7 +33,6 @@ RestartSec=10s
 KillSignal=SIGINT
 
 DynamicUser=yes
-RuntimeDirectory=en_ru_le_bot
 # The bot keeps its state in $STATE_DIRECTORY/state.json,
 # i.e. /var/lib/en_ru_le_bot/state.json; STATE_PATH overrides it
 StateDirectory=en_ru_le_bot
@@ -68,7 +67,5 @@ journalctl -u en_ru_le_bot -f   # JSON logs, LOG_LEVEL=debug in the env file for
   That's the only thing to back up.
 - The state file is rewritten atomically (a temp file next to it, then a
   rename), so it's never left half-written.
-- `RuntimeDirectory=` isn't used by the bot itself; the temp file has to be on
-  the same filesystem as the state file for the rename to be atomic.
 - `AF_UNIX` is there for glibc's DNS resolution through systemd-resolved.
 - After an update, `install` the new binary and `systemctl restart en_ru_le_bot`.

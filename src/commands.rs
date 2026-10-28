@@ -15,7 +15,7 @@ use crate::{captcha, members, violations};
 
 const MAX_COOLDOWN: Duration = Duration::from_secs(3 * 60 * 60);
 /// Remaining cooldown is shown in /settings only if it's longer than this
-const MIN_SHOWN_COOLDOWN_MS: u64 = 3000;
+const MIN_SHOWN_COOLDOWN: Duration = Duration::from_secs(3);
 const DURATION_HINT: &str = r#"Try something like "3", "10m", "1m30s", etc."#;
 
 #[derive(Debug, PartialEq)]
@@ -122,7 +122,6 @@ async fn run(bot: &Bot, app: &App, msg: &Message, user: &User, name: &str, args:
             *value
         })
     };
-    let on_off = |value: bool| if value { "on" } else { "off" };
 
     let reply = match name {
         "today" => today(&app.settings()).into(),
@@ -151,30 +150,9 @@ async fn run(bot: &Bot, app: &App, msg: &Message, user: &User, name: &str, args:
                 None => "Forced day is now disabled.".into(),
             }
         }
-        "mute_duration" => match (args, parse_duration(args).filter(|d| !d.is_zero())) {
-            ("", _) => format!("Mute duration is {}", format_duration(app.settings().mute_duration)),
-            (_, None) => format!(r#"Incorrect duration value "{args}". {DURATION_HINT}"#),
-            (_, Some(duration)) => {
-                app.store.update(|s| s.settings.mute_duration = duration)?;
-                format!("Mute duration is now {}", format_duration(duration))
-            }
-        },
-        "warnings_expiry" => match (args, parse_duration(args).filter(|d| !d.is_zero())) {
-            ("", _) => format!("Warning expiry is {}", format_duration(app.settings().warnings_expiry)),
-            (_, None) => format!(r#"Incorrect expiry value "{args}". {DURATION_HINT}"#),
-            (_, Some(duration)) => {
-                app.store.update(|s| s.settings.warnings_expiry = duration)?;
-                format!("Warning expiry is now {}", format_duration(duration))
-            }
-        },
-        "captcha_time" => match (args, parse_duration(args).filter(|d| !d.is_zero())) {
-            ("", _) => format!("Captcha max verification time: {}", format_duration(app.settings().captcha_max_age)),
-            (_, None) => format!(r#"Wrong captcha time value: "{args}". {DURATION_HINT}"#),
-            (_, Some(duration)) => {
-                app.store.update(|s| s.settings.captcha_max_age = duration)?;
-                format!("Captcha verification time is now {}", format_duration(duration))
-            }
-        },
+        "mute_duration" => duration_setting(app, args, "Mute duration", |s| &mut s.mute_duration)?,
+        "warnings_expiry" => duration_setting(app, args, "Warning expiry", |s| &mut s.warnings_expiry)?,
+        "captcha_time" => duration_setting(app, args, "Captcha verification time", |s| &mut s.captcha_max_age)?,
         "warnings_number" => match (args, args.parse::<u32>()) {
             ("", _) => format!("Maximum number of warnings is {}", app.settings().max_violations),
             (_, Err(_)) => "Maximum number of warnings must be a non-negative integer!".into(),
@@ -250,20 +228,31 @@ fn today(settings: &Settings) -> &'static str {
 
 fn help(with_admin_commands: bool) -> String {
     let mut text = String::new();
-    for c in COMMANDS.iter().filter(|c| c.access == Access::Member) {
-        text += &format!("- /{} {}\n", c.name, c.description);
-    }
-    if with_admin_commands {
-        for c in COMMANDS.iter().filter(|c| c.access == Access::Admin) {
-            text += &format!("- /{} {} (admin-only)\n", c.name, c.description);
-        }
+    for c in COMMANDS.iter().filter(|c| c.access == Access::Member || (with_admin_commands && c.access == Access::Admin)) {
+        let suffix = if c.access == Access::Admin { " (admin-only)" } else { "" };
+        text += &format!("- /{} {}{suffix}\n", c.name, c.description);
     }
     text
 }
 
+fn on_off(value: bool) -> &'static str {
+    if value { "on" } else { "off" }
+}
+
+/// Shows a duration setting without args, or sets it.
+fn duration_setting(app: &App, args: &str, label: &str, field: fn(&mut Settings) -> &mut Duration) -> anyhow::Result<String> {
+    if args.is_empty() {
+        return Ok(format!("{label} is {}", format_duration(*field(&mut app.settings()))));
+    }
+    let Some(duration) = parse_duration(args).filter(|d| !d.is_zero()) else {
+        return Ok(format!(r#"Incorrect value "{args}". {DURATION_HINT}"#));
+    };
+    app.store.update(|s| *field(&mut s.settings) = duration)?;
+    Ok(format!("{label} is now {}", format_duration(duration)))
+}
+
 fn settings(app: &App) -> String {
     let s = app.settings();
-    let on_off = |value: bool| if value { "on" } else { "off" };
     let mut text = format!(
         "en/ru days checks: {}\n\
          other lang checks: {}\n\
@@ -287,12 +276,12 @@ fn settings(app: &App) -> String {
         format_duration(s.cooldown),
         on_off(s.captcha_enabled),
         format_duration(s.captcha_max_age),
-        s.captcha_bots_allowed,
+        on_off(s.captcha_bots_allowed),
         on_off(s.alarm_enabled),
     );
-    let remaining = app.cooldown_until.lock().unwrap().map_or(0, |until| until.saturating_sub(now_ms()));
-    if remaining > MIN_SHOWN_COOLDOWN_MS {
-        text += &format!("\ncurrent cooldown for: {}", format_duration(Duration::from_secs(remaining / 1000)));
+    let remaining = app.remaining_cooldown();
+    if remaining > MIN_SHOWN_COOLDOWN {
+        text += &format!("\ncurrent cooldown for: {}", format_duration(Duration::from_secs(remaining.as_secs())));
     }
     text
 }
@@ -300,9 +289,7 @@ fn settings(app: &App) -> String {
 /// Without args resets the cooldown to the default value, and ends the current one.
 fn cooldown(app: &App, args: &str) -> anyhow::Result<String> {
     if args.is_empty() {
-        let default = Settings::default().cooldown;
-        app.store.update(|s| s.settings.cooldown = default)?;
-        *app.cooldown_until.lock().unwrap() = None;
+        let default = app.reset_cooldown()?;
         return Ok(format!("Setting cooldown to the default value of {}", format_duration(default)));
     }
     let Some(cooldown) = parse_duration(args) else {
@@ -311,11 +298,7 @@ fn cooldown(app: &App, args: &str) -> anyhow::Result<String> {
     if cooldown > MAX_COOLDOWN {
         return Ok(format!("Cooldown must be in range between 0 and {}", format_duration(MAX_COOLDOWN)));
     }
-    let old = app.store.update(|s| std::mem::replace(&mut s.settings.cooldown, cooldown))?;
-    // The current cooldown is adjusted to the new value
-    if let Some(until) = app.cooldown_until.lock().unwrap().as_mut() {
-        *until = (*until + cooldown.as_millis() as u64).saturating_sub(old.as_millis() as u64);
-    }
+    app.set_cooldown(cooldown)?;
     Ok(format!("Cooldown between warnings is now {}", format_duration(cooldown)))
 }
 

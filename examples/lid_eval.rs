@@ -10,12 +10,9 @@ use std::collections::{BTreeMap, HashMap};
 use std::fs;
 
 use anyhow::Context;
-use en_ru_le_bot::langday::{Lang, OtherLang, detect_other_language, strip_non_letter_or_whitespace_chars};
+use en_ru_le_bot::langday::{Lang, MIN_MSG_LENGTH, OtherLang, detect_other_language, strip_non_letter_or_whitespace_chars};
 use en_ru_le_bot::lid::Lid;
 use serde::{Deserialize, Serialize};
-
-/// Same as the minimal message length in the language check middleware
-const MIN_MSG_LENGTH: usize = 5;
 
 #[derive(Deserialize)]
 struct Message {
@@ -46,7 +43,7 @@ fn main() -> anyhow::Result<()> {
             let verdict = if cleaned.chars().count() < MIN_MSG_LENGTH {
                 "skip".into()
             } else {
-                match detect_other_language(&lid, &m.text, Some(Lang::En)) {
+                match detect_other_language(&lid, &m.text, &cleaned, Some(Lang::En)) {
                     None => "ok".into(),
                     Some(OtherLang::Charset) => "charset".into(),
                     Some(OtherLang::Ml { confidence, .. }) => format!("ml:{confidence:.2}"),

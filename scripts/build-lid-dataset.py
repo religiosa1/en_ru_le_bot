@@ -10,25 +10,27 @@ Labels: en, ru, ru-latin, other. Sources:
 - synthetic ru-latin: chat Cyrillic-only messages, transliterated with randomized schemes
 - other: Tatoeba sentences (scripts/fetch-tatoeba.sh)
 
-Chat messages from TEST_YEAR, as well as reviewed random samples (batch*, sample-*), go to the test set.
+Chat messages from TEST_YEAR, as well as reviewed random samples (sample-*), go to the test set.
 Output: eval/lid/{train,test}.jsonl, one {"label", "source", "text"} per line.
 """
 
+import collections
 import glob
 import hashlib
 import json
 import os
 import random
-import re
+
+from lid_data import letter_counts, read_jsonl, read_review
 
 TEST_YEAR = "2026"
 REVIEW_LABELS = "eval/review-labels.tsv"
 MAX_TRAIN = {"ru": 60_000, "ru-latin": 60_000}
 MAX_TEST = {"en": 20_000, "ru": 5_000, "ru-latin": 5_000}
 
-URL_RE = re.compile(r"\S+://\S+")
-LATIN_RE = re.compile(r"[A-Za-z]")
-CYRILLIC_RE = re.compile("[Ѐ-ӿ]")
+# Review classes to model labels; others (ru, mixed, unclear) are excluded,
+# Cyrillic messages get their label by script instead
+TRAINING_LABELS = {"en", "ru-latin", "other"}
 
 # Options per letter, one is picked per message, so a message is consistent in its scheme
 TRANSLIT = {
@@ -61,130 +63,66 @@ def stable_fraction(key: str) -> float:
 
 
 def review_labels() -> tuple[dict[str, str], set[str]]:
-    """Haiku-reviewed messages: the detector class, unless the reviewer flagged it, and ids of the pilot sample.
+    """Reviewed message labels, and ids of random samples (sample-*), which only go to the test set.
 
     Collected labels are saved to REVIEW_LABELS (no message texts), which is read instead
     when the review batches are gone.
     """
-    labels, pilot = {}, set()
-    # Sorted, so later batches (pass-*, sample-*) override earlier labels (batch*)
-    batches = sorted(glob.glob("eval/review/*.tsv"))
+    labels, samples = {}, set()
+    batches = sorted(glob.glob("eval/review/*.out.tsv"))
     if not batches and os.path.exists(REVIEW_LABELS):
         for line in open(REVIEW_LABELS, encoding="utf-8"):
-            id, label, is_pilot = line.rstrip("\n").split("\t")
+            id, label, is_sample = line.rstrip("\n").split("\t")
             labels[id] = label
-            if is_pilot == "1":
-                pilot.add(id)
-        return labels, pilot
-    for tsv in batches:
-        if tsv.endswith(".out.tsv"):
-            continue
-        out = tsv.removesuffix(".tsv") + ".out.jsonl"
-        out_by_line = tsv.removesuffix(".tsv") + ".out.tsv"
-        if os.path.exists(out_by_line):
-            batch_labels = read_labels_by_line(tsv, out_by_line)
-            labels.update(batch_labels)
-            if os.path.basename(tsv).startswith("sample"):
-                pilot.update(batch_labels)
-            continue
-        if not os.path.exists(out):
-            continue
-        for line in open(tsv, encoding="utf-8"):
-            id, detector, _ = line.split("\t", 2)
-            labels[id] = detector
-            if os.path.basename(tsv).startswith("batch"):
-                pilot.add(id)
-        for line in open(out, encoding="utf-8"):
-            if line.strip():
-                row = json.loads(line)
-                labels[row["id"]] = row["truth"]
+            if is_sample == "1":
+                samples.add(id)
+        return labels, samples
+    # Sorted, so later batches override earlier labels
+    for out in batches:
+        batch_labels = read_review(out.removesuffix(".out.tsv") + ".tsv", out)
+        labels.update(batch_labels)
+        if os.path.basename(out).startswith("sample"):
+            samples.update(batch_labels)
     with open(REVIEW_LABELS, "w", encoding="utf-8") as f:
-        f.writelines(f"{id}\t{label}\t{int(id in pilot)}\n" for id, label in sorted(labels.items()))
-    return labels, pilot
-
-
-def read_labels_by_line(tsv: str, out: str) -> dict[str, str]:
-    """Reviews listing only non-English messages by line number, so everything else is "en".
-
-    Lines whose copied second column (detector class or check code) doesn't match the batch
-    are misaligned and skipped.
-    """
-    rows = [line.split("\t", 2)[:2] for line in open(tsv, encoding="utf-8")]
-    labels = {id: "en" for id, _ in rows}
-    misaligned = 0
-    for line in open(out, encoding="utf-8"):
-        if not line.strip():
-            continue
-        number, detector, truth = line.rstrip("\n").split("\t")
-        index = int(number) - 1
-        if not 0 <= index < len(rows):
-            misaligned += 1
-        elif rows[index][1] != detector:
-            misaligned += 1
-            del labels[rows[index][0]]  # unknown truth, can't default to "en"
-        else:
-            labels[rows[index][0]] = truth
-    if misaligned:
-        print(f"{out}: {misaligned} misaligned lines skipped")
-    return labels
-
-
-def to_label(review_class: str) -> str | None:
-    """Review classes to model labels, None for messages to exclude (mixed, unclear).
-
-    Reviewers sometimes label Cyrillic Russian (messages with long urls in early batches) as "ru" or "other:ru".
-    """
-    if review_class == "en":
-        return "en"
-    if review_class in ("ru-latn", "ru-latin"):
-        return "ru-latin"
-    if review_class.startswith("other") and review_class != "other:ru":
-        return "other"
-    return None
+        f.writelines(f"{id}\t{label}\t{int(id in samples)}\n" for id, label in sorted(labels.items()))
+    return labels, samples
 
 
 def main():
     rng = random.Random(42)
-    reviewed, pilot = review_labels()
-    tongue = {}
-    for line in open("eval/full-latin-tongue.jsonl", encoding="utf-8"):
-        row = json.loads(line)
-        tongue[row["id"]] = row["language"]
+    reviewed, samples = review_labels()
+    tongue = {row["id"]: row["language"] for row in read_jsonl("eval/full-latin-tongue.jsonl")}
 
-    train, test = [], []
+    rows = {"train": [], "test": []}
     cyrillic = {"train": [], "test": []}
-    for line in open("eval/full.jsonl", encoding="utf-8"):
-        msg = json.loads(line)
+    for msg in read_jsonl("eval/full.jsonl"):
         text = msg["text"]
         split = "test" if msg["date"].startswith(TEST_YEAR) else "train"
-        # Without urls, a link shouldn't turn a Russian message into a Latin-script one
-        no_urls = URL_RE.sub("", text)
-        n_latin, n_cyrillic = len(LATIN_RE.findall(no_urls)), len(CYRILLIC_RE.findall(no_urls))
+        n_latin, n_cyrillic = letter_counts(text)
         if n_latin + n_cyrillic < 5:
             continue
         if n_latin == 0:
             cyrillic[split].append(text)
             continue
         if n_latin <= n_cyrillic:
-            continue  # en/ru mixes are handled by letter counts in the bot
+            continue  # mostly Cyrillic, but not purely Russian, too ambiguous for a label
         if msg["id"] in reviewed:
-            label, source = to_label(reviewed[msg["id"]]), "chat-reviewed"
-            if msg["id"] in pilot:
+            label, source = reviewed[msg["id"]], "chat-reviewed"
+            if msg["id"] in samples:
                 split = "test"
         elif tongue.get(msg["id"]) == "en":
             label, source = "en", "chat-tongue"
         else:
             continue
-        if label:
-            (test if split == "test" else train).append({"label": label, "source": source, "text": text})
+        if label in TRAINING_LABELS:
+            rows[split].append({"label": label, "source": source, "text": text})
 
-    for split, rows in (("train", train), ("test", test)):
+    for split, limits in (("train", MAX_TRAIN), ("test", MAX_TEST)):
         texts = cyrillic[split]
         rng.shuffle(texts)
-        limits = MAX_TRAIN if split == "train" else MAX_TEST
         half = len(texts) // 2  # disjoint messages for ru and ru-latin
-        rows += [{"label": "ru", "source": "chat", "text": t} for t in texts[: min(half, limits["ru"])]]
-        rows += [
+        rows[split] += [{"label": "ru", "source": "chat", "text": t} for t in texts[: min(half, limits["ru"])]]
+        rows[split] += [
             {"label": "ru-latin", "source": "synthetic", "text": transliterate(t, rng)}
             for t in texts[half : half + limits["ru-latin"]]
         ]
@@ -192,25 +130,21 @@ def main():
     for path in sorted(glob.glob("eval/tatoeba/*.tsv")):
         for line in open(path, encoding="utf-8"):
             _, lang, text = line.rstrip("\n").split("\t", 2)
-            row = {"label": "other", "source": f"tatoeba-{lang}", "text": text}
-            (test if stable_fraction(text) < 0.1 else train).append(row)
+            split = "test" if stable_fraction(text) < 0.1 else "train"
+            rows[split].append({"label": "other", "source": f"tatoeba-{lang}", "text": text})
 
     # Capping the biggest test class, keeping reviewed messages
-    en_test = [r for r in test if r["label"] == "en" and r["source"] == "chat-tongue"]
+    en_test = [r for r in rows["test"] if r["label"] == "en" and r["source"] == "chat-tongue"]
     if len(en_test) > MAX_TEST["en"]:
         drop = {id(r) for r in rng.sample(en_test, len(en_test) - MAX_TEST["en"])}
-        test = [r for r in test if id(r) not in drop]
+        rows["test"] = [r for r in rows["test"] if id(r) not in drop]
 
     os.makedirs("eval/lid", exist_ok=True)
-    for name, rows in (("train", train), ("test", test)):
-        rng.shuffle(rows)
-        with open(f"eval/lid/{name}.jsonl", "w", encoding="utf-8") as f:
-            for row in rows:
-                f.write(json.dumps(row, ensure_ascii=False) + "\n")
-        counts = {}
-        for row in rows:
-            counts[row["label"]] = counts.get(row["label"], 0) + 1
-        print(name, len(rows), counts)
+    for split, split_rows in rows.items():
+        rng.shuffle(split_rows)
+        with open(f"eval/lid/{split}.jsonl", "w", encoding="utf-8") as f:
+            f.writelines(json.dumps(row, ensure_ascii=False) + "\n" for row in split_rows)
+        print(split, len(split_rows), dict(collections.Counter(row["label"] for row in split_rows)))
 
 
 main()
