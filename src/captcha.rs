@@ -79,10 +79,10 @@ pub fn message(question: &str, user: &User, time_to_solve: Duration) -> String {
     md::fill(
         "{}
 
-{}, please, send the solution to the arithmetic operation provided.
-If you won't do it in {}, we'll consider you a bot. Thank you!
+{}, please send the answer to the sum above.
+If you don't do it within {}, we'll consider you a bot. Thank you!
 
-{}, пожалуйста, напиши сумму чисел в примере.
+{}, пожалуйста, напиши ответ на пример выше.
 Если ты не сделаешь этого в течение {}, мы сочтём тебя ботом. Спасибо!",
         &[&md::escape(question), &mention, &time, &mention, &time],
     )
@@ -252,7 +252,7 @@ mod tests {
     #[test]
     fn escapes_captcha_message() {
         let text = message("2 + 3", &user(42, Some("new_user")), Duration::from_secs(20 * 60));
-        assert!(text.starts_with("2 \\+ 3\n\n[@new\\_user](tg://user?id=42), please"), "{text}");
-        assert!(text.contains("in 20m, we'll consider you a bot\\. Thank you\\!"), "{text}");
+        assert!(text.starts_with("2 \\+ 3\n\n[@new\\_user](tg://user?id=42), please send"), "{text}");
+        assert!(text.contains("within 20m, we'll consider you a bot\\. Thank you\\!"), "{text}");
     }
 }

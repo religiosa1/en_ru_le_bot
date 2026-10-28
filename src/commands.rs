@@ -50,7 +50,7 @@ pub const COMMANDS: &[Spec] = &[
     spec("help", r#"["members"] display help on bot commands"#, Access::Member),
     spec("alarm", "Toggle notifications about day change on/off", Access::Admin),
     spec("langchecks", "Toggle en/ru days on/off", Access::Admin),
-    spec("otherlang", "Toggle check for message language outside of en/ru on/off", Access::Admin),
+    spec("otherlang", "Toggle checks for languages other than en/ru on/off", Access::Admin),
     spec("forcelang", "[en|ru] Force a specific language", Access::Admin),
     spec("mute", "Toggle mutes on language violations on/off", Access::Admin),
     spec("pardon", "[@user] - Remove violations for specific user or all users", Access::Admin),
@@ -169,7 +169,7 @@ async fn run(bot: &Bot, app: &App, msg: &Message, user: &User, name: &str, args:
             (_, Err(_)) => "Maximum number of warnings must be a non-negative integer!".into(),
             (_, Ok(value)) => {
                 app.store.update(|s| s.settings.max_violations = value)?;
-                format!("Max warnings number is now {value}")
+                format!("Maximum number of warnings is now {value}")
             }
         },
         "cooldown" => cooldown(app, args)?,
@@ -186,7 +186,7 @@ async fn run(bot: &Bot, app: &App, msg: &Message, user: &User, name: &str, args:
                     restore_permissions(bot, app, user_id).await;
                     format!("Pardoned user @{name}")
                 }
-                None => format!("Unable to find any violations for the {name}"),
+                None => format!("No violations found for {name}"),
             },
         },
         "trust" => match user_arg(msg, args) {
@@ -194,7 +194,7 @@ async fn run(bot: &Bot, app: &App, msg: &Message, user: &User, name: &str, args:
             Ok(None) => "username is required in this command".into(),
             Ok(Some((target, name))) => {
                 captcha::remove_check(bot, app, &target).await?;
-                format!("Ok, user @{name} is now trusted")
+                format!("OK, user @{name} is now trusted")
             }
         },
         "flush_admins" => {
@@ -225,15 +225,15 @@ async fn run(bot: &Bot, app: &App, msg: &Message, user: &User, name: &str, args:
 
 fn today(settings: &Settings) -> &'static str {
     match Day::of(settings, weekday_utc(now_ms())) {
-        Day::Disabled => "Language checks are disabled by admins\n\nПроверка языка выключена администраторами.",
-        Day::Forced(Lang::En) => "English day was forced by admins",
-        Day::Forced(Lang::Ru) => "Русский день принудительно выставлен администраторами",
+        Day::Disabled => "Language checks are disabled by the admins.\n\nПроверка языка выключена администраторами.",
+        Day::Forced(Lang::En) => "English day has been set by the admins.",
+        Day::Forced(Lang::Ru) => "Администраторы выставили русский день.",
         Day::Scheduled(None) => {
-            "Today is a free day. You can speak Russian or English language.\n\n\
+            "Today is a free day. You can speak either Russian or English.\n\n\
              Сегодня свободный день. Вы можете говорить на русском или английском."
         }
-        Day::Scheduled(Some(Lang::En)) => "Today is an English day",
-        Day::Scheduled(Some(Lang::Ru)) => "Сегодня русский день",
+        Day::Scheduled(Some(Lang::En)) => "Today is an English day.",
+        Day::Scheduled(Some(Lang::Ru)) => "Сегодня русский день.",
     }
 }
 
@@ -318,13 +318,13 @@ fn settings(app: &App) -> String {
 fn cooldown(app: &App, args: &str) -> anyhow::Result<String> {
     if args.is_empty() {
         let default = app.reset_cooldown()?;
-        return Ok(format!("Setting cooldown to the default value of {}", format_duration(default)));
+        return Ok(format!("Cooldown reset to the default value of {}", format_duration(default)));
     }
     let Some(cooldown) = parse_duration(args) else {
-        return Ok(format!(r#"Wrong cooldown duration value: "{args}". {DURATION_HINT}"#));
+        return Ok(format!(r#"Incorrect value "{args}". {DURATION_HINT}"#));
     };
     if cooldown > MAX_COOLDOWN {
-        return Ok(format!("Cooldown must be in range between 0 and {}", format_duration(MAX_COOLDOWN)));
+        return Ok(format!("The value must be between 0 and {}", format_duration(MAX_COOLDOWN)));
     }
     app.set_cooldown(cooldown)?;
     Ok(format!("Cooldown between warnings is now {}", format_duration(cooldown)))
@@ -353,44 +353,40 @@ async fn restore_permissions(bot: &Bot, app: &App, user_id: u64) {
     }
 }
 
-const RULES: &str = "This chat is made for English and Russian practice.
-On Monday, Wednesday and Friday Russian is spoken. On Tuesday, Thursday and Saturday English is spoken. On Sunday you can speak any of these two languages. It is expected from native speakers to correct other people's mistakes.
+const RULES: &str = "This chat is for practicing English and Russian.
+On Monday, Wednesday and Friday we speak Russian. On Tuesday, Thursday and Saturday we speak English. On Sunday you can speak either of the two languages. Native speakers are expected to correct other people's mistakes.
 
-The day is changed at 00:00 UTC.
+The day changes at 00:00 UTC.
 
-DO NOT WRITE TO OTHER MEMBERS DIRECTLY BEFORE YOU AT LEAST KNOW THEM. Better don't write them at all until you're pretty confident you're not bugging them. This is highly discouraged and will be punished.
+DO NOT WRITE TO OTHER MEMBERS DIRECTLY UNTIL YOU AT LEAST KNOW THEM. Better not to message them at all until you're pretty sure you're not bothering them. This is highly discouraged and will be punished.
 
-Rudeness, trolling, harassment, harassment in DM, antisocial behaviour and so on may lead to a ban. It's not a court room, but a community. It is possible to get a ban just because we don't like you -- be polite. Write to the admins if someone is bothering you, so the admins may settle the situation.
-Cursing is not forbidden, but that doesn't mean you need to use it constantly.
+Rudeness, trolling, harassment (including in DMs), antisocial behaviour and so on may lead to a ban. This is not a courtroom, but a community. You can get banned just because we don't like you -- be polite. Write to the admins if someone is bothering you, so they can settle the situation.
+Swearing isn't forbidden, but that doesn't mean you should do it constantly.
 
-The chat bot may temporarily mute you for repeated violations of the Russian/English day rules.
+The bot may temporarily mute you for repeated violations of the Russian/English day rules.
 
-IMPORTANT: Language Exchange implies that you can understand most of what is written to you and can answer. You came here to talk, so try to talk.
+IMPORTANT: language exchange implies that you understand most of what is written to you and can reply. You came here to talk, so try to talk.
 ======================
-Данный чат предназначен для практики английского или русского языков.
+Этот чат предназначен для практики английского и русского языков.
 
-В понедельник, среду и пятницу говорим по-русски. Во вторник, четверг и субботу -- по-английски. В воскресенье допустимо использование любого из этих языков. От носителей ожидаются исправления ошибок у других людей.
+В понедельник, среду и пятницу говорим по-русски. Во вторник, четверг и субботу -- по-английски. В воскресенье можно говорить на любом из этих языков. От носителей языка ожидается, что они будут исправлять ошибки других участников.
 
 Смена дня происходит в 00:00 по UTC.
 
-НЕ ПИШИТЕ ДРУГИМ УЧАСТНИКАМ В ЛИЧКУ ПОКА ВЫ С НИМИ ХОТЯ БЫ НЕ ПОЗНАКОМИТЕСЬ. Лучше вообще им не пишите, пока вы не достаточно уверены, что вы им не докучаете. Такое поведение крайне неодобряется и будет караться.
+НЕ ПИШИТЕ ДРУГИМ УЧАСТНИКАМ В ЛИЧКУ, ПОКА ВЫ С НИМИ ХОТЯ БЫ НЕ ПОЗНАКОМИТЕСЬ. Лучше вообще им не пишите, пока не будете достаточно уверены, что не докучаете им. Такое поведение крайне не одобряется и будет наказываться.
 
-За грубость, троллинг, домогательства, домогания в личке, антисоциальное поведение и т.д. возможен бан. У нас не зал суда, а сообщество. Бан возможен просто за то что вы не понравились -- будьте вежливы. Если вам кто-то докучает, пишите админам, чтобы админы могли урегулировать ситуацию.
-Использование мата не запрещено, но это не значит что нужно использовать его постоянно.
+За грубость, троллинг, домогательства (в том числе в личке), антисоциальное поведение и т. д. возможен бан. У нас не зал суда, а сообщество. Бан возможен просто за то, что вы нам не понравились -- будьте вежливы. Если вам кто-то докучает, пишите админам, чтобы они могли урегулировать ситуацию.
+Мат не запрещён, но это не значит, что им нужно пользоваться постоянно.
 
-Бот может вас замьютить за повторные нарушения порядка Русских/Английских дней.
+Бот может вас замьютить за повторные нарушения правил русских/английских дней.
 
-ВАЖНО: языковой обмен подразумевает, что вы понимаете большую часть того, что вам пишут и можете отвечать. Вы пришли сюда общаться -- пытайтесь общаться.
-
+ВАЖНО: языковой обмен подразумевает, что вы понимаете большую часть того, что вам пишут, и можете отвечать. Вы пришли сюда общаться -- пытайтесь общаться.
 ======================
-If you don't understand if today is an English or Russian day write /today
-Or take a look at this picture.
+If you're not sure whether today is an English or a Russian day, write /today or take a look at this picture:
 
 https://i.ibb.co/kK6tYNG/days-all.png
-
-=====================
-
-Unwanted advertisement and self-promotion may lead to a permanent ban. Please ask the members if they are interested in what you're selling first.";
+======================
+Unsolicited advertising and self-promotion may lead to a permanent ban. Please ask the members whether they're interested in what you're selling first.";
 
 #[cfg(test)]
 mod tests {

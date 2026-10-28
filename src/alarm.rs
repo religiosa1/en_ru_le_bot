@@ -38,9 +38,9 @@ async fn announce(bot: &Bot, app: &App, weekday: u32) {
     let text = match Day::of(&settings, weekday) {
         // nothing changes on forced days
         Day::Disabled | Day::Forced(_) => return,
-        Day::Scheduled(Some(Lang::En)) => "English Day has begun.",
+        Day::Scheduled(Some(Lang::En)) => "English day has begun.",
         Day::Scheduled(Some(Lang::Ru)) => "Начался русский день.",
-        Day::Scheduled(None) => "Free Day has begun.\nНачался свободный день.",
+        Day::Scheduled(None) => "Free day has begun.\nНачался свободный день.",
     };
     info!(text, "Announcing day change");
     if let Err(err) = bot.send_message(app.chat_id, text).await {

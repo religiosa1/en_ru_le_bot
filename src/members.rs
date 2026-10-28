@@ -90,29 +90,27 @@ pub fn welcome_message(user: &User) -> String {
     let mention = md::mention(user);
     md::fill(
         "Welcome, {}!
-This chat is made for English and Russian languages practice.
+This chat is for practicing English and Russian.
 
-Monday, Wednesday and Friday — Russian days
+Monday, Wednesday and Friday — Russian days.
 Tuesday, Thursday and Saturday — English days.
 Sunday — free day.
 
-To prevent spam, newcomers are not allowed to post gifs and such for a short
-period of time after they join.
+To prevent spam, newcomers can't post GIFs and such for a while after they join.
 
-* DO NOT WRITE TO OTHER MEMBERS DIRECTLY BEFORE YOU AT LEAST KNOW THEM. *
-Write to the admins if someone is bothering you, so the admins may settle the situation.
+*DO NOT WRITE TO OTHER MEMBERS DIRECTLY UNTIL YOU AT LEAST KNOW THEM.*
+Write to the admins if someone is bothering you, so they can settle the situation.
 
 Добро пожаловать, {}!
-Данный чат предназначен для практики английского или русского языков.
+Этот чат предназначен для практики английского и русского языков.
 
-Понедельник, среда, пятница — русский день.
-Вторник, четверг и суббота — английский.
+Понедельник, среда и пятница — русские дни.
+Вторник, четверг и суббота — английские.
 Воскресенье — свободный день.
 
-В целях предотвращения спама, новым участникам запрещено отправлять гифки
-и т.п. в течение короткого времени после присоединения.
+В целях предотвращения спама новым участникам какое-то время после вступления нельзя отправлять гифки и т. п.
 
-* НЕ ПИШИТЕ ДРУГИМ УЧАСТНИКАМ В ЛИЧКУ ПОКА ВЫ С НИМИ ХОТЯ БЫ НЕ ПОЗНАКОМИТЕСЬ. *
+*НЕ ПИШИТЕ ДРУГИМ УЧАСТНИКАМ В ЛИЧКУ, ПОКА ВЫ С НИМИ ХОТЯ БЫ НЕ ПОЗНАКОМИТЕСЬ.*
 Если вам кто-то докучает, пишите админам, чтобы они могли урегулировать ситуацию.",
         &[&mention, &mention],
     )

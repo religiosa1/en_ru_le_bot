@@ -77,16 +77,16 @@ pub async fn punish(bot: &Bot, app: &App, msg: &Message, user: &User, violation:
 
 fn warning_message(day: Option<Lang>) -> &'static str {
     match day {
-        Some(Lang::En) => "Эй, сегодня день английского. Пытайся говорить на английском!",
-        Some(Lang::Ru) => "Hey, today is Russian Day. Try to speak Russian!",
-        None => "Only Russian or English are allowed in this chat.",
+        Some(Lang::En) => "Эй, сегодня английский день. Постарайся говорить по-английски!",
+        Some(Lang::Ru) => "Hey, today is a Russian day. Try to speak Russian!",
+        None => "Only Russian and English are allowed in this chat.",
     }
 }
 
 fn count_message(day: Option<Lang>, count: u32, left: u32) -> String {
     match (day, left) {
-        (Some(Lang::En), 0) => "Это последнее предупреждение".into(),
-        (Some(Lang::En), _) => format!("Это {count}-e предупреждение."),
+        (Some(Lang::En), 0) => "Это последнее предупреждение.".into(),
+        (Some(Lang::En), _) => format!("Это {count}-е предупреждение."),
         (_, 0) => "This is your last warning.".into(),
         _ => format!("This is your {} warning.", ordinal_en(count)),
     }

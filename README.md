@@ -27,14 +27,13 @@ want other users to see them being executed).
 The bot logs who executed which command internally, so this information is
 available in the logs.
 
-Some commands expect duration as their argument. Duration can be supplied as an
-integer number (e.g. `20`) in this case it will be interpreted in minutes, or
-with a unit suffix. For example:
+Some commands expect a duration as their argument. It can be a plain number
+(e.g. `20`), interpreted as minutes, or have unit suffixes. For example:
 
 - `30s` -- 30 seconds
 - `5m30s` -- 5 minutes 30 seconds
 - `1h` -- one hour
-- `1.5d` -- 1.5 days (aka 36 hours)
+- `1.5d` -- 1.5 days (i.e. 36 hours)
 
 ### Public Commands (Available to all users)
 
@@ -55,63 +54,59 @@ with a unit suffix. For example:
 
 - /langchecks Toggle en/ru language checks on/off
 
-  Enables/disables checks of usage of english on russian days and vice versa.
+  Enables/disables checks for English used on Russian days and vice versa.
 
 - /otherlang Toggle checks for languages outside en/ru on/off
 
-  Enables/Disables check for message language being outside of en or ru
+  Enables/disables checks for messages in languages other than English or
+  Russian.
 
-  If both langchecks and otherlang are disabled, bot won't check message
-  language, or send notifications about day changes. The bot, will continue to
-  do captcha checks, display rules, accept commands, etc.
+  If both langchecks and otherlang are disabled, the bot won't check message
+  language or send notifications about day changes. It will still do captcha
+  checks, display rules, accept commands, etc.
 
 - /forcelang ["en"|"ru"] Force a specific language
 
-  Used to override the standard schedule. Without arguments removes forced
-  language. With an argument, allows to set the forced language, e.g.
-  `/forcelang ru`
+  Overrides the standard schedule. Without arguments removes the forced
+  language, with an argument sets it, e.g. `/forcelang ru`.
 
 - /mute Toggle mutes on language violations on/off
 
-  With mutes off, bot will give warnings to users, but will never restrict their
-  permissions (posting messages,photos, etc.) or count the amount of warnings.
+  With mutes off, the bot still warns users, but never restricts their
+  permissions (posting messages, photos, etc.) or counts their warnings.
 
 - /pardon [@user] - Clears violations counter for a specific user or all users.
 
-  Without arguments removes all counters for all users. Can receive username
-  mention as argument, to clear restrictions for a specific user, e.g.
-  `/pardon @john`.
+  Without arguments clears the counters of all users. With a username mention,
+  clears restrictions of a specific user, e.g. `/pardon @john`.
 
   Pardoned users get all chat permissions restored, even if they were only
   warned. This also lifts the newcomers' probation restrictions.
 
 - /mute_duration [duration] - Set or view mute duration
 
-  Without arguments displays the current mute duration value -- for how long
-  users' permissions will be restricted so they can't post, after repeated
-  violations. With the argument sets this value, between 30 seconds and 366
-  days (Telegram makes shorter or longer restrictions permanent).
+  Without arguments displays the current mute duration -- how long users can't
+  post after repeated violations. With an argument sets it, between 30 seconds
+  and 366 days (Telegram makes shorter or longer restrictions permanent).
 
 - /warnings_number [int] - Set or view number of warnings before mute
 
-  The amount of warnings user must receive before his permissions are
-  temporarily restricted. If set to 0, they will be muted immediately on the
-  first violation. Without arguments shows the current settings value, with
-  an argument -- sets it.
+  The number of warnings a user gets before their permissions are temporarily
+  restricted. If set to 0, they're muted on the first violation. Without
+  arguments shows the current value, with an argument sets it.
 
 - /warnings_expiry [duration] - Set or view warnings expiration time
 
-  Warnings automatically expire after predefined amount of time (3 hours
-  by default) -- meaning if a user hasn't performed any more violations in this
-  time their transgressions are absolved. Without an argument it shows the
-  current expiry duration, with an argument -- sets it (1 minute to 366 days).
+  Warnings expire after some time (3 hours by default): if a user doesn't
+  violate the rules again within this time, their warnings are forgotten.
+  Each new violation restarts the countdown. Without an argument shows the
+  current expiry, with an argument sets it (1 minute to 366 days).
 
 - /cooldown [duration] Set cooldown value for wrong language warnings
 
-  If a bot issued a warning, it won't do so for some time. This time is common
-  for all users, meaning if user A got a warning, and user B started to write in
-  a wrong language he still won't receive a warning until this cooldown time will
-  pass.
+  After a warning, the bot doesn't issue another one for some time. The
+  cooldown is common for all users: if user A got a warning and user B then
+  writes in a wrong language, B won't be warned until the cooldown passes.
 
   Our goal isn't to ban everyone or spam with warnings and threats, but to
   stimulate the language exchange.
@@ -148,12 +143,11 @@ These commands are not displayed in the menu or help text. Know what you're doin
 if you're using them.
 
 - /flush_admins Invalidate admins cache. Admin list is cached for 3 hours. In
-  case you just added or removed an admin, and don't want to wait for his
-  permissions to be updated, you can force cache invalidation with this
-  command.
+  case you just added or removed an admin and don't want to wait for their
+  permissions to be updated, you can force a refresh with this command.
 
-- /rt &lt;text> - Retranslate text to chat (for fun and comedic purposes -- like
-  the bot says it).
+- /rt &lt;text> - Relay text to the chat (for fun and comedic purposes -- as if
+  the bot said it).
 
 - /captcha_msg Show the captcha and welcome messages in the current chat, to
   check their formatting.
@@ -235,10 +229,9 @@ simultaneously, we shouldn't give them a warning.
 - **Target chat filtering**: The bot ensures all
   processing (language detection, captcha, probation) only occurs in the configured
   target chat. If someone adds the bot to other chats it won't do anything there,
-  DMs aren't verified either
+  DMs aren't checked either
 - **Non-letter characters are removed for a check**
-- **Minimum Length**: Number of letter characters in a message be at least 5
-  characters to trigger language detection
+- **Minimum Length**: A message needs at least 5 letters to be checked
 - **Admin Immunity**: Chat administrators are exempt from language checks
   (this includes admin-bots as well)
 - **Age Filter**: Messages older than 5 minutes are ignored (handles missed
@@ -286,9 +279,8 @@ All new members are automatically placed under a probation period when they join
 
 ### Captcha System
 
-The bot also includes an optional captcha system that can be enabled separately.
-When enabled, new members must solve a simple arithmetic question to
-prove they're human.
+The bot also includes a captcha system (on by default, toggled with `/captcha`):
+new members must solve a simple arithmetic question to prove they're human.
 
 ### How Captcha Works
 
@@ -298,7 +290,7 @@ prove they're human.
    - If bots are disabled (`/captcha_bots` off), the bot is immediately banned
    - If bots are enabled, they join without verification
 3. **Human Verification**: For human users, the system:
-   - Generates a simple arithmetic question (e.g., "What is 9 + 7?")
+   - Generates a simple arithmetic question (e.g. "9 + 7")
    - Posts the question mentioning the user in both English and Russian
    - Sets a timer for verification (default: 20 minutes)
 
