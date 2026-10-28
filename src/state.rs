@@ -81,9 +81,26 @@ pub struct Violation {
 pub struct State {
     pub settings: Settings,
     /// By user id
-    pub captchas: HashMap<i64, Captcha>,
+    pub captchas: HashMap<u64, Captcha>,
     /// By user id
-    pub violations: HashMap<i64, Violation>,
+    pub violations: HashMap<u64, Violation>,
+}
+
+/// A user referenced in an admin command: by id (text mention) or by @username.
+#[derive(Debug, Clone, PartialEq)]
+pub enum UserRef {
+    Id(u64),
+    Username(String),
+}
+
+impl UserRef {
+    /// Finds a user id in a map of records with usernames.
+    pub fn find<T>(&self, records: &HashMap<u64, T>, username: impl Fn(&T) -> Option<&str>) -> Option<u64> {
+        match self {
+            UserRef::Id(id) => records.contains_key(id).then_some(*id),
+            UserRef::Username(name) => records.iter().find(|(_, r)| username(r) == Some(name.as_str())).map(|(id, _)| *id),
+        }
+    }
 }
 
 impl State {

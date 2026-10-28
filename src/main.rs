@@ -3,19 +3,21 @@ use std::sync::Arc;
 use std::time::Instant;
 
 use anyhow::Context;
+use teloxide::payloads::setters::*;
 use teloxide::prelude::*;
-use teloxide::types::AllowedUpdate;
+use teloxide::types::{AllowedUpdate, BotCommandScope, Recipient};
 use teloxide::update_listeners::Polling;
 use tracing::{error, info};
 
+use en_ru_le_bot::bot::{self, App};
 use en_ru_le_bot::lid::Lid;
 use en_ru_le_bot::state::Store;
+use en_ru_le_bot::{alarm, captcha, commands, members};
 
 struct Config {
     token: String,
     chat_id: ChatId,
     state_path: String,
-    model_path: String,
 }
 
 impl Config {
@@ -25,16 +27,8 @@ impl Config {
             token: env::var("TOKEN").context("TOKEN env variable is required")?,
             chat_id: ChatId(chat_id.parse().with_context(|| format!("CHAT_ID {chat_id:?} isn't a valid chat id"))?),
             state_path: env::var("STATE_PATH").unwrap_or_else(|_| "data/state.json".into()),
-            model_path: env::var("MODEL_PATH").unwrap_or_else(|_| "models/lid-chat.ftz".into()),
         })
     }
-}
-
-#[allow(dead_code)] // fields are used by slices ported in the next steps
-struct App {
-    store: Store,
-    lid: Lid,
-    chat_id: ChatId,
 }
 
 #[tokio::main]
@@ -48,16 +42,24 @@ async fn main() -> anyhow::Result<()> {
     let store = Store::load(&config.state_path)?;
 
     let started = Instant::now();
-    let lid = Lid::load(&config.model_path)?;
+    let lid = Lid::embedded()?;
     info!(duration_ms = started.elapsed().as_millis() as u64, "Language model loaded");
 
-    let app = Arc::new(App { store, lid, chat_id: config.chat_id });
     let bot = Bot::new(config.token);
+    let me = bot.get_me().await.context("get bot info")?;
+    info!(username = me.username(), "Bot info loaded");
+    let app = Arc::new(App::new(store, lid, config.chat_id, me.username().into()));
+
+    set_menus(&bot, config.chat_id).await;
+    tokio::spawn(captcha::sweep(bot.clone(), app.clone()));
+    tokio::spawn(alarm::run(bot.clone(), app.clone()));
+
     let listener = Polling::builder(bot.clone())
         .allowed_updates(vec![AllowedUpdate::Message, AllowedUpdate::ChatMember, AllowedUpdate::MyChatMember])
         .build();
-
-    let handler = Update::filter_message().endpoint(on_message);
+    let handler = dptree::entry()
+        .branch(Update::filter_message().endpoint(bot::on_message))
+        .branch(Update::filter_chat_member().endpoint(members::on_chat_member));
     Dispatcher::builder(bot, handler)
         .dependencies(dptree::deps![app])
         .error_handler(Arc::new(|err: anyhow::Error| async move { error!(err = format!("{err:#}"), "Update handling failed") }))
@@ -68,10 +70,17 @@ async fn main() -> anyhow::Result<()> {
     Ok(())
 }
 
-async fn on_message(app: Arc<App>, msg: Message) -> anyhow::Result<()> {
-    if msg.chat.id != app.chat_id {
-        return Ok(());
+/// Command menus in the target chat, admins get admin commands as well.
+async fn set_menus(bot: &Bot, chat_id: ChatId) {
+    let chat_id = Recipient::Id(chat_id);
+    let menus = [
+        (commands::menu(false), BotCommandScope::Chat { chat_id: chat_id.clone() }),
+        (commands::menu(true), BotCommandScope::ChatAdministrators { chat_id }),
+    ];
+    for (menu, scope) in menus {
+        // Not fatal, the commands work without the menu
+        if let Err(err) = bot.set_my_commands(menu).scope(scope).await {
+            error!(%err, "Failed to set command menu");
+        }
     }
-    info!(text = msg.text(), "Message received");
-    Ok(())
 }

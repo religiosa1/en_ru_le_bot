@@ -12,8 +12,8 @@ English or Russian. Off-the-shelf detectors were evaluated and rejected:
 
 So we train our own small fastText classifier on the chat history, with labels
 `en`, `ru`, `ru-latin` (transliterated Russian) and `other`. Quantized it's
-~1.3 MiB and is loaded at runtime by `src/lid.rs` (`MODEL_PATH`, default
-`models/lid-chat.ftz`).
+~1.3 MiB; `models/lid-chat.ftz` is committed and compiled into the binary by
+`src/lid.rs`, so retraining means rebuilding the bot.
 
 ## Pipeline overview
 
@@ -25,9 +25,9 @@ synthetic ru-latin (transliterator)┤
 chat en / ru / reviewed labels ────┴─► eval/lid/{train,test}.jsonl ──► models/lid-chat.ftz
 ```
 
-All intermediate data lives in `eval/` and models in `models/`. Both are
-git-ignored: they contain chat messages, and the model vocabulary contains
-words and names from the chat.
+All intermediate data lives in `eval/`, git-ignored as it contains chat
+messages. Of `models/`, only the quantized `lid-chat.ftz` is committed; the
+full `lid-chat.bin` (~80 MiB) isn't.
 
 ## Step by step
 
@@ -188,5 +188,3 @@ New exports only need batches for messages not in `eval/review-labels.tsv`.
   English days as before. Whether to treat it as Russian is a product decision.
 - Russian typed with Latin lookalike letters ("OXEPOBO") or on the wrong
   keyboard layout ("cj crblrjq") is rare and not handled.
-- The model file isn't distributable from git (chat vocabulary), so the Docker
-  build needs it supplied separately.

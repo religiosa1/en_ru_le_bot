@@ -1,4 +1,11 @@
+pub mod alarm;
+pub mod bot;
+pub mod captcha;
+pub mod commands;
 pub mod duration;
 pub mod langday;
 pub mod lid;
+pub mod md;
+pub mod members;
 pub mod state;
+pub mod violations;

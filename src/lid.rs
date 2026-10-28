@@ -1,4 +1,6 @@
 //! Language identification with the fastText model trained on the chat (examples/lid_train.rs).
+//!
+//! The model is compiled into the binary, so retraining it means rebuilding the bot.
 
 use std::path::Path;
 use std::sync::LazyLock;
@@ -16,7 +18,17 @@ pub struct Detection {
     pub confidence: f32,
 }
 
+/// Written by examples/lid_train.rs
+static EMBEDDED_MODEL: &[u8] = include_bytes!("../models/lid-chat.ftz");
+
 impl Lid {
+    /// The model compiled into the binary.
+    pub fn embedded() -> anyhow::Result<Self> {
+        let model = FastText::load(&mut &EMBEDDED_MODEL[..]).context("load embedded language model")?;
+        Ok(Self(model))
+    }
+
+    /// A model from a file, e.g. to evaluate another one.
     pub fn load(path: impl AsRef<Path>) -> anyhow::Result<Self> {
         let path = path.as_ref();
         let model = FastText::load_model(path).with_context(|| format!("load language model {path:?}"))?;
@@ -31,12 +43,6 @@ impl Lid {
             confidence: prediction.prob,
         })
     }
-}
-
-/// Model at the default dev location, for tests and tools.
-pub fn load_dev_model() -> Lid {
-    Lid::load(concat!(env!("CARGO_MANIFEST_DIR"), "/models/lid-chat.ftz"))
-        .expect("model missing, run examples/lid_train.rs")
 }
 
 static URL_OR_MENTION_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"[A-Za-z0-9_]{2,8}://\S+|@\w+").unwrap());
@@ -70,7 +76,7 @@ mod tests {
 
     #[test]
     fn detects_languages() {
-        let lid = load_dev_model();
+        let lid = Lid::embedded().unwrap();
         for (text, expected) in [
             ("I personally wouldn't bother unless he gets himself a ban hammer", "en"),
             ("Interesting", "en"),

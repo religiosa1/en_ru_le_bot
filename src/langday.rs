@@ -8,12 +8,22 @@ use serde::{Deserialize, Serialize};
 use tracing::{debug, info};
 
 use crate::lid::Lid;
+use crate::state::Settings;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum Lang {
     En,
     Ru,
+}
+
+impl Lang {
+    pub fn code(self) -> &'static str {
+        match self {
+            Lang::En => "en",
+            Lang::Ru => "ru",
+        }
+    }
 }
 
 /// Language of the day by weekday (0 = Sunday), None is a free day.
@@ -23,6 +33,34 @@ pub fn scheduled_lang(weekday: u32) -> Option<Lang> {
         1 | 3 | 5 => Some(Lang::Ru),
         2 | 4 | 6 => Some(Lang::En),
         _ => panic!("{weekday} is not a valid weekday, must be in 0..=6"),
+    }
+}
+
+/// Language rules of a day.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum Day {
+    /// En/ru days are switched off by admins
+    Disabled,
+    Forced(Lang),
+    /// By the weekly schedule, None is a free day
+    Scheduled(Option<Lang>),
+}
+
+impl Day {
+    pub fn of(settings: &Settings, weekday: u32) -> Self {
+        match (settings.langday_checks, settings.forced_lang) {
+            (false, _) => Day::Disabled,
+            (true, Some(lang)) => Day::Forced(lang),
+            (true, None) => Day::Scheduled(scheduled_lang(weekday)),
+        }
+    }
+
+    /// Language required on this day, if any.
+    pub fn lang(self) -> Option<Lang> {
+        match self {
+            Day::Disabled | Day::Scheduled(None) => None,
+            Day::Forced(lang) | Day::Scheduled(Some(lang)) => Some(lang),
+        }
     }
 }
 
@@ -105,6 +143,47 @@ const ML_TARGET_CONFIDENCE: f32 = 0.7;
 /// Share of words outside the common en/ru vocab, required to confirm an ML detection.
 const UNKNOWN_WORDS_THRESHOLD: f64 = 0.6;
 
+/// Messages shorter than this (in letters) aren't checked at all.
+const MIN_MSG_LENGTH: usize = 5;
+
+/// Message written in a wrong language.
+#[derive(Debug, Clone, PartialEq)]
+pub struct LangViolation {
+    /// Language of the day, None on free days (or with en/ru days disabled)
+    pub day: Option<Lang>,
+    /// Language of the message, None for languages other than en/ru
+    pub msg: Option<Lang>,
+}
+
+/// Checks a message against the language rules of the day, None if it's fine.
+pub fn check_message(lid: &Lid, settings: &Settings, text: &str, weekday: u32) -> Option<LangViolation> {
+    let cleaned = strip_non_letter_or_whitespace_chars(text);
+    if cleaned.chars().count() < MIN_MSG_LENGTH {
+        debug!("The message is too short for a check, ignoring");
+        return None;
+    }
+    let day = Day::of(settings, weekday).lang();
+    if settings.otherlang_checks && detect_other_language(lid, text, day).is_some() {
+        info!(text, ?day, "Decided it's a bad language");
+        return Some(LangViolation { day, msg: None });
+    }
+    // NOTE: transliterated Russian (Lid's "ru-latin") is treated as English here, as before:
+    // it passes on English days. Counting it as Russian is a deferred decision.
+    let Some(day) = day else {
+        debug!("No specific language is set for the explicit check");
+        return None;
+    };
+    let Some(msg) = detect_en_ru(&cleaned) else {
+        info!("Seems to be a mixed language message, not issuing a warning");
+        return None;
+    };
+    if msg == day {
+        return None;
+    }
+    info!(?msg, ?day, "Language mismatch");
+    Some(LangViolation { day: Some(day), msg: Some(msg) })
+}
+
 #[derive(Debug, PartialEq)]
 pub enum OtherLang {
     Charset,
@@ -183,13 +262,48 @@ fn is_name_list(text: &str) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::lid::load_dev_model;
+    use crate::lid::Lid;
 
     #[test]
     fn schedule() {
         let days: Vec<_> = (0..7).map(scheduled_lang).collect();
         use Lang::*;
         assert_eq!(days, [None, Some(Ru), Some(En), Some(Ru), Some(En), Some(Ru), Some(En)]);
+    }
+
+    const RU_TEXT: &str = "что-то на русском тут написано";
+    const EN_TEXT: &str = "something in english here";
+    const MONDAY: u32 = 1;
+    const TUESDAY: u32 = 2;
+
+    #[test]
+    fn checks_message_language_by_day() {
+        let lid = Lid::embedded().unwrap();
+        let settings = Settings::default();
+        let check = |text: &str, weekday| check_message(&lid, &settings, text, weekday);
+
+        assert_eq!(check(RU_TEXT, MONDAY), None);
+        assert_eq!(check(EN_TEXT, MONDAY), Some(LangViolation { day: Some(Lang::Ru), msg: Some(Lang::En) }));
+        assert_eq!(check(EN_TEXT, TUESDAY), None);
+        assert_eq!(check(RU_TEXT, TUESDAY), Some(LangViolation { day: Some(Lang::En), msg: Some(Lang::Ru) }));
+        assert_eq!(check(RU_TEXT, 0), None, "free day");
+        assert_eq!(check("Hi!", MONDAY), None, "too short");
+        assert_eq!(check(&format!("{EN_TEXT} {RU_TEXT}"), MONDAY), None, "bilingual");
+        assert!(check(&format!("{EN_TEXT} {EN_TEXT} {RU_TEXT}"), MONDAY).is_some(), "mostly english");
+    }
+
+    #[test]
+    fn respects_day_settings() {
+        let lid = Lid::embedded().unwrap();
+        let forced = Settings { forced_lang: Some(Lang::En), ..Settings::default() };
+        assert_eq!(check_message(&lid, &forced, EN_TEXT, MONDAY), None);
+        let disabled = Settings { langday_checks: false, ..Settings::default() };
+        assert_eq!(check_message(&lid, &disabled, EN_TEXT, MONDAY), None);
+        // other language checks still work with en/ru days disabled, as on a free day
+        let german = "Ich weiß nicht, ob das heute noch klappt";
+        assert_eq!(check_message(&lid, &disabled, german, MONDAY), Some(LangViolation { day: None, msg: None }));
+        let no_other = Settings { otherlang_checks: false, ..Settings::default() };
+        assert_eq!(check_message(&lid, &no_other, german, 0), None);
     }
 
     #[test]
@@ -256,7 +370,7 @@ mod tests {
 
     #[test]
     fn other_language() {
-        let lid = load_dev_model();
+        let lid = Lid::embedded().unwrap();
         let detect = |text: &str, target| detect_other_language(&lid, text, target);
 
         assert_eq!(detect("你们不能对 Eon 实施制裁！ 西方需要停止殖民", Some(Lang::Ru)), Some(OtherLang::Charset));

@@ -4,4 +4,5 @@ node_modules
 /data
 /messages*.html
 /eval
-/models
+/models/*
+!/models/lid-chat.ftz
