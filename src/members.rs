@@ -51,10 +51,11 @@ pub async fn on_chat_member(
 }
 
 /// User who just joined the chat, as opposed to other member status changes.
+///
+/// Restricted users (e.g. on probation) rejoin as restricted, not as plain members.
 fn joined_user(update: &ChatMemberUpdated) -> Option<&User> {
-    let old = &update.old_chat_member.kind;
-    (update.new_chat_member.kind.is_member() && (old.is_left() || old.is_banned()))
-        .then_some(&update.new_chat_member.user)
+    let (old, new) = (&update.old_chat_member.kind, &update.new_chat_member.kind);
+    (new.is_present() && !old.is_present()).then_some(&update.new_chat_member.user)
 }
 
 async fn probation(bot: &Bot, app: &App, user: &User) -> anyhow::Result<()> {
@@ -156,6 +157,37 @@ mod tests {
         assert!(joined("kicked", "member"));
         assert!(!joined("member", "left"), "leaving");
         assert!(!joined("member", "member"), "no change");
+
+        let restricted = |is_member| {
+            let mut kind = json!({"status": "restricted", "user": user_json(USER_ID),
+                                  "is_member": is_member, "until_date": 0});
+            for permission in [
+                "send_messages",
+                "send_audios",
+                "send_documents",
+                "send_photos",
+                "send_videos",
+                "send_video_notes",
+                "send_voice_notes",
+                "send_other_messages",
+                "add_web_page_previews",
+                "change_info",
+                "invite_users",
+                "pin_messages",
+                "manage_topics",
+                "send_polls",
+            ] {
+                kind[format!("can_{permission}")] = json!(permission == "send_messages");
+            }
+            kind
+        };
+        let mut rejoined = member_update(user_json(USER_ID), "left", "member");
+        rejoined.old_chat_member = serde_json::from_value(restricted(false)).unwrap();
+        rejoined.new_chat_member = serde_json::from_value(restricted(true)).unwrap();
+        assert!(
+            joined_user(&rejoined).is_some(),
+            "rejoined during probation"
+        );
     }
 
     #[tokio::test]

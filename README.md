@@ -118,8 +118,8 @@ Some commands expect a duration as their argument. It can be a plain number
 - /captcha Toggle captcha check for newcomers on/off
 
   When enabled, new members must solve an arithmetic question to prove they're
-  not bots. Users who fail to answer within the time limit or fail 7 attempts
-  are banned.
+  not bots. Users who fail 7 attempts are banned, users who fail to answer
+  within the time limit are banned for a week.
 
 - /captcha_time [duration] - Set or view time in which members must pass captcha
 
@@ -254,6 +254,9 @@ Mute Details:
   invite users)
 - Expiration: Violations expire after a set time -- 3 hours by default,
   configurable with `/warnings_expiry`
+- No reset: a mute doesn't reset the violations, so a user who starts
+  misbehaving again after a mute (before the violations expire) is muted
+  straight away, without warnings
 
 The system only affects non-admin users and requires the mute capacity to be
 enabled.
@@ -302,8 +305,8 @@ new members must solve a simple arithmetic question to prove they're human.
 - **Attempt Tracking**: Failed attempts are counted (max 7 attempts)
 - **Progressive Warnings**: Every 3rd failed attempt repeats the same question,
   in case user missed the original one.
-- **Timeout/Ban**: Users who exceed max attempts or don't respond in time are
-  banned
+- **Timeout/Ban**: Users who exceed max attempts are banned, users who don't
+  respond in time are banned for a week (they may be slow humans)
 - **Success**: Correct answers immediately remove verification requirement
 
 Captcha checks are on by default, `/captcha` toggles them. The probation

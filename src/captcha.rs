@@ -5,6 +5,7 @@ use std::hash::{BuildHasher, Hasher, RandomState};
 use std::sync::Arc;
 use std::time::Duration;
 
+use chrono::Utc;
 use teloxide::payloads::setters::*;
 use teloxide::prelude::*;
 use teloxide::types::{MessageId, ParseMode, User};
@@ -21,6 +22,8 @@ const MAX_ATTEMPTS: u32 = 7;
 /// The question is repeated every this many failed attempts
 const REPEAT_QUESTION_EVERY: u32 = 3;
 const SWEEP_INTERVAL: Duration = dur::minutes(1);
+/// Users who didn't solve the captcha in time may be slow humans, so they can retry later
+const STALE_BAN_DURATION: Duration = dur::days(7);
 
 struct Attempt {
     correct: bool,
@@ -191,7 +194,7 @@ pub async fn remove_check(bot: &Bot, app: &App, user: &UserRef) -> anyhow::Resul
     Ok(())
 }
 
-/// Bans users who didn't solve their captcha in time, runs forever.
+/// Bans users who didn't solve their captcha in time, for [STALE_BAN_DURATION]. Runs forever.
 ///
 /// With captcha disabled, their messages aren't checked anymore, so stale captchas are just dropped.
 pub async fn sweep(bot: Bot, app: Arc<App>) {
@@ -213,7 +216,9 @@ pub async fn sweep(bot: Bot, app: Arc<App>) {
             let result = async {
                 remove_check(&bot, &app, &UserRef::Id(user_id)).await?;
                 if settings.captcha_enabled {
-                    bot.ban_chat_member(app.chat_id, UserId(user_id)).await?;
+                    bot.ban_chat_member(app.chat_id, UserId(user_id))
+                        .until_date(Utc::now() + STALE_BAN_DURATION)
+                        .await?;
                 }
                 anyhow::Ok(())
             };

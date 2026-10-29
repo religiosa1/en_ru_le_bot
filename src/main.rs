@@ -78,11 +78,7 @@ async fn main() -> anyhow::Result<()> {
     tokio::spawn(alarm::run(bot.clone(), app.clone()));
 
     let listener = Polling::builder(bot.clone())
-        .allowed_updates(vec![
-            AllowedUpdate::Message,
-            AllowedUpdate::ChatMember,
-            AllowedUpdate::MyChatMember,
-        ])
+        .allowed_updates(vec![AllowedUpdate::Message, AllowedUpdate::ChatMember])
         // A webhook left on the token would make Telegram refuse polling
         .delete_webhook()
         .await

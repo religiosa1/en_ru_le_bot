@@ -3,6 +3,12 @@
 //! Warnings are written in the other language: Russian on English days and vice versa.
 //! It's a failsafe for users who can't read the other language yet, e.g. someone
 //! writing in English gets a warning they can understand.
+//!
+//! By design, it's a scare tactic rather than a ban hammer:
+//! - The warnings cooldown is common for all users (see `App::start_cooldown`), so during it
+//!   other users' violations are neither warned about nor counted.
+//! - Violations aren't reset by a mute: misbehaving again after one, before the violations
+//!   expire, means a mute straight away, without warnings.
 
 use chrono::Utc;
 use teloxide::payloads::setters::*;

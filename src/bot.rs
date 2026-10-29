@@ -71,6 +71,8 @@ impl App {
     }
 
     /// Starts the warnings cooldown, false if it's still active.
+    ///
+    /// Common for all users by design, see [crate::violations].
     fn start_cooldown(&self) -> bool {
         let now = now_ms();
         let mut until = lock(&self.cooldown_until);
