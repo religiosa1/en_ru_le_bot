@@ -12,7 +12,7 @@ use tracing::{error, info};
 use en_ru_le_bot::bot::{self, App};
 use en_ru_le_bot::lid::Lid;
 use en_ru_le_bot::state::Store;
-use en_ru_le_bot::{alarm, captcha, commands, members};
+use en_ru_le_bot::{VERSION, alarm, captcha, commands, members};
 
 struct Config {
     token: String,
@@ -40,11 +40,17 @@ fn state_path() -> String {
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
+    if env::args().skip(1).any(|arg| arg == "--version" || arg == "-V") {
+        println!("en_ru_le_bot {VERSION}");
+        return Ok(());
+    }
+
     tracing_subscriber::fmt()
         .json()
         .with_env_filter(env::var("LOG_LEVEL").unwrap_or_else(|_| "info".into()))
         .init();
 
+    info!(version = VERSION, "Starting");
     let config = Config::from_env()?;
     let store = Store::load(&config.state_path)?;
 

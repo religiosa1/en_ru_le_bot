@@ -43,6 +43,7 @@ Some commands expect a duration as their argument. It can be a plain number
 - /help ["members"] display help on bot commands
   For admins it will also display admin-only commands, unless "members" argument
   is supplied.
+- /version display the bot version
 
 ### Admin-Only Commands
 
@@ -336,6 +337,19 @@ Requires a recent stable Rust (2024 edition). `cargo test` runs the test suite.
   `.env`. The state is kept in the `bot_data` volume.
 
 The bot shuts down gracefully on SIGINT.
+
+### Version
+
+`en_ru_le_bot --version` prints the version embedded at build time (it doesn't
+need any configuration). It's also shown by `/version` and `/settings`. The
+version comes from `git describe --tags --always --dirty`, e.g.
+`v1.0.0-3-g3882bb8-dirty`, falling back to the `Cargo.toml` version when built
+without git. `BOT_VERSION` at build time overrides it, which the Docker build
+uses, as `.git` isn't in its context:
+
+```sh
+docker build --build-arg VERSION=$(git describe --tags --always --dirty) .
+```
 
 ## Configuration
 

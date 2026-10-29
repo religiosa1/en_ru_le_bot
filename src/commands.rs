@@ -11,6 +11,7 @@ use tracing::{info, warn};
 use crate::bot::App;
 use crate::duration::{format_duration, parse_duration};
 use crate::langday::{Day, Lang, weekday_utc};
+use crate::VERSION;
 use crate::state::{Settings, UserRef, now_ms};
 use crate::{captcha, members, violations};
 
@@ -48,6 +49,7 @@ pub const COMMANDS: &[Spec] = &[
     spec("today", "check current day: whether it's English, Russian, or Free", Access::Member),
     spec("rules", "display the group's rules", Access::Member),
     spec("help", r#"["members"] display help on bot commands"#, Access::Member),
+    spec("version", "display the bot version", Access::Member),
     spec("alarm", "Toggle notifications about day change on/off", Access::Admin),
     spec("langchecks", "Toggle en/ru days on/off", Access::Admin),
     spec("otherlang", "Toggle checks for languages other than en/ru on/off", Access::Admin),
@@ -133,6 +135,7 @@ async fn run(bot: &Bot, app: &App, msg: &Message, user: &User, name: &str, args:
     let reply = match name {
         "today" => today(&app.settings()).into(),
         "rules" => RULES.into(),
+        "version" => VERSION.into(),
         "help" => help(args != "members" && app.is_admin(bot, user.id).await?),
         "settings" => settings(app),
         "alarm" => format!("Day change notifications are now {}", on_off(toggle(|s| &mut s.alarm_enabled)?)),
@@ -293,7 +296,8 @@ fn settings(app: &App) -> String {
          captcha: {}\n\
          captcha verification time: {}\n\
          captcha bots allowed: {}\n\
-         day change notifications: {}",
+         day change notifications: {}\n\
+         version: {}",
         on_off(s.langday_checks),
         on_off(s.otherlang_checks),
         s.forced_lang.map_or("none", Lang::code),
@@ -306,6 +310,7 @@ fn settings(app: &App) -> String {
         format_duration(s.captcha_max_age),
         on_off(s.captcha_bots_allowed),
         on_off(s.alarm_enabled),
+        VERSION,
     );
     let remaining = app.remaining_cooldown();
     if remaining > MIN_SHOWN_COOLDOWN {
@@ -406,7 +411,7 @@ mod tests {
     #[test]
     fn builds_menus() {
         let names = |menu: Vec<BotCommand>| menu.into_iter().map(|c| c.command).collect::<Vec<_>>();
-        assert_eq!(names(menu(false)), ["today", "rules", "help"]);
+        assert_eq!(names(menu(false)), ["today", "rules", "help", "version"]);
         let admin_menu = names(menu(true));
         assert!(admin_menu.contains(&"today".into()) && admin_menu.contains(&"settings".into()));
         assert!(!admin_menu.contains(&"rt".into()), "hidden commands aren't listed");

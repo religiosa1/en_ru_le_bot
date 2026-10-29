@@ -1,3 +1,6 @@
+/// Version of the build, from the git tag, see build.rs
+pub const VERSION: &str = env!("BOT_VERSION");
+
 pub mod alarm;
 pub mod bot;
 pub mod captcha;

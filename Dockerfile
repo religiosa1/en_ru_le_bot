@@ -1,6 +1,10 @@
 FROM rust:1.95-slim-trixie AS build
+# .git isn't in the build context, so the version comes from the build arg:
+# docker build --build-arg VERSION=$(git describe --tags --always --dirty) .
+ARG VERSION
+ENV BOT_VERSION=$VERSION
 WORKDIR /app
-COPY Cargo.toml Cargo.lock ./
+COPY Cargo.toml Cargo.lock build.rs ./
 COPY src src
 COPY examples examples
 COPY words words
