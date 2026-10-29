@@ -1,32 +1,33 @@
 //! Day change notifications at midnight (UTC).
 
 use std::sync::Arc;
-use std::time::Duration;
 
+use chrono::{Datelike, NaiveTime, TimeDelta, Utc};
 use teloxide::prelude::*;
 use tracing::{error, info, warn};
 
 use crate::bot::App;
-use crate::duration::DAY;
-use crate::langday::{Day, Lang, weekday_utc};
-use crate::state::{Settings, now_ms};
+use crate::langday::{Day, Lang};
+use crate::state::Settings;
 
 /// Announcements this late (e.g. after the host was suspended) are skipped
-const MAX_DELAY_MS: u64 = 60 * 60 * 1000;
+const MAX_DELAY: TimeDelta = TimeDelta::hours(1);
 
 /// Announces each day's language at midnight, runs forever.
 pub async fn run(bot: Bot, app: Arc<App>) {
     // Advanced by a day each time, rather than recomputed from the clock, so a clock
     // adjustment around midnight can't make it announce the same day twice
-    let mut midnight = (now_ms() / DAY + 1) * DAY;
+    let mut midnight =
+        Utc::now().date_naive().and_time(NaiveTime::MIN).and_utc() + TimeDelta::days(1);
     loop {
-        tokio::time::sleep(Duration::from_millis(midnight.saturating_sub(now_ms()))).await;
-        if now_ms() > midnight + MAX_DELAY_MS {
-            warn!(midnight, "Day change announcement is too late, skipping");
+        // Negative (already past) converts to an error, i.e. no wait
+        tokio::time::sleep((midnight - Utc::now()).to_std().unwrap_or_default()).await;
+        if Utc::now() - midnight > MAX_DELAY {
+            warn!(%midnight, "Day change announcement is too late, skipping");
         } else {
-            announce(&bot, &app, weekday_utc(midnight)).await;
+            announce(&bot, &app, midnight.weekday().num_days_from_sunday()).await;
         }
-        midnight += DAY;
+        midnight += TimeDelta::days(1);
     }
 }
 

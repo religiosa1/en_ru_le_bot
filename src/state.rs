@@ -9,7 +9,7 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use anyhow::Context;
 use serde::{Deserialize, Serialize};
 
-use crate::duration;
+use crate::duration as dur;
 use crate::langday::Lang;
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -19,16 +19,16 @@ pub struct Settings {
     pub otherlang_checks: bool,
     pub forced_lang: Option<Lang>,
     pub mute_enabled: bool,
-    #[serde(with = "duration::as_str")]
+    #[serde(with = "dur::as_str")]
     pub mute_duration: Duration,
     /// Warnings a user gets before a mute.
     pub max_violations: u32,
-    #[serde(with = "duration::as_str")]
+    #[serde(with = "dur::as_str")]
     pub warnings_expiry: Duration,
-    #[serde(with = "duration::as_str")]
+    #[serde(with = "dur::as_str")]
     pub cooldown: Duration,
     pub captcha_enabled: bool,
-    #[serde(with = "duration::as_str")]
+    #[serde(with = "dur::as_str")]
     pub captcha_max_age: Duration,
     pub captcha_bots_allowed: bool,
     pub alarm_enabled: bool,
@@ -41,12 +41,12 @@ impl Default for Settings {
             otherlang_checks: true,
             forced_lang: None,
             mute_enabled: true,
-            mute_duration: Duration::from_secs(15 * 60),
+            mute_duration: dur::minutes(15),
             max_violations: 2,
-            warnings_expiry: Duration::from_secs(3 * 60 * 60),
-            cooldown: Duration::from_secs(2 * 60),
+            warnings_expiry: dur::hours(3),
+            cooldown: dur::minutes(2),
             captcha_enabled: true,
-            captcha_max_age: Duration::from_secs(20 * 60),
+            captcha_max_age: dur::minutes(20),
             captcha_bots_allowed: false,
             alarm_enabled: true,
         }
@@ -247,7 +247,7 @@ mod tests {
         assert_eq!(
             settings,
             Settings {
-                cooldown: Duration::from_secs(300),
+                cooldown: dur::minutes(5),
                 captcha_enabled: false,
                 ..Settings::default()
             }

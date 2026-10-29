@@ -11,7 +11,7 @@ use teloxide::types::{MessageId, ParseMode, User};
 use tracing::{error, info};
 
 use crate::bot::App;
-use crate::duration::format_duration;
+use crate::duration::{self as dur, format_duration};
 use crate::md;
 use crate::members::welcome;
 use crate::state::{Captcha, State, UserRef, now_ms};
@@ -20,7 +20,7 @@ use crate::state::{Captcha, State, UserRef, now_ms};
 const MAX_ATTEMPTS: u32 = 7;
 /// The question is repeated every this many failed attempts
 const REPEAT_QUESTION_EVERY: u32 = 3;
-const SWEEP_INTERVAL: Duration = Duration::from_secs(60);
+const SWEEP_INTERVAL: Duration = dur::minutes(1);
 
 pub struct Attempt {
     pub correct: bool,
@@ -331,11 +331,7 @@ mod tests {
 
     #[test]
     fn escapes_captcha_message() {
-        let text = message(
-            "2 + 3",
-            &user(42, Some("new_user")),
-            Duration::from_secs(20 * 60),
-        );
+        let text = message("2 + 3", &user(42, Some("new_user")), dur::minutes(20));
         assert!(
             text.starts_with("2 \\+ 3\n\n[@new\\_user](tg://user?id=42), please send"),
             "{text}"

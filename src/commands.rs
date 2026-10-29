@@ -12,22 +12,18 @@ use tracing::{info, warn};
 
 use crate::VERSION;
 use crate::bot::App;
-use crate::duration::{format_duration, parse_duration};
+use crate::duration::{self as dur, format_duration, parse_duration};
 use crate::langday::{Day, Lang, weekday_utc};
 use crate::state::{Settings, UserRef, now_ms};
 use crate::{captcha, members, violations};
 
-const MAX_COOLDOWN: Duration = Duration::from_secs(3 * 60 * 60);
-const MINUTE: Duration = Duration::from_secs(60);
-const DAY: Duration = Duration::from_secs(24 * 60 * 60);
+const MAX_COOLDOWN: Duration = dur::hours(3);
 /// Telegram treats restrictions shorter than 30s or longer than 366 days as permanent
-const MUTE_DURATION_RANGE: RangeInclusive<Duration> =
-    Duration::from_secs(30)..=Duration::from_secs(366 * 24 * 60 * 60);
-const WARNINGS_EXPIRY_RANGE: RangeInclusive<Duration> =
-    MINUTE..=Duration::from_secs(366 * 24 * 60 * 60);
-const CAPTCHA_TIME_RANGE: RangeInclusive<Duration> = MINUTE..=DAY;
+const MUTE_DURATION_RANGE: RangeInclusive<Duration> = dur::seconds(30)..=dur::days(366);
+const WARNINGS_EXPIRY_RANGE: RangeInclusive<Duration> = dur::minutes(1)..=dur::days(366);
+const CAPTCHA_TIME_RANGE: RangeInclusive<Duration> = dur::minutes(1)..=dur::days(1);
 /// Remaining cooldown is shown in /settings only if it's longer than this
-const MIN_SHOWN_COOLDOWN: Duration = Duration::from_secs(3);
+const MIN_SHOWN_COOLDOWN: Duration = dur::seconds(3);
 const DURATION_HINT: &str = r#"Try something like "3", "10m", "1m30s", etc."#;
 
 #[derive(Debug, PartialEq)]
@@ -613,7 +609,7 @@ mod tests {
     fn bounds_durations() {
         assert_eq!(
             parse_bounded_duration("15", &MUTE_DURATION_RANGE),
-            Ok(Duration::from_secs(15 * 60))
+            Ok(dur::minutes(15))
         );
         assert!(
             parse_bounded_duration("10s", &MUTE_DURATION_RANGE).is_err(),

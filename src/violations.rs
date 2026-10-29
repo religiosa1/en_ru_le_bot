@@ -131,14 +131,13 @@ fn ordinal_en(n: u32) -> String {
 
 #[cfg(test)]
 mod tests {
-    use std::time::Duration;
-
     use super::*;
+    use crate::duration as dur;
 
     #[test]
     fn registers_violations_with_sliding_expiry() {
         let mut state = State::default();
-        state.settings.warnings_expiry = Duration::from_secs(60);
+        state.settings.warnings_expiry = dur::minutes(1);
         assert_eq!(register(&mut state, 1, Some("user"), 1000), 1);
         assert_eq!(register(&mut state, 1, None, 5000), 2);
         let violation = &state.violations[&1];

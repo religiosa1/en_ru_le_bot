@@ -7,13 +7,14 @@ use chrono::Utc;
 use teloxide::prelude::*;
 use tracing::{debug, info};
 
+use crate::duration as dur;
 use crate::langday::{check_message, weekday_utc};
 use crate::lid::Lid;
 use crate::members::WelcomeState;
 use crate::state::{Settings, Store, now_ms};
 use crate::{captcha, commands, members, violations};
 
-const ADMINS_CACHE_TTL: Duration = Duration::from_secs(3 * 60 * 60);
+const ADMINS_CACHE_TTL: Duration = dur::hours(3);
 
 /// Telegram can send a lot of updates we missed while being down, those aren't checked.
 const MESSAGE_AGE_THRESHOLD: chrono::TimeDelta = chrono::TimeDelta::minutes(5);
