@@ -11,7 +11,7 @@ use crate::duration as dur;
 use crate::langday::{check_message, weekday_utc};
 use crate::lid::Lid;
 use crate::members::WelcomeState;
-use crate::state::{Settings, Store, now_ms};
+use crate::state::{Settings, Store, lock, now_ms};
 use crate::{captcha, commands, members, violations};
 
 const ADMINS_CACHE_TTL: Duration = dur::hours(3);
@@ -50,7 +50,7 @@ impl App {
 
     /// Whether a user is an admin of the target chat, with admins cached.
     pub async fn is_admin(&self, bot: &Bot, user_id: UserId) -> anyhow::Result<bool> {
-        if let Some((ids, refreshed_at)) = &*self.admins.lock().unwrap()
+        if let Some((ids, refreshed_at)) = &*lock(&self.admins)
             && refreshed_at.elapsed() < ADMINS_CACHE_TTL
         {
             return Ok(ids.contains(&user_id));
@@ -66,14 +66,14 @@ impl App {
             .map(|m| m.user.id)
             .collect();
         debug!(?ids, "Admins list fetched");
-        *self.admins.lock().unwrap() = Some((ids.clone(), Instant::now()));
+        *lock(&self.admins) = Some((ids.clone(), Instant::now()));
         Ok(ids)
     }
 
     /// Starts the warnings cooldown, false if it's still active.
     fn start_cooldown(&self) -> bool {
         let now = now_ms();
-        let mut until = self.cooldown_until.lock().unwrap();
+        let mut until = lock(&self.cooldown_until);
         if until.is_some_and(|until| until > now) {
             info!(cooldown_until = *until, "Still cooling down, no warning");
             return false;
@@ -85,7 +85,7 @@ impl App {
 
     /// Time left until warnings are issued again.
     pub fn remaining_cooldown(&self) -> Duration {
-        let until = self.cooldown_until.lock().unwrap().unwrap_or(0);
+        let until = lock(&self.cooldown_until).unwrap_or(0);
         Duration::from_millis(until.saturating_sub(now_ms()))
     }
 
@@ -94,7 +94,7 @@ impl App {
         let old = self
             .store
             .update(|s| std::mem::replace(&mut s.settings.cooldown, cooldown))?;
-        if let Some(until) = self.cooldown_until.lock().unwrap().as_mut() {
+        if let Some(until) = lock(&self.cooldown_until).as_mut() {
             *until = (*until + cooldown.as_millis() as u64).saturating_sub(old.as_millis() as u64);
         }
         Ok(())
@@ -104,7 +104,7 @@ impl App {
     pub fn reset_cooldown(&self) -> anyhow::Result<Duration> {
         let default = Settings::default().cooldown;
         self.store.update(|s| s.settings.cooldown = default)?;
-        *self.cooldown_until.lock().unwrap() = None;
+        *lock(&self.cooldown_until) = None;
         Ok(default)
     }
 }

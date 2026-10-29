@@ -3,7 +3,7 @@
 use std::collections::HashMap;
 use std::fs;
 use std::path::PathBuf;
-use std::sync::Mutex;
+use std::sync::{Mutex, MutexGuard, PoisonError};
 use std::time::Duration;
 
 use anyhow::Context;
@@ -139,7 +139,7 @@ impl Store {
 
     /// Reads current state, with expired records already removed.
     pub fn read<T>(&self, f: impl FnOnce(&State) -> T) -> T {
-        let mut state = self.state.lock().unwrap();
+        let mut state = lock(&self.state);
         state.prune(now_ms());
         f(&state)
     }
@@ -147,7 +147,7 @@ impl Store {
     /// Mutates the state and persists it.
     // ponytail: rewrites the whole file synchronously under the lock, fine for a few KB of state.
     pub fn update<T>(&self, f: impl FnOnce(&mut State) -> T) -> anyhow::Result<T> {
-        let mut state = self.state.lock().unwrap();
+        let mut state = lock(&self.state);
         state.prune(now_ms());
         let result = f(&mut state);
         self.save(&state)?;
@@ -166,6 +166,11 @@ impl Store {
             .with_context(|| format!("rename {tmp:?} to {:?}", self.path))?;
         Ok(())
     }
+}
+
+/// Locks a mutex, ignoring poisoning: a panic in one handler shouldn't take down every later one.
+pub fn lock<T>(mutex: &Mutex<T>) -> MutexGuard<'_, T> {
+    mutex.lock().unwrap_or_else(PoisonError::into_inner)
 }
 
 pub fn now_ms() -> u64 {

@@ -11,6 +11,7 @@ use teloxide::types::{
 use tracing::{debug, error, info};
 
 use crate::bot::App;
+use crate::state::lock;
 use crate::{captcha, md};
 
 /// Newcomers can only send text messages for this long, to prevent spam.
@@ -73,7 +74,7 @@ async fn probation(bot: &Bot, app: &App, user: &User) -> anyhow::Result<()> {
 
 /// Counts a chat message towards the next full welcome message.
 pub fn count_message(app: &App) {
-    let mut state = app.welcome.lock().unwrap();
+    let mut state = lock(&app.welcome);
     state.messages_to_long_welcome = state.messages_to_long_welcome.saturating_sub(1);
 }
 
@@ -81,7 +82,7 @@ pub fn count_message(app: &App) {
 /// chat messages; until then, newcomers are mentioned in a reply to the last one.
 pub async fn welcome(bot: &Bot, app: &App, user: &User) {
     let (is_long, reply_to) = {
-        let state = app.welcome.lock().unwrap();
+        let state = lock(&app.welcome);
         (state.messages_to_long_welcome == 0, state.last_long_welcome)
     };
     debug!(user_id = user.id.0, is_long, "Sending welcome");
@@ -100,7 +101,7 @@ pub async fn welcome(bot: &Bot, app: &App, user: &User) {
     }
     match request.await {
         Ok(msg) if is_long => {
-            *app.welcome.lock().unwrap() = WelcomeState {
+            *lock(&app.welcome) = WelcomeState {
                 messages_to_long_welcome: MESSAGES_BETWEEN_LONG_WELCOMES,
                 last_long_welcome: Some(msg.id),
             };
