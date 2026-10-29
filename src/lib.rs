@@ -12,3 +12,6 @@ pub mod md;
 pub mod members;
 pub mod state;
 pub mod violations;
+
+#[cfg(test)]
+mod testing;

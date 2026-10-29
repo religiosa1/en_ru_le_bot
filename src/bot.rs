@@ -132,3 +132,102 @@ pub async fn on_message(bot: Bot, app: Arc<App>, msg: Message) -> anyhow::Result
     }
     violations::punish(&bot, &app, &msg, user, &violation).await
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::VERSION;
+    use crate::langday::Lang;
+    use crate::state::Captcha;
+    use crate::testing::{ADMIN_ID, CHAT_ID, TestBot, USER_ID, message, message_at};
+
+    const EN_TEXT: &str = "something in english here";
+
+    /// Russian day regardless of the weekday the tests run on
+    fn russian_day() -> Settings {
+        Settings { forced_lang: Some(Lang::Ru), ..Settings::default() }
+    }
+
+    async fn send(t: &TestBot, msg: Message) {
+        on_message(t.bot.clone(), t.app.clone(), msg).await.unwrap();
+    }
+
+    #[tokio::test]
+    async fn warns_about_wrong_language() {
+        let t = TestBot::new(russian_day()).await;
+        send(&t, message(USER_ID, CHAT_ID, EN_TEXT)).await;
+        let sent = t.calls("sendmessage").await;
+        assert_eq!(sent.len(), 1);
+        assert_eq!(sent[0]["text"], "Hey, today is a Russian day. Try to speak Russian!\n\nThis is your 1st warning.");
+        assert_eq!(sent[0]["reply_parameters"]["message_id"], 1);
+        assert_eq!(t.app.store.read(|s| s.violations[&USER_ID].count), 1);
+    }
+
+    #[tokio::test]
+    async fn skips_admins_old_messages_other_chats_and_correct_language() {
+        let t = TestBot::new(russian_day()).await;
+        send(&t, message(ADMIN_ID, CHAT_ID, EN_TEXT)).await;
+        let hour_ago = now_ms() / 1000 - 3600;
+        send(&t, message_at(USER_ID, CHAT_ID, EN_TEXT, hour_ago)).await;
+        send(&t, message(USER_ID, CHAT_ID - 1, EN_TEXT)).await;
+        send(&t, message(USER_ID, CHAT_ID, "что-то на русском тут написано")).await;
+        assert!(t.sent_texts().await.is_empty());
+    }
+
+    #[tokio::test]
+    async fn warns_once_per_cooldown() {
+        let t = TestBot::new(russian_day()).await;
+        send(&t, message(USER_ID, CHAT_ID, EN_TEXT)).await;
+        send(&t, message(USER_ID + 1, CHAT_ID, EN_TEXT)).await;
+        assert_eq!(t.sent_texts().await.len(), 1);
+        assert!(t.app.remaining_cooldown() > Duration::ZERO);
+    }
+
+    #[tokio::test]
+    async fn mutes_after_too_many_warnings() {
+        let t = TestBot::new(Settings { max_violations: 0, ..russian_day() }).await;
+        send(&t, message(USER_ID, CHAT_ID, EN_TEXT)).await;
+        let restrictions = t.calls("restrictchatmember").await;
+        assert_eq!(restrictions.len(), 1);
+        assert_eq!(restrictions[0]["user_id"], USER_ID);
+        assert!(restrictions[0]["until_date"].as_i64().is_some());
+        assert_eq!(t.sent_texts().await, ["You're temporarily muted for repeated violations."]);
+    }
+
+    #[tokio::test]
+    async fn only_warns_with_mutes_disabled() {
+        let t = TestBot::new(Settings { mute_enabled: false, max_violations: 0, ..russian_day() }).await;
+        send(&t, message(USER_ID, CHAT_ID, EN_TEXT)).await;
+        assert!(t.calls("restrictchatmember").await.is_empty());
+        assert_eq!(t.sent_texts().await, ["Hey, today is a Russian day. Try to speak Russian!"]);
+        assert!(t.app.store.read(|s| s.violations.is_empty()), "violations aren't counted");
+    }
+
+    #[tokio::test]
+    async fn runs_commands_with_admin_checks() {
+        let t = TestBot::new(Settings::default()).await;
+        send(&t, message(USER_ID, USER_ID as i64, "/version")).await;
+        send(&t, message(USER_ID, CHAT_ID, "/settings")).await;
+        send(&t, message(ADMIN_ID, ADMIN_ID as i64, "/settings")).await;
+        let sent = t.sent_texts().await;
+        assert_eq!(sent[0], VERSION);
+        assert_eq!(sent[1], format!("@user{USER_ID} You're not allowed to do that!"));
+        assert!(sent[2].contains("cooldown: 2m"), "{}", sent[2]);
+    }
+
+    #[tokio::test]
+    async fn checks_captcha_before_language() {
+        let t = TestBot::new(russian_day()).await;
+        let captcha = Captcha { question: "2 + 3".into(), answer: "5".into(), username: None, asked_at: now_ms(), attempts: 0, msg_ids: vec![7] };
+        t.app.store.update(|s| s.captchas.insert(USER_ID, captcha)).unwrap();
+
+        send(&t, message(USER_ID, CHAT_ID, EN_TEXT)).await;
+        assert_eq!(t.calls("deletemessage").await.len(), 1, "unverified user's message is deleted");
+        assert!(t.sent_texts().await.is_empty(), "no language warning");
+
+        send(&t, message(USER_ID, CHAT_ID, "5")).await;
+        assert!(t.app.store.read(|s| s.captchas.is_empty()));
+        assert_eq!(t.calls("deletemessages").await[0]["message_ids"], serde_json::json!([7]));
+        assert!(t.sent_texts().await[0].starts_with("Welcome"));
+    }
+}

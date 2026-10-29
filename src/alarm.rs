@@ -9,7 +9,7 @@ use tracing::{error, info, warn};
 use crate::bot::App;
 use crate::duration::DAY;
 use crate::langday::{Day, Lang, weekday_utc};
-use crate::state::now_ms;
+use crate::state::{Settings, now_ms};
 
 /// Announcements this late (e.g. after the host was suspended) are skipped
 const MAX_DELAY_MS: u64 = 60 * 60 * 1000;
@@ -31,19 +31,64 @@ pub async fn run(bot: Bot, app: Arc<App>) {
 }
 
 async fn announce(bot: &Bot, app: &App, weekday: u32) {
-    let settings = app.settings();
-    if !settings.alarm_enabled {
+    let Some(text) = announcement(&app.settings(), weekday) else {
         return;
-    }
-    let text = match Day::of(&settings, weekday) {
-        // nothing changes on forced days
-        Day::Disabled | Day::Forced(_) => return,
-        Day::Scheduled(Some(Lang::En)) => "English day has begun.",
-        Day::Scheduled(Some(Lang::Ru)) => "Начался русский день.",
-        Day::Scheduled(None) => "Free day has begun.\nНачался свободный день.",
     };
     info!(text, "Announcing day change");
     if let Err(err) = bot.send_message(app.chat_id, text).await {
         error!(%err, "Error while trying to issue day change warning");
+    }
+}
+
+/// What to announce at the start of a day, None if nothing.
+fn announcement(settings: &Settings, weekday: u32) -> Option<&'static str> {
+    if !settings.alarm_enabled {
+        return None;
+    }
+    match Day::of(settings, weekday) {
+        // nothing changes on forced days
+        Day::Disabled | Day::Forced(_) => None,
+        Day::Scheduled(Some(Lang::En)) => Some("English day has begun."),
+        Day::Scheduled(Some(Lang::Ru)) => Some("Начался русский день."),
+        Day::Scheduled(None) => Some("Free day has begun.\nНачался свободный день."),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::testing::TestBot;
+
+    const SUNDAY: u32 = 0;
+    const MONDAY: u32 = 1;
+    const TUESDAY: u32 = 2;
+
+    #[test]
+    fn announces_scheduled_days() {
+        let settings = Settings::default();
+        assert_eq!(announcement(&settings, MONDAY), Some("Начался русский день."));
+        assert_eq!(announcement(&settings, TUESDAY), Some("English day has begun."));
+        assert_eq!(announcement(&settings, SUNDAY), Some("Free day has begun.\nНачался свободный день."));
+    }
+
+    #[test]
+    fn stays_silent_when_nothing_changes() {
+        let forced = Settings { forced_lang: Some(Lang::En), ..Settings::default() };
+        assert_eq!(announcement(&forced, MONDAY), None);
+        let disabled = Settings { langday_checks: false, ..Settings::default() };
+        assert_eq!(announcement(&disabled, MONDAY), None);
+        let alarm_off = Settings { alarm_enabled: false, ..Settings::default() };
+        assert_eq!(announcement(&alarm_off, MONDAY), None);
+    }
+
+    #[tokio::test]
+    async fn sends_announcement_to_the_chat() {
+        let t = TestBot::new(Settings::default()).await;
+        announce(&t.bot, &t.app, TUESDAY).await;
+        assert_eq!(t.sent_texts().await, ["English day has begun."]);
+
+        let t = TestBot::new(Settings { alarm_enabled: false, ..Settings::default() }).await;
+        announce(&t.bot, &t.app, TUESDAY).await;
+        assert!(t.sent_texts().await.is_empty());
     }
 }

@@ -115,3 +115,91 @@ Write to the admins if someone is bothering you, so they can settle the situatio
         &[&mention, &mention],
     )
 }
+
+#[cfg(test)]
+mod tests {
+    use serde_json::json;
+
+    use super::*;
+    use crate::state::Settings;
+    use crate::testing::{CHAT_ID, SENT_MSG_ID, TestBot, USER_ID, member_update, user_json};
+
+    #[test]
+    fn detects_joins_only() {
+        let joined = |old, new| joined_user(&member_update(user_json(USER_ID), old, new)).is_some();
+        assert!(joined("left", "member"));
+        assert!(joined("kicked", "member"));
+        assert!(!joined("member", "left"), "leaving");
+        assert!(!joined("member", "member"), "no change");
+    }
+
+    #[tokio::test]
+    async fn newcomer_gets_probation_and_captcha() {
+        let t = TestBot::new(Settings::default()).await;
+        on_chat_member(t.bot.clone(), t.app.clone(), member_update(user_json(USER_ID), "left", "member")).await.unwrap();
+
+        let restrictions = t.calls("restrictchatmember").await;
+        assert_eq!(restrictions.len(), 1);
+        assert_eq!(restrictions[0]["user_id"], USER_ID);
+        assert_eq!(restrictions[0]["permissions"]["can_send_messages"], true);
+        // false permissions are omitted in the request
+        assert_ne!(restrictions[0]["permissions"]["can_send_photos"], true);
+
+        let sent = t.calls("sendmessage").await;
+        assert_eq!(sent.len(), 1);
+        assert_eq!(sent[0]["parse_mode"], "MarkdownV2");
+        assert!(sent[0]["text"].as_str().unwrap().contains("please send the answer"));
+        assert_eq!(t.app.store.read(|s| s.captchas[&USER_ID].msg_ids.clone()), [SENT_MSG_ID]);
+    }
+
+    #[tokio::test]
+    async fn ignores_other_member_changes_and_chats() {
+        let t = TestBot::new(Settings::default()).await;
+        on_chat_member(t.bot.clone(), t.app.clone(), member_update(user_json(USER_ID), "member", "left")).await.unwrap();
+        let mut other_chat = member_update(user_json(USER_ID), "left", "member");
+        other_chat.chat.id = ChatId(CHAT_ID - 1);
+        on_chat_member(t.bot.clone(), t.app.clone(), other_chat).await.unwrap();
+        assert!(t.calls("restrictchatmember").await.is_empty());
+        assert!(t.sent_texts().await.is_empty());
+    }
+
+    #[tokio::test]
+    async fn bots_are_banned_unless_allowed() {
+        let bot_user = json!({"id": 7, "is_bot": true, "first_name": "Spam", "username": "spam_bot"});
+        let t = TestBot::new(Settings::default()).await;
+        on_chat_member(t.bot.clone(), t.app.clone(), member_update(bot_user.clone(), "left", "member")).await.unwrap();
+        assert_eq!(t.calls("banchatmember").await.len(), 1);
+        assert!(t.calls("restrictchatmember").await.is_empty(), "no probation for bots");
+
+        let t = TestBot::new(Settings { captcha_bots_allowed: true, ..Settings::default() }).await;
+        on_chat_member(t.bot.clone(), t.app.clone(), member_update(bot_user, "left", "member")).await.unwrap();
+        assert!(t.calls("banchatmember").await.is_empty());
+    }
+
+    #[tokio::test]
+    async fn no_captcha_when_disabled() {
+        let t = TestBot::new(Settings { captcha_enabled: false, ..Settings::default() }).await;
+        on_chat_member(t.bot.clone(), t.app.clone(), member_update(user_json(USER_ID), "left", "member")).await.unwrap();
+        assert_eq!(t.calls("restrictchatmember").await.len(), 1, "probation still applies");
+        assert!(t.sent_texts().await.is_empty());
+    }
+
+    #[tokio::test]
+    async fn rotates_long_and_short_welcomes() {
+        let t = TestBot::new(Settings::default()).await;
+        let user: User = serde_json::from_value(user_json(USER_ID)).unwrap();
+        welcome(&t.bot, &t.app, &user).await;
+        welcome(&t.bot, &t.app, &user).await;
+        for _ in 0..MESSAGES_BETWEEN_LONG_WELCOMES {
+            count_message(&t.app);
+        }
+        welcome(&t.bot, &t.app, &user).await;
+
+        let sent = t.calls("sendmessage").await;
+        assert!(sent[0]["text"].as_str().unwrap().starts_with("Welcome"));
+        assert!(sent[0].get("reply_parameters").is_none());
+        assert_eq!(sent[1]["text"], md::mention(&user), "short one is a mention");
+        assert_eq!(sent[1]["reply_parameters"]["message_id"], SENT_MSG_ID);
+        assert!(sent[2]["text"].as_str().unwrap().starts_with("Welcome"), "long again after enough messages");
+    }
+}
