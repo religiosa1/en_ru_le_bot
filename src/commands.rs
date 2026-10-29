@@ -34,8 +34,37 @@ pub enum Access {
     Hidden,
 }
 
+/// What a command does; [run] matches on it exhaustively.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum Kind {
+    Today,
+    Rules,
+    Help,
+    Version,
+    Alarm,
+    LangChecks,
+    OtherLang,
+    ForceLang,
+    Mute,
+    Pardon,
+    MuteDuration,
+    WarningsExpiry,
+    WarningsNumber,
+    Cooldown,
+    Settings,
+    Trust,
+    Captcha,
+    CaptchaTime,
+    CaptchaBots,
+    FlushAdmins,
+    Rt,
+    CaptchaMsg,
+    CaptchaClear,
+}
+
 #[derive(Debug)]
 pub struct Spec {
+    pub kind: Kind,
     pub name: &'static str,
     pub description: &'static str,
     pub access: Access,
@@ -48,8 +77,9 @@ impl Spec {
     }
 }
 
-const fn spec(name: &'static str, description: &'static str, access: Access) -> Spec {
+const fn spec(kind: Kind, name: &'static str, description: &'static str, access: Access) -> Spec {
     Spec {
+        kind,
         name,
         description,
         access,
@@ -58,96 +88,139 @@ const fn spec(name: &'static str, description: &'static str, access: Access) -> 
 
 const COMMANDS: &[Spec] = &[
     spec(
+        Kind::Today,
         "today",
         "check current day: whether it's English, Russian, or Free",
         Access::Member,
     ),
-    spec("rules", "display the group's rules", Access::Member),
     spec(
+        Kind::Rules,
+        "rules",
+        "display the group's rules",
+        Access::Member,
+    ),
+    spec(
+        Kind::Help,
         "help",
         r#"["members"] display help on bot commands"#,
         Access::Member,
     ),
-    spec("version", "display the bot version", Access::Member),
     spec(
+        Kind::Version,
+        "version",
+        "display the bot version",
+        Access::Member,
+    ),
+    spec(
+        Kind::Alarm,
         "alarm",
         "Toggle notifications about day change on/off",
         Access::Admin,
     ),
-    spec("langchecks", "Toggle en/ru days on/off", Access::Admin),
     spec(
+        Kind::LangChecks,
+        "langchecks",
+        "Toggle en/ru days on/off",
+        Access::Admin,
+    ),
+    spec(
+        Kind::OtherLang,
         "otherlang",
         "Toggle checks for languages other than en/ru on/off",
         Access::Admin,
     ),
     spec(
+        Kind::ForceLang,
         "forcelang",
         "[en|ru] Force a specific language",
         Access::Admin,
     ),
     spec(
+        Kind::Mute,
         "mute",
         "Toggle mutes on language violations on/off",
         Access::Admin,
     ),
     spec(
+        Kind::Pardon,
         "pardon",
         "[@user] - Remove violations for specific user or all users",
         Access::Admin,
     ),
     spec(
+        Kind::MuteDuration,
         "mute_duration",
         "[duration] - Set or view mute duration",
         Access::Admin,
     ),
     spec(
+        Kind::WarningsExpiry,
         "warnings_expiry",
         "[duration] - Set or view warnings expiration time",
         Access::Admin,
     ),
     spec(
+        Kind::WarningsNumber,
         "warnings_number",
         "[int] - Set or view number of warnings before mute",
         Access::Admin,
     ),
     spec(
+        Kind::Cooldown,
         "cooldown",
         "[duration] Set cooldown value for wrong language warnings",
         Access::Admin,
     ),
-    spec("settings", "display current bot settings", Access::Admin),
     spec(
+        Kind::Settings,
+        "settings",
+        "display current bot settings",
+        Access::Admin,
+    ),
+    spec(
+        Kind::Trust,
         "trust",
         "@username remove captcha check for a user",
         Access::Admin,
     ),
     spec(
+        Kind::Captcha,
         "captcha",
         "toggle captcha check for newcomers on/off",
         Access::Admin,
     ),
     spec(
+        Kind::CaptchaTime,
         "captcha_time",
         "[duration] show or set time in which members must pass captcha check",
         Access::Admin,
     ),
-    spec("captcha_bots", "toggle bots allowed on/off", Access::Admin),
     spec(
+        Kind::CaptchaBots,
+        "captcha_bots",
+        "toggle bots allowed on/off",
+        Access::Admin,
+    ),
+    spec(
+        Kind::FlushAdmins,
         "flush_admins",
         "invalidate the admins cache",
         Access::Hidden,
     ),
     spec(
+        Kind::Rt,
         "rt",
         "<text> send text to the chat on behalf of the bot",
         Access::Hidden,
     ),
     spec(
+        Kind::CaptchaMsg,
         "captcha_msg",
         "show captcha and welcome messages, to check their formatting",
         Access::Hidden,
     ),
     spec(
+        Kind::CaptchaClear,
         "captcha_clear",
         "remove all pending captcha checks",
         Access::Hidden,
@@ -204,7 +277,7 @@ pub async fn handle(
         );
         return not_allowed(bot, app, msg, user).await;
     }
-    if let Some(text) = run(bot, app, msg, user, spec.name, args).await? {
+    if let Some(text) = run(bot, app, msg, user, spec.kind, args).await? {
         bot.send_message(msg.chat.id, text).await?;
     }
     Ok(())
@@ -236,7 +309,7 @@ async fn run(
     app: &App,
     msg: &Message,
     user: &User,
-    name: &str,
+    kind: Kind,
     args: &str,
 ) -> anyhow::Result<Option<String>> {
     let toggle = |field: fn(&mut Settings) -> &mut bool| {
@@ -247,37 +320,37 @@ async fn run(
         })
     };
 
-    let reply = match name {
-        "today" => today(&app.settings()).into(),
-        "rules" => RULES.into(),
-        "version" => VERSION.into(),
-        "help" => help(args != "members" && app.is_admin(bot, user.id).await?),
-        "settings" => settings(app),
-        "alarm" => format!(
+    let reply = match kind {
+        Kind::Today => today(&app.settings()).into(),
+        Kind::Rules => RULES.into(),
+        Kind::Version => VERSION.into(),
+        Kind::Help => help(args != "members" && app.is_admin(bot, user.id).await?),
+        Kind::Settings => settings(app),
+        Kind::Alarm => format!(
             "Day change notifications are now {}",
             on_off(toggle(|s| &mut s.alarm_enabled)?)
         ),
-        "langchecks" => format!(
+        Kind::LangChecks => format!(
             "Language checks are now {}",
             on_off(toggle(|s| &mut s.langday_checks)?)
         ),
-        "otherlang" => format!(
+        Kind::OtherLang => format!(
             "Other language checks are now {}",
             on_off(toggle(|s| &mut s.otherlang_checks)?)
         ),
-        "mute" => format!(
+        Kind::Mute => format!(
             "Mute on language violations is now {}",
             on_off(toggle(|s| &mut s.mute_enabled)?)
         ),
-        "captcha" => format!(
+        Kind::Captcha => format!(
             "Captcha checks for newcomers are now {}",
             on_off(toggle(|s| &mut s.captcha_enabled)?)
         ),
-        "captcha_bots" => match toggle(|s| &mut s.captcha_bots_allowed)? {
+        Kind::CaptchaBots => match toggle(|s| &mut s.captcha_bots_allowed)? {
             true => "Bots can join now".into(),
             false => "Bots are forbidden to join now".into(),
         },
-        "forcelang" => {
+        Kind::ForceLang => {
             let lang = match args.to_lowercase().as_str() {
                 "" => None,
                 "en" | "eng" | "english" => Some(Lang::En),
@@ -290,24 +363,24 @@ async fn run(
                 None => "Forced day is now disabled.".into(),
             }
         }
-        "mute_duration" => {
+        Kind::MuteDuration => {
             duration_setting(app, args, "Mute duration", MUTE_DURATION_RANGE, |s| {
                 &mut s.mute_duration
             })?
         }
-        "warnings_expiry" => {
+        Kind::WarningsExpiry => {
             duration_setting(app, args, "Warning expiry", WARNINGS_EXPIRY_RANGE, |s| {
                 &mut s.warnings_expiry
             })?
         }
-        "captcha_time" => duration_setting(
+        Kind::CaptchaTime => duration_setting(
             app,
             args,
             "Captcha verification time",
             CAPTCHA_TIME_RANGE,
             |s| &mut s.captcha_max_age,
         )?,
-        "warnings_number" => match (args, args.parse::<u32>()) {
+        Kind::WarningsNumber => match (args, args.parse::<u32>()) {
             ("", _) => format!(
                 "Maximum number of warnings is {}",
                 app.settings().max_violations
@@ -318,8 +391,8 @@ async fn run(
                 format!("Maximum number of warnings is now {value}")
             }
         },
-        "cooldown" => cooldown(app, args)?,
-        "pardon" => match user_arg(msg, args) {
+        Kind::Cooldown => cooldown(app, args)?,
+        Kind::Pardon => match user_arg(msg, args) {
             Err(err) => err.into(),
             Ok(None) => {
                 for user_id in app.store.update(violations::pardon_all)? {
@@ -343,7 +416,7 @@ async fn run(
                 }
             }
         },
-        "trust" => match user_arg(msg, args) {
+        Kind::Trust => match user_arg(msg, args) {
             Err(err) => err.into(),
             Ok(None) => "username is required in this command".into(),
             Ok(Some((target, name))) => {
@@ -351,15 +424,15 @@ async fn run(
                 format!("OK, user @{name} is now trusted")
             }
         },
-        "flush_admins" => {
+        Kind::FlushAdmins => {
             app.refresh_admins(bot).await?;
             "List of admins refreshed".into()
         }
-        "captcha_clear" => {
+        Kind::CaptchaClear => {
             app.store.update(|s| s.captchas.clear())?;
             "Removed all pending captcha checks".into()
         }
-        "captcha_msg" => {
+        Kind::CaptchaMsg => {
             let (question, _) = captcha::question_answer();
             for text in [
                 captcha::message(&question, user, app.settings().captcha_max_age),
@@ -371,13 +444,12 @@ async fn run(
             }
             return Ok(None);
         }
-        "rt" => {
+        Kind::Rt => {
             if !args.is_empty() {
                 bot.send_message(app.chat_id, args).await?;
             }
             return Ok(None);
         }
-        _ => unreachable!("command {name} is in COMMANDS, but isn't handled"),
     };
     Ok(Some(reply))
 }
@@ -631,6 +703,15 @@ mod tests {
         );
         assert!(parse_bounded_duration("0", &CAPTCHA_TIME_RANGE).is_err());
         assert!(parse_bounded_duration("nope", &CAPTCHA_TIME_RANGE).is_err());
+    }
+
+    #[test]
+    fn commands_are_unique() {
+        for (i, a) in COMMANDS.iter().enumerate() {
+            for b in &COMMANDS[i + 1..] {
+                assert!(a.name != b.name && a.kind != b.kind, "{a:?} vs {b:?}");
+            }
+        }
     }
 
     #[test]
