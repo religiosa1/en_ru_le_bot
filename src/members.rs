@@ -122,7 +122,7 @@ Sunday — free day.
 
 To prevent spam, newcomers can't post GIFs and such for a while after they join.
 
-*DO NOT WRITE TO OTHER MEMBERS DIRECTLY UNTIL YOU AT LEAST KNOW THEM.*
+*DO NOT MESSAGE OTHER MEMBERS DIRECTLY UNTIL YOU AT LEAST KNOW THEM.*
 Write to the admins if someone is bothering you, so they can settle the situation.
 
 Добро пожаловать, {}!
