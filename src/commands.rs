@@ -34,201 +34,69 @@ pub enum Access {
     Hidden,
 }
 
-/// What a command does; [run] matches on it exhaustively.
-#[derive(Debug, Clone, Copy, PartialEq)]
-pub enum Kind {
-    Today,
-    Rules,
-    Help,
-    Version,
-    Alarm,
-    LangChecks,
-    OtherLang,
-    ForceLang,
-    Mute,
-    Pardon,
-    MuteDuration,
-    WarningsExpiry,
-    WarningsNumber,
-    Cooldown,
-    Settings,
-    Trust,
-    Captcha,
-    CaptchaTime,
-    CaptchaBots,
-    FlushAdmins,
-    Rt,
-    CaptchaMsg,
-    CaptchaClear,
+/// Defines [Kind] with its name, access and description, so each command is listed once.
+macro_rules! commands {
+    ($($kind:ident $name:literal $access:ident $description:literal,)*) => {
+        /// Bot command; [run] handles each one.
+        #[derive(Debug, Clone, Copy, PartialEq)]
+        pub enum Kind {
+            $($kind,)*
+        }
+
+        impl Kind {
+            /// In the order of the menu and /help.
+            const ALL: &[Kind] = &[$(Kind::$kind,)*];
+
+            /// Name, description and access.
+            fn spec(self) -> (&'static str, &'static str, Access) {
+                match self {
+                    $(Kind::$kind => ($name, $description, Access::$access),)*
+                }
+            }
+        }
+    };
 }
 
-#[derive(Debug)]
-pub struct Spec {
-    pub kind: Kind,
-    pub name: &'static str,
-    pub description: &'static str,
-    pub access: Access,
+commands! {
+    Today          "today"           Member "check current day: whether it's English, Russian, or Free",
+    Rules          "rules"           Member "display the group's rules",
+    Help           "help"            Member r#"["members"] display help on bot commands"#,
+    Version        "version"         Member "display the bot version",
+    Alarm          "alarm"           Admin  "Toggle notifications about day change on/off",
+    LangChecks     "langchecks"      Admin  "Toggle en/ru days on/off",
+    OtherLang      "otherlang"       Admin  "Toggle checks for languages other than en/ru on/off",
+    ForceLang      "forcelang"       Admin  "[en|ru] Force a specific language",
+    Mute           "mute"            Admin  "Toggle mutes on language violations on/off",
+    Pardon         "pardon"          Admin  "[@user] - Remove violations for specific user or all users",
+    MuteDuration   "mute_duration"   Admin  "[duration] - Set or view mute duration",
+    WarningsExpiry "warnings_expiry" Admin  "[duration] - Set or view warnings expiration time",
+    WarningsNumber "warnings_number" Admin  "[int] - Set or view number of warnings before mute",
+    Cooldown       "cooldown"        Admin  "[duration] Set cooldown value for wrong language warnings",
+    Settings       "settings"        Admin  "display current bot settings",
+    Trust          "trust"           Admin  "@username remove captcha check for a user",
+    Captcha        "captcha"         Admin  "toggle captcha check for newcomers on/off",
+    CaptchaTime    "captcha_time"    Admin  "[duration] show or set time in which members must pass captcha check",
+    CaptchaBots    "captcha_bots"    Admin  "toggle bots allowed on/off",
+    FlushAdmins    "flush_admins"    Hidden "invalidate the admins cache",
+    Rt             "rt"              Hidden "<text> send text to the chat on behalf of the bot",
+    CaptchaMsg     "captcha_msg"     Hidden "show captcha and welcome messages, to check their formatting",
+    CaptchaClear   "captcha_clear"   Hidden "remove all pending captcha checks",
 }
 
-impl Spec {
+impl Kind {
+    fn name(self) -> &'static str {
+        self.spec().0
+    }
+
     /// Whether it's listed in the menu and /help.
-    fn visible_to(&self, admin: bool) -> bool {
-        self.access == Access::Member || (admin && self.access == Access::Admin)
+    fn visible_to(self, admin: bool) -> bool {
+        let access = self.spec().2;
+        access == Access::Member || (admin && access == Access::Admin)
     }
 }
-
-const fn spec(kind: Kind, name: &'static str, description: &'static str, access: Access) -> Spec {
-    Spec {
-        kind,
-        name,
-        description,
-        access,
-    }
-}
-
-const COMMANDS: &[Spec] = &[
-    spec(
-        Kind::Today,
-        "today",
-        "check current day: whether it's English, Russian, or Free",
-        Access::Member,
-    ),
-    spec(
-        Kind::Rules,
-        "rules",
-        "display the group's rules",
-        Access::Member,
-    ),
-    spec(
-        Kind::Help,
-        "help",
-        r#"["members"] display help on bot commands"#,
-        Access::Member,
-    ),
-    spec(
-        Kind::Version,
-        "version",
-        "display the bot version",
-        Access::Member,
-    ),
-    spec(
-        Kind::Alarm,
-        "alarm",
-        "Toggle notifications about day change on/off",
-        Access::Admin,
-    ),
-    spec(
-        Kind::LangChecks,
-        "langchecks",
-        "Toggle en/ru days on/off",
-        Access::Admin,
-    ),
-    spec(
-        Kind::OtherLang,
-        "otherlang",
-        "Toggle checks for languages other than en/ru on/off",
-        Access::Admin,
-    ),
-    spec(
-        Kind::ForceLang,
-        "forcelang",
-        "[en|ru] Force a specific language",
-        Access::Admin,
-    ),
-    spec(
-        Kind::Mute,
-        "mute",
-        "Toggle mutes on language violations on/off",
-        Access::Admin,
-    ),
-    spec(
-        Kind::Pardon,
-        "pardon",
-        "[@user] - Remove violations for specific user or all users",
-        Access::Admin,
-    ),
-    spec(
-        Kind::MuteDuration,
-        "mute_duration",
-        "[duration] - Set or view mute duration",
-        Access::Admin,
-    ),
-    spec(
-        Kind::WarningsExpiry,
-        "warnings_expiry",
-        "[duration] - Set or view warnings expiration time",
-        Access::Admin,
-    ),
-    spec(
-        Kind::WarningsNumber,
-        "warnings_number",
-        "[int] - Set or view number of warnings before mute",
-        Access::Admin,
-    ),
-    spec(
-        Kind::Cooldown,
-        "cooldown",
-        "[duration] Set cooldown value for wrong language warnings",
-        Access::Admin,
-    ),
-    spec(
-        Kind::Settings,
-        "settings",
-        "display current bot settings",
-        Access::Admin,
-    ),
-    spec(
-        Kind::Trust,
-        "trust",
-        "@username remove captcha check for a user",
-        Access::Admin,
-    ),
-    spec(
-        Kind::Captcha,
-        "captcha",
-        "toggle captcha check for newcomers on/off",
-        Access::Admin,
-    ),
-    spec(
-        Kind::CaptchaTime,
-        "captcha_time",
-        "[duration] show or set time in which members must pass captcha check",
-        Access::Admin,
-    ),
-    spec(
-        Kind::CaptchaBots,
-        "captcha_bots",
-        "toggle bots allowed on/off",
-        Access::Admin,
-    ),
-    spec(
-        Kind::FlushAdmins,
-        "flush_admins",
-        "invalidate the admins cache",
-        Access::Hidden,
-    ),
-    spec(
-        Kind::Rt,
-        "rt",
-        "<text> send text to the chat on behalf of the bot",
-        Access::Hidden,
-    ),
-    spec(
-        Kind::CaptchaMsg,
-        "captcha_msg",
-        "show captcha and welcome messages, to check their formatting",
-        Access::Hidden,
-    ),
-    spec(
-        Kind::CaptchaClear,
-        "captcha_clear",
-        "remove all pending captcha checks",
-        Access::Hidden,
-    ),
-];
 
 pub struct Command<'a> {
-    pub spec: &'static Spec,
+    pub kind: Kind,
     pub args: &'a str,
 }
 
@@ -240,19 +108,22 @@ pub fn parse<'a>(text: &'a str, bot_username: &str) -> Option<Command<'a>> {
     if !addressee.eq_ignore_ascii_case(bot_username) {
         return None;
     }
-    let spec = COMMANDS.iter().find(|c| c.name == name)?;
+    let kind = Kind::ALL.iter().copied().find(|k| k.name() == name)?;
     Some(Command {
-        spec,
+        kind,
         args: args.trim(),
     })
 }
 
 /// Commands for the bot menu: members get theirs, admins get admin ones as well.
 pub fn menu(for_admins: bool) -> Vec<BotCommand> {
-    COMMANDS
+    Kind::ALL
         .iter()
         .filter(|c| c.visible_to(for_admins))
-        .map(|c| BotCommand::new(c.name, c.description))
+        .map(|k| {
+            let (name, description, _) = k.spec();
+            BotCommand::new(name, description)
+        })
         .collect()
 }
 
@@ -263,21 +134,22 @@ pub async fn handle(
     user: &User,
     command: Command<'_>,
 ) -> anyhow::Result<()> {
-    let Command { spec, args } = command;
+    let Command { kind, args } = command;
+    let (name, _, access) = kind.spec();
     info!(
-        command = spec.name,
+        command = name,
         args,
         user_id = user.id.0,
         "Command received"
     );
-    if spec.access != Access::Member && !app.is_admin(bot, user.id).await? {
+    if access != Access::Member && !app.is_admin(bot, user.id).await? {
         info!(
             user_id = user.id.0,
             "User not authorized to perform this request"
         );
         return not_allowed(bot, app, msg, user).await;
     }
-    if let Some(text) = run(bot, app, msg, user, spec.kind, args).await? {
+    if let Some(text) = run(bot, app, msg, user, kind, args).await? {
         bot.send_message(msg.chat.id, text).await?;
     }
     Ok(())
@@ -472,16 +344,17 @@ fn today(settings: &Settings) -> &'static str {
 
 fn help(with_admin_commands: bool) -> String {
     let mut text = String::new();
-    for c in COMMANDS
+    for kind in Kind::ALL
         .iter()
-        .filter(|c| c.visible_to(with_admin_commands))
+        .filter(|k| k.visible_to(with_admin_commands))
     {
-        let suffix = if c.access == Access::Admin {
+        let (name, description, access) = kind.spec();
+        let suffix = if access == Access::Admin {
             " (admin-only)"
         } else {
             ""
         };
-        text += &format!("- /{} {}{suffix}\n", c.name, c.description);
+        text += &format!("- /{name} {description}{suffix}\n");
     }
     text
 }
@@ -662,7 +535,7 @@ mod tests {
 
     #[test]
     fn parses_commands() {
-        let parse = |text| parse(text, "en_ru_le_bot").map(|c| (c.spec.name, c.args));
+        let parse = |text| parse(text, "en_ru_le_bot").map(|c| (c.kind.name(), c.args));
         assert_eq!(parse("/help"), Some(("help", "")));
         assert_eq!(
             parse("/help@en_ru_le_bot members"),
@@ -706,20 +579,12 @@ mod tests {
     }
 
     #[test]
-    fn commands_are_unique() {
-        for (i, a) in COMMANDS.iter().enumerate() {
-            for b in &COMMANDS[i + 1..] {
-                assert!(a.name != b.name && a.kind != b.kind, "{a:?} vs {b:?}");
-            }
-        }
-    }
-
-    #[test]
     fn command_names_are_valid() {
-        for c in COMMANDS {
+        for &kind in Kind::ALL {
+            let name = kind.name();
             assert!(
-                c.name.len() <= 32
-                    && c.name
+                name.len() <= 32
+                    && name
                         .chars()
                         .all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '_')
             );
