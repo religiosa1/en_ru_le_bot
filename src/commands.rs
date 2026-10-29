@@ -549,7 +549,7 @@ On Monday, Wednesday and Friday we speak Russian. On Tuesday, Thursday and Satur
 
 The day changes at 00:00 UTC.
 
-DO NOT WRITE TO OTHER MEMBERS DIRECTLY UNTIL YOU AT LEAST KNOW THEM. Better not to message them at all until you're pretty sure you're not bothering them. This is highly discouraged and will be punished.
+DO NOT MESSAGE OTHER MEMBERS DIRECTLY UNTIL YOU AT LEAST KNOW THEM. Better not to message them at all until you're pretty sure you're not bothering them. This is highly discouraged and will be punished.
 
 Rudeness, trolling, harassment (including in DMs), antisocial behaviour and so on may lead to a ban. This is not a courtroom, but a community. You can get banned just because we don't like you -- be polite. Write to the admins if someone is bothering you, so they can settle the situation.
 Swearing isn't forbidden, but that doesn't mean you should do it constantly.
