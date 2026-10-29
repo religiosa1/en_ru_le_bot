@@ -156,8 +156,9 @@ mod tests {
         register(&mut state, 2, None, 0);
         register(&mut state, 3, None, 0);
         assert_eq!(
-            pardon(&mut state, &UserRef::Username("one".into())),
-            Some(1)
+            pardon(&mut state, &UserRef::Username("One".into())),
+            Some(1),
+            "usernames are case-insensitive"
         );
         assert_eq!(pardon(&mut state, &UserRef::Username("one".into())), None);
         assert_eq!(pardon(&mut state, &UserRef::Id(2)), Some(2));

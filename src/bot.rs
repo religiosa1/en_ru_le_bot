@@ -113,13 +113,15 @@ pub async fn on_message(bot: Bot, app: Arc<App>, msg: Message) -> anyhow::Result
     let (Some(text), Some(user)) = (msg.text(), msg.from.as_ref()) else {
         return Ok(());
     };
+    let in_chat = msg.chat.id == app.chat_id;
+    // Before commands, so unverified users can't post e.g. "/help <spam link>"
+    if in_chat && captcha::on_message(&bot, &app, &msg, user).await? {
+        return Ok(());
+    }
     if let Some(command) = commands::parse(text, &app.bot_username) {
         return commands::handle(&bot, &app, &msg, user, command).await;
     }
-    if msg.chat.id != app.chat_id {
-        return Ok(());
-    }
-    if captcha::on_message(&bot, &app, &msg, user).await? {
+    if !in_chat {
         return Ok(());
     }
     members::count_message(&app);
@@ -286,5 +288,45 @@ mod tests {
             serde_json::json!([7])
         );
         assert!(t.sent_texts().await[0].starts_with("Welcome"));
+    }
+
+    #[tokio::test]
+    async fn pardon_unmutes_text_mention_without_violations() {
+        let t = TestBot::new(Settings::default()).await;
+        let mut msg =
+            serde_json::to_value(message(ADMIN_ID, ADMIN_ID as i64, "/pardon Name")).unwrap();
+        msg["entities"] = serde_json::json!([{
+            "type": "text_mention",
+            "offset": 8,
+            "length": 4,
+            "user": crate::testing::user_json(USER_ID),
+        }]);
+        send(&t, serde_json::from_value(msg).unwrap()).await;
+
+        let restrictions = t.calls("restrictchatmember").await;
+        assert_eq!(restrictions.len(), 1, "unmuted although warnings expired");
+        assert_eq!(restrictions[0]["user_id"], USER_ID);
+        assert_eq!(t.sent_texts().await, ["Pardoned user @Name"]);
+    }
+
+    #[tokio::test]
+    async fn unverified_users_cant_run_commands() {
+        let t = TestBot::new(Settings::default()).await;
+        let captcha = Captcha {
+            question: "2 + 3".into(),
+            answer: "5".into(),
+            username: None,
+            asked_at: now_ms(),
+            attempts: 0,
+            msg_ids: vec![],
+        };
+        t.app
+            .store
+            .update(|s| s.captchas.insert(USER_ID, captcha))
+            .unwrap();
+
+        send(&t, message(USER_ID, CHAT_ID, "/help https://spam.example")).await;
+        assert_eq!(t.calls("deletemessage").await.len(), 1);
+        assert!(t.sent_texts().await.is_empty());
     }
 }

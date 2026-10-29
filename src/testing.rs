@@ -1,5 +1,6 @@
 //! Test helpers: a fake Telegram Bot API recording the calls handlers make, and update builders.
 
+use std::path::PathBuf;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
@@ -51,6 +52,7 @@ pub struct TestBot {
     pub bot: Bot,
     pub app: Arc<App>,
     server: MockServer,
+    _state_dir: TempDir,
 }
 
 impl TestBot {
@@ -61,7 +63,8 @@ impl TestBot {
             .mount(&server)
             .await;
         let bot = Bot::new("123:test").set_api_url(server.uri().parse().unwrap());
-        let store = Store::load(temp_state_path()).unwrap();
+        let state_dir = TempDir::new();
+        let store = Store::load(state_dir.state_path()).unwrap();
         store.update(|s| s.settings = settings).unwrap();
         let app = Arc::new(App::new(
             store,
@@ -69,7 +72,12 @@ impl TestBot {
             ChatId(CHAT_ID),
             "en_ru_le_bot".into(),
         ));
-        Self { bot, app, server }
+        Self {
+            bot,
+            app,
+            server,
+            _state_dir: state_dir,
+        }
     }
 
     /// Params of the calls made to a Bot API method, e.g. "sendmessage".
@@ -92,13 +100,25 @@ impl TestBot {
     }
 }
 
-fn temp_state_path() -> String {
-    static COUNTER: AtomicUsize = AtomicUsize::new(0);
-    let n = COUNTER.fetch_add(1, Ordering::Relaxed);
-    let dir =
-        std::env::temp_dir().join(format!("en_ru_le_bot_handlers_{}_{n}", std::process::id()));
-    let _ = std::fs::remove_dir_all(&dir);
-    dir.join("state.json").to_string_lossy().into_owned()
+/// Unique temp dir, removed on drop.
+pub struct TempDir(PathBuf);
+
+impl TempDir {
+    pub fn new() -> Self {
+        static COUNTER: AtomicUsize = AtomicUsize::new(0);
+        let n = COUNTER.fetch_add(1, Ordering::Relaxed);
+        Self(std::env::temp_dir().join(format!("en_ru_le_bot_test_{}_{n}", std::process::id())))
+    }
+
+    pub fn state_path(&self) -> PathBuf {
+        self.0.join("state.json")
+    }
+}
+
+impl Drop for TempDir {
+    fn drop(&mut self) {
+        let _ = std::fs::remove_dir_all(&self.0);
+    }
 }
 
 pub fn user_json(id: u64) -> Value {

@@ -321,7 +321,13 @@ async fn run(
                 "Pardoned all users".into()
             }
             Ok(Some((target, name))) => {
-                match app.store.update(|s| violations::pardon(s, &target))? {
+                let pardoned = app.store.update(|s| violations::pardon(s, &target))?;
+                // Mutes can outlive expired warnings, so a known id is unmuted regardless
+                let known_id = match target {
+                    UserRef::Id(id) => Some(id),
+                    UserRef::Username(_) => None,
+                };
+                match pardoned.or(known_id) {
                     Some(user_id) => {
                         restore_permissions(bot, app, user_id).await;
                         format!("Pardoned user @{name}")

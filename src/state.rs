@@ -102,7 +102,7 @@ impl UserRef {
             UserRef::Id(id) => records.contains_key(id).then_some(*id),
             UserRef::Username(name) => records
                 .iter()
-                .find(|(_, r)| username(r) == Some(name.as_str()))
+                .find(|(_, r)| username(r).is_some_and(|u| u.eq_ignore_ascii_case(name)))
                 .map(|(id, _)| *id),
         }
     }
@@ -178,13 +178,7 @@ pub fn now_ms() -> u64 {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    fn temp_path(name: &str) -> PathBuf {
-        let dir =
-            std::env::temp_dir().join(format!("en_ru_le_bot_test_{}_{name}", std::process::id()));
-        let _ = fs::remove_dir_all(&dir);
-        dir.join("state.json")
-    }
+    use crate::testing::TempDir;
 
     fn violation(expires_at: u64) -> Violation {
         Violation {
@@ -196,13 +190,15 @@ mod tests {
 
     #[test]
     fn missing_file_gives_defaults() {
-        let store = Store::load(temp_path("missing")).unwrap();
+        let dir = TempDir::new();
+        let store = Store::load(dir.state_path()).unwrap();
         assert_eq!(store.read(|s| s.clone()), State::default());
     }
 
     #[test]
     fn survives_restart() {
-        let path = temp_path("restart");
+        let dir = TempDir::new();
+        let path = dir.state_path();
         let store = Store::load(&path).unwrap();
         store
             .update(|s| {
@@ -219,7 +215,8 @@ mod tests {
 
     #[test]
     fn expired_records_are_dropped() {
-        let store = Store::load(temp_path("expiry")).unwrap();
+        let dir = TempDir::new();
+        let store = Store::load(dir.state_path()).unwrap();
         let now = now_ms();
         store
             .update(|s| {
@@ -235,7 +232,8 @@ mod tests {
 
     #[test]
     fn missing_fields_fall_back_to_defaults() {
-        let path = temp_path("partial");
+        let dir = TempDir::new();
+        let path = dir.state_path();
         fs::create_dir_all(path.parent().unwrap()).unwrap();
         fs::write(
             &path,
@@ -256,7 +254,8 @@ mod tests {
 
     #[test]
     fn corrupted_file_is_an_error() {
-        let path = temp_path("corrupted");
+        let dir = TempDir::new();
+        let path = dir.state_path();
         fs::create_dir_all(path.parent().unwrap()).unwrap();
         fs::write(&path, "{nope").unwrap();
         assert!(Store::load(&path).is_err());
