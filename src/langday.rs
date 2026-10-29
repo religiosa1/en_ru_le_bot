@@ -28,7 +28,7 @@ impl Lang {
 }
 
 /// Language of the day by weekday (0 = Sunday), None is a free day.
-pub fn scheduled_lang(weekday: u32) -> Option<Lang> {
+fn scheduled_lang(weekday: u32) -> Option<Lang> {
     match weekday {
         0 => None,
         1 | 3 | 5 => Some(Lang::Ru),
@@ -96,7 +96,7 @@ static LATIN_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"\p{Latin}").unw
 const REQUIRED_LANGUAGE_RATE: f64 = 1.7;
 
 /// Main language of a message by letter counts, None if it's mixed or has no letters.
-pub fn detect_en_ru(text: &str) -> Option<Lang> {
+fn detect_en_ru(text: &str) -> Option<Lang> {
     let ru = CYRILLIC_RE.find_iter(text).count() as f64;
     let en = LATIN_RE.find_iter(text).count() as f64;
     match (ru, en) {
@@ -131,13 +131,13 @@ fn is_cyrillic(c: char) -> bool {
 }
 
 /// Detects languages with a script other than cyrillic or latin, e.g. arabic or chinese.
-pub fn detect_bad_lang_by_charset(text: &str) -> bool {
+fn detect_bad_lang_by_charset(text: &str) -> bool {
     let allowed = |c: char| c.is_ascii_alphabetic() || "ïëöÏËÖ".contains(c) || is_cyrillic(c);
     charset_rate(text, allowed).is_some_and(|rate| rate < CHARSET_MATCH_RATE)
 }
 
 /// True for mostly cyrillic texts, and for texts without letters.
-pub fn is_mostly_cyrillic(text: &str) -> bool {
+fn is_mostly_cyrillic(text: &str) -> bool {
     charset_rate(text, is_cyrillic).is_none_or(|rate| rate >= CHARSET_MATCH_RATE)
 }
 
@@ -154,7 +154,13 @@ const ML_TARGET_CONFIDENCE: f32 = 0.7;
 const UNKNOWN_WORDS_THRESHOLD: f64 = 0.6;
 
 /// Messages shorter than this (in letters) aren't checked at all.
-pub const MIN_MSG_LENGTH: usize = 5;
+const MIN_MSG_LENGTH: usize = 5;
+
+/// Message text after [strip_non_letter_or_whitespace_chars], None if it's too short for a check.
+pub fn checkable_text(text: &str) -> Option<String> {
+    let cleaned = strip_non_letter_or_whitespace_chars(text);
+    (cleaned.chars().count() >= MIN_MSG_LENGTH).then_some(cleaned)
+}
 
 /// Message written in a wrong language.
 #[derive(Debug, Clone, PartialEq)]
@@ -172,11 +178,10 @@ pub fn check_message(
     text: &str,
     weekday: u32,
 ) -> Option<LangViolation> {
-    let cleaned = strip_non_letter_or_whitespace_chars(text);
-    if cleaned.chars().count() < MIN_MSG_LENGTH {
+    let Some(cleaned) = checkable_text(text) else {
         debug!("The message is too short for a check, ignoring");
         return None;
-    }
+    };
     let day = Day::of(settings, weekday).lang();
     if settings.otherlang_checks && detect_other_language(lid, text, &cleaned, day).is_some() {
         info!(text, ?day, "Decided it's a bad language");
@@ -205,11 +210,7 @@ pub fn check_message(
 #[derive(Debug, PartialEq)]
 pub enum OtherLang {
     Charset,
-    Ml {
-        confidence: f32,
-        unknown_words: usize,
-        total_words: usize,
-    },
+    Ml { confidence: f32 },
 }
 
 /// Detects a message written in a language other than en/ru.
@@ -282,8 +283,6 @@ pub fn detect_other_language(
     );
     has_plenty_unknown_words.then_some(OtherLang::Ml {
         confidence: detection.confidence,
-        unknown_words: unknown.len(),
-        total_words: words.len(),
     })
 }
 

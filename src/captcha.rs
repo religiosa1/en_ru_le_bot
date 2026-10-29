@@ -22,14 +22,14 @@ const MAX_ATTEMPTS: u32 = 7;
 const REPEAT_QUESTION_EVERY: u32 = 3;
 const SWEEP_INTERVAL: Duration = dur::minutes(1);
 
-pub struct Attempt {
-    pub correct: bool,
-    pub attempts: u32,
-    pub question: String,
+struct Attempt {
+    correct: bool,
+    attempts: u32,
+    question: String,
 }
 
 /// Adds a pending captcha, keeping bot messages of a previous one (e.g. the user left and rejoined) for cleanup.
-pub fn add(
+fn add(
     state: &mut State,
     user: &User,
     question: String,
@@ -54,7 +54,7 @@ pub fn add(
 }
 
 /// Registers an answer attempt, None if the user has no pending captcha.
-pub fn attempt(state: &mut State, user_id: u64, answer: &str) -> Option<Attempt> {
+fn attempt(state: &mut State, user_id: u64, answer: &str) -> Option<Attempt> {
     let captcha = state.captchas.get_mut(&user_id)?;
     captcha.attempts += 1;
     Some(Attempt {
@@ -65,13 +65,13 @@ pub fn attempt(state: &mut State, user_id: u64, answer: &str) -> Option<Attempt>
 }
 
 /// Removes a pending captcha, returning bot messages to clean up.
-pub fn remove(state: &mut State, user: &UserRef) -> Option<Vec<i32>> {
+fn remove(state: &mut State, user: &UserRef) -> Option<Vec<i32>> {
     let id = user.find(&state.captchas, |c| c.username.as_deref())?;
     state.captchas.remove(&id).map(|c| c.msg_ids)
 }
 
 /// Users who didn't solve their captcha since `asked_before` (unix ms).
-pub fn stale(state: &State, asked_before: u64) -> Vec<u64> {
+fn stale(state: &State, asked_before: u64) -> Vec<u64> {
     state
         .captchas
         .iter()

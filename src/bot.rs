@@ -21,10 +21,10 @@ const MESSAGE_AGE_THRESHOLD: chrono::TimeDelta = chrono::TimeDelta::minutes(5);
 
 pub struct App {
     pub store: Store,
-    pub lid: Lid,
+    lid: Lid,
     pub chat_id: ChatId,
     /// For commands addressed to a specific bot, e.g. "/help@en_ru_le_bot"
-    pub bot_username: String,
+    bot_username: String,
     admins: Mutex<Option<(Vec<UserId>, Instant)>>,
     /// Unix ms; no warnings are issued until then. In memory, as it's short-lived.
     cooldown_until: Mutex<Option<u64>>,
@@ -130,14 +130,15 @@ pub async fn on_message(bot: Bot, app: Arc<App>, msg: Message) -> anyhow::Result
         info!(date = %msg.date, "Message is too old, not checking it");
         return Ok(());
     }
-    if app.is_admin(&bot, user.id).await? {
-        debug!("User is an admin, not checking the language");
-        return Ok(());
-    }
     let Some(violation) = check_message(&app.lid, &app.settings(), text, weekday_utc(now_ms()))
     else {
         return Ok(());
     };
+    // After the check, so the admins list is only fetched for violations
+    if app.is_admin(&bot, user.id).await? {
+        debug!("User is an admin, no warning");
+        return Ok(());
+    }
     if !app.start_cooldown() {
         return Ok(());
     }
@@ -164,6 +165,22 @@ mod tests {
 
     async fn send(t: &TestBot, msg: Message) {
         on_message(t.bot.clone(), t.app.clone(), msg).await.unwrap();
+    }
+
+    /// "2 + 3" captcha for USER_ID
+    fn pending_captcha(t: &TestBot, msg_ids: Vec<i32>) {
+        let captcha = Captcha {
+            question: "2 + 3".into(),
+            answer: "5".into(),
+            username: None,
+            asked_at: now_ms(),
+            attempts: 0,
+            msg_ids,
+        };
+        t.app
+            .store
+            .update(|s| s.captchas.insert(USER_ID, captcha))
+            .unwrap();
     }
 
     #[tokio::test]
@@ -260,18 +277,7 @@ mod tests {
     #[tokio::test]
     async fn checks_captcha_before_language() {
         let t = TestBot::new(russian_day()).await;
-        let captcha = Captcha {
-            question: "2 + 3".into(),
-            answer: "5".into(),
-            username: None,
-            asked_at: now_ms(),
-            attempts: 0,
-            msg_ids: vec![7],
-        };
-        t.app
-            .store
-            .update(|s| s.captchas.insert(USER_ID, captcha))
-            .unwrap();
+        pending_captcha(&t, vec![7]);
 
         send(&t, message(USER_ID, CHAT_ID, EN_TEXT)).await;
         assert_eq!(
@@ -312,18 +318,7 @@ mod tests {
     #[tokio::test]
     async fn unverified_users_cant_run_commands() {
         let t = TestBot::new(Settings::default()).await;
-        let captcha = Captcha {
-            question: "2 + 3".into(),
-            answer: "5".into(),
-            username: None,
-            asked_at: now_ms(),
-            attempts: 0,
-            msg_ids: vec![],
-        };
-        t.app
-            .store
-            .update(|s| s.captchas.insert(USER_ID, captcha))
-            .unwrap();
+        pending_captcha(&t, vec![]);
 
         send(&t, message(USER_ID, CHAT_ID, "/help https://spam.example")).await;
         assert_eq!(t.calls("deletemessage").await.len(), 1);

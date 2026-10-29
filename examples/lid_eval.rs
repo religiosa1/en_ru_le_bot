@@ -10,9 +10,7 @@ use std::collections::{BTreeMap, HashMap};
 use std::fs;
 
 use anyhow::Context;
-use en_ru_le_bot::langday::{
-    Lang, MIN_MSG_LENGTH, OtherLang, detect_other_language, strip_non_letter_or_whitespace_chars,
-};
+use en_ru_le_bot::langday::{Lang, OtherLang, checkable_text, detect_other_language};
 use en_ru_le_bot::lid::Lid;
 use serde::{Deserialize, Serialize};
 
@@ -48,14 +46,14 @@ fn main() -> anyhow::Result<()> {
     let decisions: Vec<Decision> = messages
         .iter()
         .map(|m| {
-            let cleaned = strip_non_letter_or_whitespace_chars(&m.text);
-            let verdict = if cleaned.chars().count() < MIN_MSG_LENGTH {
-                "skip".into()
-            } else {
-                match detect_other_language(&lid, &m.text, &cleaned, Some(Lang::En)) {
-                    None => "ok".into(),
-                    Some(OtherLang::Charset) => "charset".into(),
-                    Some(OtherLang::Ml { confidence, .. }) => format!("ml:{confidence:.2}"),
+            let verdict = match checkable_text(&m.text) {
+                None => "skip".into(),
+                Some(cleaned) => {
+                    match detect_other_language(&lid, &m.text, &cleaned, Some(Lang::En)) {
+                        None => "ok".into(),
+                        Some(OtherLang::Charset) => "charset".into(),
+                        Some(OtherLang::Ml { confidence }) => format!("ml:{confidence:.2}"),
+                    }
                 }
             };
             Decision {

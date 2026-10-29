@@ -15,7 +15,7 @@ use crate::langday::{Lang, LangViolation};
 use crate::state::{State, UserRef, Violation, now_ms};
 
 /// Registers a violation, prolonging the expiry of earlier ones. Returns the number of violations.
-pub fn register(state: &mut State, user_id: u64, username: Option<&str>, now: u64) -> u32 {
+fn register(state: &mut State, user_id: u64, username: Option<&str>, now: u64) -> u32 {
     let expires_at = now + state.settings.warnings_expiry.as_millis() as u64;
     let violation = state.violations.entry(user_id).or_insert(Violation {
         count: 0,
@@ -24,8 +24,8 @@ pub fn register(state: &mut State, user_id: u64, username: Option<&str>, now: u6
     });
     violation.count += 1;
     violation.expires_at = expires_at;
-    if username.is_some() {
-        violation.username = username.map(str::to_owned);
+    if let Some(username) = username {
+        violation.username = Some(username.to_owned());
     }
     violation.count
 }

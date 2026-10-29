@@ -61,12 +61,10 @@ fn main() -> anyhow::Result<()> {
         ..Args::default()
     };
     let started = Instant::now();
-    let mut model = FastText::train(args.clone()).map_err(|e| anyhow::anyhow!("train: {e}"))?;
+    let mut model = FastText::train(args.clone()).context("train")?;
     println!("trained in {:.0?}", started.elapsed());
     fs::create_dir_all("models")?;
-    model
-        .save_model(MODEL_BIN)
-        .map_err(|e| anyhow::anyhow!("save: {e}"))?;
+    model.save_model(MODEL_BIN).context("save")?;
     println!("== full model");
     evaluate(&Lid::load(MODEL_BIN)?, &test);
 
@@ -77,12 +75,8 @@ fn main() -> anyhow::Result<()> {
         epoch: 3,
         ..args
     };
-    model
-        .quantize(&qargs)
-        .map_err(|e| anyhow::anyhow!("quantize: {e}"))?;
-    model
-        .save_model(MODEL_FTZ)
-        .map_err(|e| anyhow::anyhow!("save: {e}"))?;
+    model.quantize(&qargs).context("quantize")?;
+    model.save_model(MODEL_FTZ).context("save")?;
     for path in [MODEL_BIN, MODEL_FTZ] {
         println!(
             "{path}: {:.1} MiB",

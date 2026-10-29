@@ -95,7 +95,7 @@ pub async fn welcome(bot: &Bot, app: &App, user: &User) {
             },
         )
         .parse_mode(ParseMode::MarkdownV2);
-    if let (false, Some(msg_id)) = (is_long, reply_to) {
+    if let Some(msg_id) = reply_to.filter(|_| !is_long) {
         request = request.reply_parameters(ReplyParameters::new(msg_id));
     }
     match request.await {

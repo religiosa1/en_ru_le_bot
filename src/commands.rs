@@ -17,7 +17,7 @@ use crate::langday::{Day, Lang, weekday_utc};
 use crate::state::{Settings, UserRef, now_ms};
 use crate::{captcha, members, violations};
 
-const MAX_COOLDOWN: Duration = dur::hours(3);
+const COOLDOWN_RANGE: RangeInclusive<Duration> = Duration::ZERO..=dur::hours(3);
 /// Telegram treats restrictions shorter than 30s or longer than 366 days as permanent
 const MUTE_DURATION_RANGE: RangeInclusive<Duration> = dur::seconds(30)..=dur::days(366);
 const WARNINGS_EXPIRY_RANGE: RangeInclusive<Duration> = dur::minutes(1)..=dur::days(366);
@@ -41,6 +41,13 @@ pub struct Spec {
     pub access: Access,
 }
 
+impl Spec {
+    /// Whether it's listed in the menu and /help.
+    fn visible_to(&self, admin: bool) -> bool {
+        self.access == Access::Member || (admin && self.access == Access::Admin)
+    }
+}
+
 const fn spec(name: &'static str, description: &'static str, access: Access) -> Spec {
     Spec {
         name,
@@ -49,7 +56,7 @@ const fn spec(name: &'static str, description: &'static str, access: Access) -> 
     }
 }
 
-pub const COMMANDS: &[Spec] = &[
+const COMMANDS: &[Spec] = &[
     spec(
         "today",
         "check current day: whether it's English, Russian, or Free",
@@ -171,7 +178,7 @@ pub fn parse<'a>(text: &'a str, bot_username: &str) -> Option<Command<'a>> {
 pub fn menu(for_admins: bool) -> Vec<BotCommand> {
     COMMANDS
         .iter()
-        .filter(|c| c.access == Access::Member || (for_admins && c.access == Access::Admin))
+        .filter(|c| c.visible_to(for_admins))
         .map(|c| BotCommand::new(c.name, c.description))
         .collect()
 }
@@ -393,9 +400,10 @@ fn today(settings: &Settings) -> &'static str {
 
 fn help(with_admin_commands: bool) -> String {
     let mut text = String::new();
-    for c in COMMANDS.iter().filter(|c| {
-        c.access == Access::Member || (with_admin_commands && c.access == Access::Admin)
-    }) {
+    for c in COMMANDS
+        .iter()
+        .filter(|c| c.visible_to(with_admin_commands))
+    {
         let suffix = if c.access == Access::Admin {
             " (admin-only)"
         } else {
@@ -483,7 +491,7 @@ fn settings(app: &App) -> String {
     if remaining > MIN_SHOWN_COOLDOWN {
         text += &format!(
             "\ncurrent cooldown for: {}",
-            format_duration(Duration::from_secs(remaining.as_secs()))
+            format_duration(dur::seconds(remaining.as_secs()))
         );
     }
     text
@@ -498,15 +506,10 @@ fn cooldown(app: &App, args: &str) -> anyhow::Result<String> {
             format_duration(default)
         ));
     }
-    let Some(cooldown) = parse_duration(args) else {
-        return Ok(format!(r#"Incorrect value "{args}". {DURATION_HINT}"#));
+    let cooldown = match parse_bounded_duration(args, &COOLDOWN_RANGE) {
+        Ok(cooldown) => cooldown,
+        Err(reply) => return Ok(reply),
     };
-    if cooldown > MAX_COOLDOWN {
-        return Ok(format!(
-            "The value must be between 0 and {}",
-            format_duration(MAX_COOLDOWN)
-        ));
-    }
     app.set_cooldown(cooldown)?;
     Ok(format!(
         "Cooldown between warnings is now {}",
