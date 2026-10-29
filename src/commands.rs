@@ -5,13 +5,15 @@ use std::time::Duration;
 
 use teloxide::payloads::setters::*;
 use teloxide::prelude::*;
-use teloxide::types::{BotCommand, ChatPermissions, MessageEntityKind, ParseMode, ReplyParameters, User};
+use teloxide::types::{
+    BotCommand, ChatPermissions, MessageEntityKind, ParseMode, ReplyParameters, User,
+};
 use tracing::{info, warn};
 
+use crate::VERSION;
 use crate::bot::App;
 use crate::duration::{format_duration, parse_duration};
 use crate::langday::{Day, Lang, weekday_utc};
-use crate::VERSION;
 use crate::state::{Settings, UserRef, now_ms};
 use crate::{captcha, members, violations};
 
@@ -19,8 +21,10 @@ const MAX_COOLDOWN: Duration = Duration::from_secs(3 * 60 * 60);
 const MINUTE: Duration = Duration::from_secs(60);
 const DAY: Duration = Duration::from_secs(24 * 60 * 60);
 /// Telegram treats restrictions shorter than 30s or longer than 366 days as permanent
-const MUTE_DURATION_RANGE: RangeInclusive<Duration> = Duration::from_secs(30)..=Duration::from_secs(366 * 24 * 60 * 60);
-const WARNINGS_EXPIRY_RANGE: RangeInclusive<Duration> = MINUTE..=Duration::from_secs(366 * 24 * 60 * 60);
+const MUTE_DURATION_RANGE: RangeInclusive<Duration> =
+    Duration::from_secs(30)..=Duration::from_secs(366 * 24 * 60 * 60);
+const WARNINGS_EXPIRY_RANGE: RangeInclusive<Duration> =
+    MINUTE..=Duration::from_secs(366 * 24 * 60 * 60);
 const CAPTCHA_TIME_RANGE: RangeInclusive<Duration> = MINUTE..=DAY;
 /// Remaining cooldown is shown in /settings only if it's longer than this
 const MIN_SHOWN_COOLDOWN: Duration = Duration::from_secs(3);
@@ -42,33 +46,109 @@ pub struct Spec {
 }
 
 const fn spec(name: &'static str, description: &'static str, access: Access) -> Spec {
-    Spec { name, description, access }
+    Spec {
+        name,
+        description,
+        access,
+    }
 }
 
 pub const COMMANDS: &[Spec] = &[
-    spec("today", "check current day: whether it's English, Russian, or Free", Access::Member),
+    spec(
+        "today",
+        "check current day: whether it's English, Russian, or Free",
+        Access::Member,
+    ),
     spec("rules", "display the group's rules", Access::Member),
-    spec("help", r#"["members"] display help on bot commands"#, Access::Member),
+    spec(
+        "help",
+        r#"["members"] display help on bot commands"#,
+        Access::Member,
+    ),
     spec("version", "display the bot version", Access::Member),
-    spec("alarm", "Toggle notifications about day change on/off", Access::Admin),
+    spec(
+        "alarm",
+        "Toggle notifications about day change on/off",
+        Access::Admin,
+    ),
     spec("langchecks", "Toggle en/ru days on/off", Access::Admin),
-    spec("otherlang", "Toggle checks for languages other than en/ru on/off", Access::Admin),
-    spec("forcelang", "[en|ru] Force a specific language", Access::Admin),
-    spec("mute", "Toggle mutes on language violations on/off", Access::Admin),
-    spec("pardon", "[@user] - Remove violations for specific user or all users", Access::Admin),
-    spec("mute_duration", "[duration] - Set or view mute duration", Access::Admin),
-    spec("warnings_expiry", "[duration] - Set or view warnings expiration time", Access::Admin),
-    spec("warnings_number", "[int] - Set or view number of warnings before mute", Access::Admin),
-    spec("cooldown", "[duration] Set cooldown value for wrong language warnings", Access::Admin),
+    spec(
+        "otherlang",
+        "Toggle checks for languages other than en/ru on/off",
+        Access::Admin,
+    ),
+    spec(
+        "forcelang",
+        "[en|ru] Force a specific language",
+        Access::Admin,
+    ),
+    spec(
+        "mute",
+        "Toggle mutes on language violations on/off",
+        Access::Admin,
+    ),
+    spec(
+        "pardon",
+        "[@user] - Remove violations for specific user or all users",
+        Access::Admin,
+    ),
+    spec(
+        "mute_duration",
+        "[duration] - Set or view mute duration",
+        Access::Admin,
+    ),
+    spec(
+        "warnings_expiry",
+        "[duration] - Set or view warnings expiration time",
+        Access::Admin,
+    ),
+    spec(
+        "warnings_number",
+        "[int] - Set or view number of warnings before mute",
+        Access::Admin,
+    ),
+    spec(
+        "cooldown",
+        "[duration] Set cooldown value for wrong language warnings",
+        Access::Admin,
+    ),
     spec("settings", "display current bot settings", Access::Admin),
-    spec("trust", "@username remove captcha check for a user", Access::Admin),
-    spec("captcha", "toggle captcha check for newcomers on/off", Access::Admin),
-    spec("captcha_time", "[duration] show or set time in which members must pass captcha check", Access::Admin),
+    spec(
+        "trust",
+        "@username remove captcha check for a user",
+        Access::Admin,
+    ),
+    spec(
+        "captcha",
+        "toggle captcha check for newcomers on/off",
+        Access::Admin,
+    ),
+    spec(
+        "captcha_time",
+        "[duration] show or set time in which members must pass captcha check",
+        Access::Admin,
+    ),
     spec("captcha_bots", "toggle bots allowed on/off", Access::Admin),
-    spec("flush_admins", "invalidate the admins cache", Access::Hidden),
-    spec("rt", "<text> send text to the chat on behalf of the bot", Access::Hidden),
-    spec("captcha_msg", "show captcha and welcome messages, to check their formatting", Access::Hidden),
-    spec("captcha_clear", "remove all pending captcha checks", Access::Hidden),
+    spec(
+        "flush_admins",
+        "invalidate the admins cache",
+        Access::Hidden,
+    ),
+    spec(
+        "rt",
+        "<text> send text to the chat on behalf of the bot",
+        Access::Hidden,
+    ),
+    spec(
+        "captcha_msg",
+        "show captcha and welcome messages, to check their formatting",
+        Access::Hidden,
+    ),
+    spec(
+        "captcha_clear",
+        "remove all pending captcha checks",
+        Access::Hidden,
+    ),
 ];
 
 pub struct Command<'a> {
@@ -85,7 +165,10 @@ pub fn parse<'a>(text: &'a str, bot_username: &str) -> Option<Command<'a>> {
         return None;
     }
     let spec = COMMANDS.iter().find(|c| c.name == name)?;
-    Some(Command { spec, args: args.trim() })
+    Some(Command {
+        spec,
+        args: args.trim(),
+    })
 }
 
 /// Commands for the bot menu: members get theirs, admins get admin ones as well.
@@ -97,11 +180,25 @@ pub fn menu(for_admins: bool) -> Vec<BotCommand> {
         .collect()
 }
 
-pub async fn handle(bot: &Bot, app: &App, msg: &Message, user: &User, command: Command<'_>) -> anyhow::Result<()> {
+pub async fn handle(
+    bot: &Bot,
+    app: &App,
+    msg: &Message,
+    user: &User,
+    command: Command<'_>,
+) -> anyhow::Result<()> {
     let Command { spec, args } = command;
-    info!(command = spec.name, args, user_id = user.id.0, "Command received");
+    info!(
+        command = spec.name,
+        args,
+        user_id = user.id.0,
+        "Command received"
+    );
     if spec.access != Access::Member && !app.is_admin(bot, user.id).await? {
-        info!(user_id = user.id.0, "User not authorized to perform this request");
+        info!(
+            user_id = user.id.0,
+            "User not authorized to perform this request"
+        );
         return not_allowed(bot, app, msg, user).await;
     }
     if let Some(text) = run(bot, app, msg, user, spec.name, args).await? {
@@ -112,18 +209,33 @@ pub async fn handle(bot: &Bot, app: &App, msg: &Message, user: &User, command: C
 
 async fn not_allowed(bot: &Bot, app: &App, msg: &Message, user: &User) -> anyhow::Result<()> {
     if msg.chat.id == app.chat_id {
-        let mention = user.username.as_ref().map(|u| format!("@{u} ")).unwrap_or_default();
-        bot.send_message(msg.chat.id, format!("{mention}You're not allowed to do that!"))
-            .reply_parameters(ReplyParameters::new(msg.id))
-            .await?;
+        let mention = user
+            .username
+            .as_ref()
+            .map(|u| format!("@{u} "))
+            .unwrap_or_default();
+        bot.send_message(
+            msg.chat.id,
+            format!("{mention}You're not allowed to do that!"),
+        )
+        .reply_parameters(ReplyParameters::new(msg.id))
+        .await?;
     } else {
-        bot.send_message(msg.chat.id, "You're not allowed to do that!").await?;
+        bot.send_message(msg.chat.id, "You're not allowed to do that!")
+            .await?;
     }
     Ok(())
 }
 
 /// Runs a command, returning the reply text, if any.
-async fn run(bot: &Bot, app: &App, msg: &Message, user: &User, name: &str, args: &str) -> anyhow::Result<Option<String>> {
+async fn run(
+    bot: &Bot,
+    app: &App,
+    msg: &Message,
+    user: &User,
+    name: &str,
+    args: &str,
+) -> anyhow::Result<Option<String>> {
     let toggle = |field: fn(&mut Settings) -> &mut bool| {
         app.store.update(|s| {
             let value = field(&mut s.settings);
@@ -138,11 +250,26 @@ async fn run(bot: &Bot, app: &App, msg: &Message, user: &User, name: &str, args:
         "version" => VERSION.into(),
         "help" => help(args != "members" && app.is_admin(bot, user.id).await?),
         "settings" => settings(app),
-        "alarm" => format!("Day change notifications are now {}", on_off(toggle(|s| &mut s.alarm_enabled)?)),
-        "langchecks" => format!("Language checks are now {}", on_off(toggle(|s| &mut s.langday_checks)?)),
-        "otherlang" => format!("Other language checks are now {}", on_off(toggle(|s| &mut s.otherlang_checks)?)),
-        "mute" => format!("Mute on language violations is now {}", on_off(toggle(|s| &mut s.mute_enabled)?)),
-        "captcha" => format!("Captcha checks for newcomers are now {}", on_off(toggle(|s| &mut s.captcha_enabled)?)),
+        "alarm" => format!(
+            "Day change notifications are now {}",
+            on_off(toggle(|s| &mut s.alarm_enabled)?)
+        ),
+        "langchecks" => format!(
+            "Language checks are now {}",
+            on_off(toggle(|s| &mut s.langday_checks)?)
+        ),
+        "otherlang" => format!(
+            "Other language checks are now {}",
+            on_off(toggle(|s| &mut s.otherlang_checks)?)
+        ),
+        "mute" => format!(
+            "Mute on language violations is now {}",
+            on_off(toggle(|s| &mut s.mute_enabled)?)
+        ),
+        "captcha" => format!(
+            "Captcha checks for newcomers are now {}",
+            on_off(toggle(|s| &mut s.captcha_enabled)?)
+        ),
         "captcha_bots" => match toggle(|s| &mut s.captcha_bots_allowed)? {
             true => "Bots can join now".into(),
             false => "Bots are forbidden to join now".into(),
@@ -160,15 +287,28 @@ async fn run(bot: &Bot, app: &App, msg: &Message, user: &User, name: &str, args:
                 None => "Forced day is now disabled.".into(),
             }
         }
-        "mute_duration" => duration_setting(app, args, "Mute duration", MUTE_DURATION_RANGE, |s| &mut s.mute_duration)?,
+        "mute_duration" => {
+            duration_setting(app, args, "Mute duration", MUTE_DURATION_RANGE, |s| {
+                &mut s.mute_duration
+            })?
+        }
         "warnings_expiry" => {
-            duration_setting(app, args, "Warning expiry", WARNINGS_EXPIRY_RANGE, |s| &mut s.warnings_expiry)?
+            duration_setting(app, args, "Warning expiry", WARNINGS_EXPIRY_RANGE, |s| {
+                &mut s.warnings_expiry
+            })?
         }
-        "captcha_time" => {
-            duration_setting(app, args, "Captcha verification time", CAPTCHA_TIME_RANGE, |s| &mut s.captcha_max_age)?
-        }
+        "captcha_time" => duration_setting(
+            app,
+            args,
+            "Captcha verification time",
+            CAPTCHA_TIME_RANGE,
+            |s| &mut s.captcha_max_age,
+        )?,
         "warnings_number" => match (args, args.parse::<u32>()) {
-            ("", _) => format!("Maximum number of warnings is {}", app.settings().max_violations),
+            ("", _) => format!(
+                "Maximum number of warnings is {}",
+                app.settings().max_violations
+            ),
             (_, Err(_)) => "Maximum number of warnings must be a non-negative integer!".into(),
             (_, Ok(value)) => {
                 app.store.update(|s| s.settings.max_violations = value)?;
@@ -184,13 +324,15 @@ async fn run(bot: &Bot, app: &App, msg: &Message, user: &User, name: &str, args:
                 }
                 "Pardoned all users".into()
             }
-            Ok(Some((target, name))) => match app.store.update(|s| violations::pardon(s, &target))? {
-                Some(user_id) => {
-                    restore_permissions(bot, app, user_id).await;
-                    format!("Pardoned user @{name}")
+            Ok(Some((target, name))) => {
+                match app.store.update(|s| violations::pardon(s, &target))? {
+                    Some(user_id) => {
+                        restore_permissions(bot, app, user_id).await;
+                        format!("Pardoned user @{name}")
+                    }
+                    None => format!("No violations found for {name}"),
                 }
-                None => format!("No violations found for {name}"),
-            },
+            }
         },
         "trust" => match user_arg(msg, args) {
             Err(err) => err.into(),
@@ -210,8 +352,13 @@ async fn run(bot: &Bot, app: &App, msg: &Message, user: &User, name: &str, args:
         }
         "captcha_msg" => {
             let (question, _) = captcha::question_answer();
-            for text in [captcha::message(&question, user, app.settings().captcha_max_age), members::welcome_message(user)] {
-                bot.send_message(msg.chat.id, text).parse_mode(ParseMode::MarkdownV2).await?;
+            for text in [
+                captcha::message(&question, user, app.settings().captcha_max_age),
+                members::welcome_message(user),
+            ] {
+                bot.send_message(msg.chat.id, text)
+                    .parse_mode(ParseMode::MarkdownV2)
+                    .await?;
             }
             return Ok(None);
         }
@@ -228,7 +375,9 @@ async fn run(bot: &Bot, app: &App, msg: &Message, user: &User, name: &str, args:
 
 fn today(settings: &Settings) -> &'static str {
     match Day::of(settings, weekday_utc(now_ms())) {
-        Day::Disabled => "Language checks are disabled by the admins.\n\nПроверка языка выключена администраторами.",
+        Day::Disabled => {
+            "Language checks are disabled by the admins.\n\nПроверка языка выключена администраторами."
+        }
         Day::Forced(Lang::En) => "English day has been set by the admins.",
         Day::Forced(Lang::Ru) => "Администраторы выставили русский день.",
         Day::Scheduled(None) => {
@@ -242,8 +391,14 @@ fn today(settings: &Settings) -> &'static str {
 
 fn help(with_admin_commands: bool) -> String {
     let mut text = String::new();
-    for c in COMMANDS.iter().filter(|c| c.access == Access::Member || (with_admin_commands && c.access == Access::Admin)) {
-        let suffix = if c.access == Access::Admin { " (admin-only)" } else { "" };
+    for c in COMMANDS.iter().filter(|c| {
+        c.access == Access::Member || (with_admin_commands && c.access == Access::Admin)
+    }) {
+        let suffix = if c.access == Access::Admin {
+            " (admin-only)"
+        } else {
+            ""
+        };
         text += &format!("- /{} {}{suffix}\n", c.name, c.description);
     }
     text
@@ -262,7 +417,10 @@ fn duration_setting(
     field: fn(&mut Settings) -> &mut Duration,
 ) -> anyhow::Result<String> {
     if args.is_empty() {
-        return Ok(format!("{label} is {}", format_duration(*field(&mut app.settings()))));
+        return Ok(format!(
+            "{label} is {}",
+            format_duration(*field(&mut app.settings()))
+        ));
     }
     let duration = match parse_bounded_duration(args, &range) {
         Ok(duration) => duration,
@@ -273,10 +431,17 @@ fn duration_setting(
 }
 
 /// Parses a duration within the range, or returns a reply explaining what's wrong.
-fn parse_bounded_duration(args: &str, range: &RangeInclusive<Duration>) -> Result<Duration, String> {
-    let duration = parse_duration(args).ok_or_else(|| format!(r#"Incorrect value "{args}". {DURATION_HINT}"#))?;
+fn parse_bounded_duration(
+    args: &str,
+    range: &RangeInclusive<Duration>,
+) -> Result<Duration, String> {
+    let duration = parse_duration(args)
+        .ok_or_else(|| format!(r#"Incorrect value "{args}". {DURATION_HINT}"#))?;
     if !range.contains(&duration) {
-        let (min, max) = (format_duration(*range.start()), format_duration(*range.end()));
+        let (min, max) = (
+            format_duration(*range.start()),
+            format_duration(*range.end()),
+        );
         return Err(format!("The value must be between {min} and {max}"));
     }
     Ok(duration)
@@ -314,7 +479,10 @@ fn settings(app: &App) -> String {
     );
     let remaining = app.remaining_cooldown();
     if remaining > MIN_SHOWN_COOLDOWN {
-        text += &format!("\ncurrent cooldown for: {}", format_duration(Duration::from_secs(remaining.as_secs())));
+        text += &format!(
+            "\ncurrent cooldown for: {}",
+            format_duration(Duration::from_secs(remaining.as_secs()))
+        );
     }
     text
 }
@@ -323,16 +491,25 @@ fn settings(app: &App) -> String {
 fn cooldown(app: &App, args: &str) -> anyhow::Result<String> {
     if args.is_empty() {
         let default = app.reset_cooldown()?;
-        return Ok(format!("Cooldown reset to the default value of {}", format_duration(default)));
+        return Ok(format!(
+            "Cooldown reset to the default value of {}",
+            format_duration(default)
+        ));
     }
     let Some(cooldown) = parse_duration(args) else {
         return Ok(format!(r#"Incorrect value "{args}". {DURATION_HINT}"#));
     };
     if cooldown > MAX_COOLDOWN {
-        return Ok(format!("The value must be between 0 and {}", format_duration(MAX_COOLDOWN)));
+        return Ok(format!(
+            "The value must be between 0 and {}",
+            format_duration(MAX_COOLDOWN)
+        ));
     }
     app.set_cooldown(cooldown)?;
-    Ok(format!("Cooldown between warnings is now {}", format_duration(cooldown)))
+    Ok(format!(
+        "Cooldown between warnings is now {}",
+        format_duration(cooldown)
+    ))
 }
 
 /// User from command args: a text mention (for users without a username) or an @username,
@@ -341,19 +518,28 @@ fn user_arg(msg: &Message, args: &str) -> Result<Option<(UserRef, String)>, &'st
     if args.is_empty() {
         return Ok(None);
     }
-    let text_mention = msg.parse_entities().into_iter().flatten().find_map(|entity| match entity.kind() {
-        MessageEntityKind::TextMention { user } => Some(user.clone()),
-        _ => None,
-    });
+    let text_mention = msg
+        .parse_entities()
+        .into_iter()
+        .flatten()
+        .find_map(|entity| match entity.kind() {
+            MessageEntityKind::TextMention { user } => Some(user.clone()),
+            _ => None,
+        });
     if let Some(user) = text_mention {
         return Ok(Some((UserRef::Id(user.id.0), user.first_name)));
     }
-    let username = args.strip_prefix('@').ok_or("username mention must start from @")?;
+    let username = args
+        .strip_prefix('@')
+        .ok_or("username mention must start from @")?;
     Ok(Some((UserRef::Username(username.into()), username.into())))
 }
 
 async fn restore_permissions(bot: &Bot, app: &App, user_id: u64) {
-    if let Err(err) = bot.restrict_chat_member(app.chat_id, UserId(user_id), ChatPermissions::all()).await {
+    if let Err(err) = bot
+        .restrict_chat_member(app.chat_id, UserId(user_id), ChatPermissions::all())
+        .await
+    {
         warn!(%err, user_id, "Error restoring chat permissions, but warnings successfully removed");
     }
 }
@@ -401,7 +587,10 @@ mod tests {
     fn parses_commands() {
         let parse = |text| parse(text, "en_ru_le_bot").map(|c| (c.spec.name, c.args));
         assert_eq!(parse("/help"), Some(("help", "")));
-        assert_eq!(parse("/help@en_ru_le_bot members"), Some(("help", "members")));
+        assert_eq!(
+            parse("/help@en_ru_le_bot members"),
+            Some(("help", "members"))
+        );
         assert_eq!(parse("/forcelang  en "), Some(("forcelang", "en")));
         assert_eq!(parse("/help@other_bot"), None, "addressed to another bot");
         assert_eq!(parse("/start"), None, "unknown");
@@ -414,15 +603,27 @@ mod tests {
         assert_eq!(names(menu(false)), ["today", "rules", "help", "version"]);
         let admin_menu = names(menu(true));
         assert!(admin_menu.contains(&"today".into()) && admin_menu.contains(&"settings".into()));
-        assert!(!admin_menu.contains(&"rt".into()), "hidden commands aren't listed");
+        assert!(
+            !admin_menu.contains(&"rt".into()),
+            "hidden commands aren't listed"
+        );
     }
 
     #[test]
     fn bounds_durations() {
-        assert_eq!(parse_bounded_duration("15", &MUTE_DURATION_RANGE), Ok(Duration::from_secs(15 * 60)));
-        assert!(parse_bounded_duration("10s", &MUTE_DURATION_RANGE).is_err(), "Telegram makes it permanent");
+        assert_eq!(
+            parse_bounded_duration("15", &MUTE_DURATION_RANGE),
+            Ok(Duration::from_secs(15 * 60))
+        );
+        assert!(
+            parse_bounded_duration("10s", &MUTE_DURATION_RANGE).is_err(),
+            "Telegram makes it permanent"
+        );
         assert!(parse_bounded_duration("400d", &MUTE_DURATION_RANGE).is_err());
-        assert!(parse_bounded_duration("99999999999d", &WARNINGS_EXPIRY_RANGE).is_err(), "no overflow");
+        assert!(
+            parse_bounded_duration("99999999999d", &WARNINGS_EXPIRY_RANGE).is_err(),
+            "no overflow"
+        );
         assert!(parse_bounded_duration("0", &CAPTCHA_TIME_RANGE).is_err());
         assert!(parse_bounded_duration("nope", &CAPTCHA_TIME_RANGE).is_err());
     }
@@ -430,7 +631,12 @@ mod tests {
     #[test]
     fn command_names_are_valid() {
         for c in COMMANDS {
-            assert!(c.name.len() <= 32 && c.name.chars().all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '_'));
+            assert!(
+                c.name.len() <= 32
+                    && c.name
+                        .chars()
+                        .all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '_')
+            );
         }
     }
 }

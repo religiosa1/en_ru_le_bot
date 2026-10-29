@@ -67,18 +67,26 @@ impl Day {
 
 /// UTC weekday of a unix ms timestamp, 0 = Sunday.
 pub fn weekday_utc(unix_ms: u64) -> u32 {
-    DateTime::from_timestamp_millis(unix_ms as i64).expect("timestamp in range").weekday().num_days_from_sunday()
+    DateTime::from_timestamp_millis(unix_ms as i64)
+        .expect("timestamp in range")
+        .weekday()
+        .num_days_from_sunday()
 }
 
 /// Latin or cyrillic "ha-ha"s
-static LAUGH_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"(?i)\b(?:[hх][aeае][hх]?-?)+\b").unwrap());
+static LAUGH_RE: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"(?i)\b(?:[hх][aeае][hх]?-?)+\b").unwrap());
 static NON_LETTER_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"[^\p{L}\s]").unwrap());
 
 /// Strips urls, mentions, ha-ha-s and everything except letters, collapsing whitespace.
 pub fn strip_non_letter_or_whitespace_chars(text: &str) -> String {
     let text = URL_OR_MENTION_RE.replace_all(text, " ");
     let text = LAUGH_RE.replace_all(&text, "");
-    NON_LETTER_RE.replace_all(&text, "").split_whitespace().collect::<Vec<_>>().join(" ")
+    NON_LETTER_RE
+        .replace_all(&text, "")
+        .split_whitespace()
+        .collect::<Vec<_>>()
+        .join(" ")
 }
 
 static CYRILLIC_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"\p{Cyrillic}").unwrap());
@@ -106,7 +114,10 @@ const KAOMOJI_CHARS: &str = "ツシシノººノㅇㅅㅇㅠㅠㅜㅜωツʘʘ";
 
 /// Share of letters in the charset, None if there are no letters.
 fn charset_rate(text: &str, in_charset: impl Fn(char) -> bool) -> Option<f64> {
-    let letters: Vec<char> = text.chars().filter(|c| c.is_alphabetic() && !KAOMOJI_CHARS.contains(*c)).collect();
+    let letters: Vec<char> = text
+        .chars()
+        .filter(|c| c.is_alphabetic() && !KAOMOJI_CHARS.contains(*c))
+        .collect();
     if letters.is_empty() {
         return None;
     }
@@ -130,8 +141,10 @@ pub fn is_mostly_cyrillic(text: &str) -> bool {
     charset_rate(text, is_cyrillic).is_none_or(|rate| rate >= CHARSET_MATCH_RATE)
 }
 
-static EN_WORDS: LazyLock<HashSet<&str>> = LazyLock::new(|| include_str!("../words/en.txt").lines().collect());
-static RU_WORDS: LazyLock<HashSet<&str>> = LazyLock::new(|| include_str!("../words/ru.txt").lines().collect());
+static EN_WORDS: LazyLock<HashSet<&str>> =
+    LazyLock::new(|| include_str!("../words/en.txt").lines().collect());
+static RU_WORDS: LazyLock<HashSet<&str>> =
+    LazyLock::new(|| include_str!("../words/ru.txt").lines().collect());
 
 const ML_MIN_LENGTH: usize = 10;
 /// Longer messages are checked even if every word is capitalized, so the rule can't be abused.
@@ -153,7 +166,12 @@ pub struct LangViolation {
 }
 
 /// Checks a message against the language rules of the day, None if it's fine.
-pub fn check_message(lid: &Lid, settings: &Settings, text: &str, weekday: u32) -> Option<LangViolation> {
+pub fn check_message(
+    lid: &Lid,
+    settings: &Settings,
+    text: &str,
+    weekday: u32,
+) -> Option<LangViolation> {
     let cleaned = strip_non_letter_or_whitespace_chars(text);
     if cleaned.chars().count() < MIN_MSG_LENGTH {
         debug!("The message is too short for a check, ignoring");
@@ -178,20 +196,32 @@ pub fn check_message(lid: &Lid, settings: &Settings, text: &str, weekday: u32) -
         return None;
     }
     info!(?msg, ?day, "Language mismatch");
-    Some(LangViolation { day: Some(day), msg: Some(msg) })
+    Some(LangViolation {
+        day: Some(day),
+        msg: Some(msg),
+    })
 }
 
 #[derive(Debug, PartialEq)]
 pub enum OtherLang {
     Charset,
-    Ml { confidence: f32, unknown_words: usize, total_words: usize },
+    Ml {
+        confidence: f32,
+        unknown_words: usize,
+        total_words: usize,
+    },
 }
 
 /// Detects a message written in a language other than en/ru.
 ///
 /// `cleaned` is `raw_text` after [strip_non_letter_or_whitespace_chars]; the model gets the raw text,
 /// as it has its own preprocessing.
-pub fn detect_other_language(lid: &Lid, raw_text: &str, cleaned: &str, target: Option<Lang>) -> Option<OtherLang> {
+pub fn detect_other_language(
+    lid: &Lid,
+    raw_text: &str,
+    cleaned: &str,
+    target: Option<Lang>,
+) -> Option<OtherLang> {
     let text = cleaned;
     if detect_bad_lang_by_charset(text) {
         debug!("Language mismatch by charset");
@@ -226,16 +256,23 @@ pub fn detect_other_language(lid: &Lid, raw_text: &str, cleaned: &str, target: O
         return None;
     }
     if detection.confidence < ML_TARGET_CONFIDENCE {
-        info!(?detection, "Language detected as NOT Russian or English, but confidence level is too low");
+        info!(
+            ?detection,
+            "Language detected as NOT Russian or English, but confidence level is too low"
+        );
         return None;
     }
 
     // Filtering out false positives by checking words against the most common en/ru vocab.
     // Less effective for russian due to declension/conjugation, hence the threshold below 100%.
     let words: Vec<String> = text.split_whitespace().map(str::to_lowercase).collect();
-    let unknown: Vec<&str> =
-        words.iter().map(String::as_str).filter(|w| !EN_WORDS.contains(w) && !RU_WORDS.contains(w)).collect();
-    let has_plenty_unknown_words = unknown.len() as f64 / words.len() as f64 > UNKNOWN_WORDS_THRESHOLD;
+    let unknown: Vec<&str> = words
+        .iter()
+        .map(String::as_str)
+        .filter(|w| !EN_WORDS.contains(w) && !RU_WORDS.contains(w))
+        .collect();
+    let has_plenty_unknown_words =
+        unknown.len() as f64 / words.len() as f64 > UNKNOWN_WORDS_THRESHOLD;
     info!(
         ?detection,
         ?unknown,
@@ -256,7 +293,10 @@ pub fn detect_other_language(lid: &Lid, raw_text: &str, cleaned: &str, target: O
 /// English days. Foreign greetings like "Guten Morgen" slip through as well, which is acceptable.
 fn is_name_list(text: &str) -> bool {
     let words: Vec<&str> = text.split_whitespace().collect();
-    words.len() <= MAX_NAME_LIST_WORDS && words.iter().all(|w| w.chars().next().is_some_and(char::is_uppercase))
+    words.len() <= MAX_NAME_LIST_WORDS
+        && words
+            .iter()
+            .all(|w| w.chars().next().is_some_and(char::is_uppercase))
 }
 
 #[cfg(test)]
@@ -268,7 +308,18 @@ mod tests {
     fn schedule() {
         let days: Vec<_> = (0..7).map(scheduled_lang).collect();
         use Lang::*;
-        assert_eq!(days, [None, Some(Ru), Some(En), Some(Ru), Some(En), Some(Ru), Some(En)]);
+        assert_eq!(
+            days,
+            [
+                None,
+                Some(Ru),
+                Some(En),
+                Some(Ru),
+                Some(En),
+                Some(Ru),
+                Some(En)
+            ]
+        );
     }
 
     const RU_TEXT: &str = "что-то на русском тут написано";
@@ -283,26 +334,60 @@ mod tests {
         let check = |text: &str, weekday| check_message(&lid, &settings, text, weekday);
 
         assert_eq!(check(RU_TEXT, MONDAY), None);
-        assert_eq!(check(EN_TEXT, MONDAY), Some(LangViolation { day: Some(Lang::Ru), msg: Some(Lang::En) }));
+        assert_eq!(
+            check(EN_TEXT, MONDAY),
+            Some(LangViolation {
+                day: Some(Lang::Ru),
+                msg: Some(Lang::En)
+            })
+        );
         assert_eq!(check(EN_TEXT, TUESDAY), None);
-        assert_eq!(check(RU_TEXT, TUESDAY), Some(LangViolation { day: Some(Lang::En), msg: Some(Lang::Ru) }));
+        assert_eq!(
+            check(RU_TEXT, TUESDAY),
+            Some(LangViolation {
+                day: Some(Lang::En),
+                msg: Some(Lang::Ru)
+            })
+        );
         assert_eq!(check(RU_TEXT, 0), None, "free day");
         assert_eq!(check("Hi!", MONDAY), None, "too short");
-        assert_eq!(check(&format!("{EN_TEXT} {RU_TEXT}"), MONDAY), None, "bilingual");
-        assert!(check(&format!("{EN_TEXT} {EN_TEXT} {RU_TEXT}"), MONDAY).is_some(), "mostly english");
+        assert_eq!(
+            check(&format!("{EN_TEXT} {RU_TEXT}"), MONDAY),
+            None,
+            "bilingual"
+        );
+        assert!(
+            check(&format!("{EN_TEXT} {EN_TEXT} {RU_TEXT}"), MONDAY).is_some(),
+            "mostly english"
+        );
     }
 
     #[test]
     fn respects_day_settings() {
         let lid = Lid::embedded().unwrap();
-        let forced = Settings { forced_lang: Some(Lang::En), ..Settings::default() };
+        let forced = Settings {
+            forced_lang: Some(Lang::En),
+            ..Settings::default()
+        };
         assert_eq!(check_message(&lid, &forced, EN_TEXT, MONDAY), None);
-        let disabled = Settings { langday_checks: false, ..Settings::default() };
+        let disabled = Settings {
+            langday_checks: false,
+            ..Settings::default()
+        };
         assert_eq!(check_message(&lid, &disabled, EN_TEXT, MONDAY), None);
         // other language checks still work with en/ru days disabled, as on a free day
         let german = "Ich weiß nicht, ob das heute noch klappt";
-        assert_eq!(check_message(&lid, &disabled, german, MONDAY), Some(LangViolation { day: None, msg: None }));
-        let no_other = Settings { otherlang_checks: false, ..Settings::default() };
+        assert_eq!(
+            check_message(&lid, &disabled, german, MONDAY),
+            Some(LangViolation {
+                day: None,
+                msg: None
+            })
+        );
+        let no_other = Settings {
+            otherlang_checks: false,
+            ..Settings::default()
+        };
         assert_eq!(check_message(&lid, &no_other, german, 0), None);
     }
 
@@ -322,7 +407,10 @@ mod tests {
         assert_eq!(strip("hi  all"), "hi all");
         assert_eq!(strip("hi \t\t all"), "hi all");
         assert_eq!(strip("\thi all  "), "hi all");
-        assert_eq!(strip("hi https://example.com/some?id=123&foo=bar#frag all"), "hi all");
+        assert_eq!(
+            strip("hi https://example.com/some?id=123&foo=bar#frag all"),
+            "hi all"
+        );
     }
 
     #[test]
@@ -361,25 +449,56 @@ mod tests {
         for text in ok {
             assert!(!detect_bad_lang_by_charset(text), "{text:?}");
         }
-        assert!(detect_bad_lang_by_charset("你们不能对 Eon 实施制裁！ 西方需要停止殖民"));
+        assert!(detect_bad_lang_by_charset(
+            "你们不能对 Eon 实施制裁！ 西方需要停止殖民"
+        ));
         assert!(detect_bad_lang_by_charset("لوحة المفاتيح العربية"));
         // NOTE: 3 accented letters of 41 is below the 95% rate. Same in the TS version,
         // where this case was asserted as false, but the test file was never picked up by the runner.
-        assert!(detect_bad_lang_by_charset("Sorry dear bot, my name is Julioé César I’m from Perú "));
+        assert!(detect_bad_lang_by_charset(
+            "Sorry dear bot, my name is Julioé César I’m from Perú "
+        ));
     }
 
     #[test]
     fn other_language() {
         let lid = Lid::embedded().unwrap();
-        let detect =
-            |text: &str, target| detect_other_language(&lid, text, &strip_non_letter_or_whitespace_chars(text), target);
+        let detect = |text: &str, target| {
+            detect_other_language(
+                &lid,
+                text,
+                &strip_non_letter_or_whitespace_chars(text),
+                target,
+            )
+        };
 
-        assert_eq!(detect("你们不能对 Eon 实施制裁！ 西方需要停止殖民", Some(Lang::Ru)), Some(OtherLang::Charset));
-        assert_eq!(detect("I personally wouldn't bother unless he gets himself a ban hammer", Some(Lang::En)), None);
-        assert_eq!(detect("Ich weiß nicht, ob das heute noch klappt", Some(Lang::Ru)), None, "only charset on ru days");
-        assert_eq!(detect("Привет, как дела у всех сегодня вечером", None), None, "cyrillic on free days");
+        assert_eq!(
+            detect("你们不能对 Eon 实施制裁！ 西方需要停止殖民", Some(Lang::Ru)),
+            Some(OtherLang::Charset)
+        );
+        assert_eq!(
+            detect(
+                "I personally wouldn't bother unless he gets himself a ban hammer",
+                Some(Lang::En)
+            ),
+            None
+        );
+        assert_eq!(
+            detect("Ich weiß nicht, ob das heute noch klappt", Some(Lang::Ru)),
+            None,
+            "only charset on ru days"
+        );
+        assert_eq!(
+            detect("Привет, как дела у всех сегодня вечером", None),
+            None,
+            "cyrillic on free days"
+        );
         assert_eq!(detect("Hallo du", Some(Lang::En)), None, "too short");
-        assert_eq!(detect("Campinas, SP - Brazil", Some(Lang::En)), None, "names");
+        assert_eq!(
+            detect("Campinas, SP - Brazil", Some(Lang::En)),
+            None,
+            "names"
+        );
         assert!(
             detect("Ich Weiß Nicht, Ob Das Heute Noch Klappt", Some(Lang::En)).is_some(),
             "capitalized, but too long for a list of names"

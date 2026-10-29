@@ -17,7 +17,11 @@ use crate::state::{State, UserRef, Violation, now_ms};
 /// Registers a violation, prolonging the expiry of earlier ones. Returns the number of violations.
 pub fn register(state: &mut State, user_id: u64, username: Option<&str>, now: u64) -> u32 {
     let expires_at = now + state.settings.warnings_expiry.as_millis() as u64;
-    let violation = state.violations.entry(user_id).or_insert(Violation { count: 0, username: None, expires_at });
+    let violation = state.violations.entry(user_id).or_insert(Violation {
+        count: 0,
+        username: None,
+        expires_at,
+    });
     violation.count += 1;
     violation.expires_at = expires_at;
     if username.is_some() {
@@ -41,8 +45,17 @@ pub fn pardon_all(state: &mut State) -> Vec<u64> {
 /// Warns the user, or mutes them after too many warnings.
 ///
 /// With mutes disabled, it's a warning only and the counter stays as is, so it can expire on its own.
-pub async fn punish(bot: &Bot, app: &App, msg: &Message, user: &User, violation: &LangViolation) -> anyhow::Result<()> {
-    let reply = |text: String| bot.send_message(msg.chat.id, text).reply_parameters(ReplyParameters::new(msg.id));
+pub async fn punish(
+    bot: &Bot,
+    app: &App,
+    msg: &Message,
+    user: &User,
+    violation: &LangViolation,
+) -> anyhow::Result<()> {
+    let reply = |text: String| {
+        bot.send_message(msg.chat.id, text)
+            .reply_parameters(ReplyParameters::new(msg.id))
+    };
     let warning = warning_message(violation.day);
     let settings = app.settings();
     if !settings.mute_enabled {
@@ -50,10 +63,16 @@ pub async fn punish(bot: &Bot, app: &App, msg: &Message, user: &User, violation:
         return Ok(());
     }
 
-    let count = app.store.update(|s| register(s, user.id.0, user.username.as_deref(), now_ms()))?;
+    let count = app
+        .store
+        .update(|s| register(s, user.id.0, user.username.as_deref(), now_ms()))?;
     let max = settings.max_violations;
     if count <= max {
-        reply(format!("{warning}\n\n{}", count_message(violation.day, count, max - count))).await?;
+        reply(format!(
+            "{warning}\n\n{}",
+            count_message(violation.day, count, max - count)
+        ))
+        .await?;
         return Ok(());
     }
 
@@ -67,10 +86,17 @@ pub async fn punish(bot: &Bot, app: &App, msg: &Message, user: &User, violation:
         (Ok(_), _) => "You're temporarily muted for repeated violations.",
         (Err(err), day) => {
             error!(%err, user_id = user.id.0, "Error while restricting a member");
-            if day == Some(Lang::En) { "Ничего, в следующий раз тебя ещё достану." } else { "You're in luck, pal. I'll get to you next time." }
+            if day == Some(Lang::En) {
+                "Ничего, в следующий раз тебя ещё достану."
+            } else {
+                "You're in luck, pal. I'll get to you next time."
+            }
         }
     };
-    info!(user_id = user.id.0, count, max, "Temporarily restricting member");
+    info!(
+        user_id = user.id.0,
+        count, max, "Temporarily restricting member"
+    );
     reply(text.into()).await?;
     Ok(())
 }
@@ -117,7 +143,11 @@ mod tests {
         assert_eq!(register(&mut state, 1, None, 5000), 2);
         let violation = &state.violations[&1];
         assert_eq!(violation.expires_at, 65_000);
-        assert_eq!(violation.username.as_deref(), Some("user"), "kept when missing later");
+        assert_eq!(
+            violation.username.as_deref(),
+            Some("user"),
+            "kept when missing later"
+        );
     }
 
     #[test]
@@ -126,7 +156,10 @@ mod tests {
         register(&mut state, 1, Some("one"), 0);
         register(&mut state, 2, None, 0);
         register(&mut state, 3, None, 0);
-        assert_eq!(pardon(&mut state, &UserRef::Username("one".into())), Some(1));
+        assert_eq!(
+            pardon(&mut state, &UserRef::Username("one".into())),
+            Some(1)
+        );
         assert_eq!(pardon(&mut state, &UserRef::Username("one".into())), None);
         assert_eq!(pardon(&mut state, &UserRef::Id(2)), Some(2));
         assert_eq!(pardon_all(&mut state), [3]);
@@ -135,7 +168,15 @@ mod tests {
 
     #[test]
     fn formats_ordinals() {
-        let ordinals: Vec<_> = [1, 2, 3, 4, 11, 12, 13, 21, 22, 101, 111].map(ordinal_en).into();
-        assert_eq!(ordinals, ["1st", "2nd", "3rd", "4th", "11th", "12th", "13th", "21st", "22nd", "101st", "111th"]);
+        let ordinals: Vec<_> = [1, 2, 3, 4, 11, 12, 13, 21, 22, 101, 111]
+            .map(ordinal_en)
+            .into();
+        assert_eq!(
+            ordinals,
+            [
+                "1st", "2nd", "3rd", "4th", "11th", "12th", "13th", "21st", "22nd", "101st",
+                "111th"
+            ]
+        );
     }
 }

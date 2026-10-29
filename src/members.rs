@@ -5,7 +5,9 @@ use std::sync::Arc;
 use chrono::{TimeDelta, Utc};
 use teloxide::payloads::setters::*;
 use teloxide::prelude::*;
-use teloxide::types::{ChatMemberUpdated, ChatPermissions, MessageId, ParseMode, ReplyParameters, User};
+use teloxide::types::{
+    ChatMemberUpdated, ChatPermissions, MessageId, ParseMode, ReplyParameters, User,
+};
 use tracing::{debug, error, info};
 
 use crate::bot::App;
@@ -23,14 +25,22 @@ pub struct WelcomeState {
     last_long_welcome: Option<MessageId>,
 }
 
-pub async fn on_chat_member(bot: Bot, app: Arc<App>, update: ChatMemberUpdated) -> anyhow::Result<()> {
+pub async fn on_chat_member(
+    bot: Bot,
+    app: Arc<App>,
+    update: ChatMemberUpdated,
+) -> anyhow::Result<()> {
     if update.chat.id != app.chat_id {
         return Ok(());
     }
     let Some(user) = joined_user(&update) else {
         return Ok(());
     };
-    info!(user_id = user.id.0, username = user.username, "New member joined");
+    info!(
+        user_id = user.id.0,
+        username = user.username,
+        "New member joined"
+    );
     if !user.is_bot
         && let Err(err) = probation(&bot, &app, user).await
     {
@@ -47,10 +57,17 @@ fn joined_user(update: &ChatMemberUpdated) -> Option<&User> {
 }
 
 async fn probation(bot: &Bot, app: &App, user: &User) -> anyhow::Result<()> {
-    info!(user_id = user.id.0, "Restricting user for probation, so they only can send text messages");
-    bot.restrict_chat_member(app.chat_id, user.id, ChatPermissions::SEND_MESSAGES | ChatPermissions::INVITE_USERS)
-        .until_date(Utc::now() + PROBATION_DURATION)
-        .await?;
+    info!(
+        user_id = user.id.0,
+        "Restricting user for probation, so they only can send text messages"
+    );
+    bot.restrict_chat_member(
+        app.chat_id,
+        user.id,
+        ChatPermissions::SEND_MESSAGES | ChatPermissions::INVITE_USERS,
+    )
+    .until_date(Utc::now() + PROBATION_DURATION)
+    .await?;
     Ok(())
 }
 
@@ -69,7 +86,14 @@ pub async fn welcome(bot: &Bot, app: &App, user: &User) {
     };
     debug!(user_id = user.id.0, is_long, "Sending welcome");
     let mut request = bot
-        .send_message(app.chat_id, if is_long { welcome_message(user) } else { md::mention(user) })
+        .send_message(
+            app.chat_id,
+            if is_long {
+                welcome_message(user)
+            } else {
+                md::mention(user)
+            },
+        )
         .parse_mode(ParseMode::MarkdownV2);
     if let (false, Some(msg_id)) = (is_long, reply_to) {
         request = request.reply_parameters(ReplyParameters::new(msg_id));
@@ -136,7 +160,13 @@ mod tests {
     #[tokio::test]
     async fn newcomer_gets_probation_and_captcha() {
         let t = TestBot::new(Settings::default()).await;
-        on_chat_member(t.bot.clone(), t.app.clone(), member_update(user_json(USER_ID), "left", "member")).await.unwrap();
+        on_chat_member(
+            t.bot.clone(),
+            t.app.clone(),
+            member_update(user_json(USER_ID), "left", "member"),
+        )
+        .await
+        .unwrap();
 
         let restrictions = t.calls("restrictchatmember").await;
         assert_eq!(restrictions.len(), 1);
@@ -148,39 +178,89 @@ mod tests {
         let sent = t.calls("sendmessage").await;
         assert_eq!(sent.len(), 1);
         assert_eq!(sent[0]["parse_mode"], "MarkdownV2");
-        assert!(sent[0]["text"].as_str().unwrap().contains("please send the answer"));
-        assert_eq!(t.app.store.read(|s| s.captchas[&USER_ID].msg_ids.clone()), [SENT_MSG_ID]);
+        assert!(
+            sent[0]["text"]
+                .as_str()
+                .unwrap()
+                .contains("please send the answer")
+        );
+        assert_eq!(
+            t.app.store.read(|s| s.captchas[&USER_ID].msg_ids.clone()),
+            [SENT_MSG_ID]
+        );
     }
 
     #[tokio::test]
     async fn ignores_other_member_changes_and_chats() {
         let t = TestBot::new(Settings::default()).await;
-        on_chat_member(t.bot.clone(), t.app.clone(), member_update(user_json(USER_ID), "member", "left")).await.unwrap();
+        on_chat_member(
+            t.bot.clone(),
+            t.app.clone(),
+            member_update(user_json(USER_ID), "member", "left"),
+        )
+        .await
+        .unwrap();
         let mut other_chat = member_update(user_json(USER_ID), "left", "member");
         other_chat.chat.id = ChatId(CHAT_ID - 1);
-        on_chat_member(t.bot.clone(), t.app.clone(), other_chat).await.unwrap();
+        on_chat_member(t.bot.clone(), t.app.clone(), other_chat)
+            .await
+            .unwrap();
         assert!(t.calls("restrictchatmember").await.is_empty());
         assert!(t.sent_texts().await.is_empty());
     }
 
     #[tokio::test]
     async fn bots_are_banned_unless_allowed() {
-        let bot_user = json!({"id": 7, "is_bot": true, "first_name": "Spam", "username": "spam_bot"});
+        let bot_user =
+            json!({"id": 7, "is_bot": true, "first_name": "Spam", "username": "spam_bot"});
         let t = TestBot::new(Settings::default()).await;
-        on_chat_member(t.bot.clone(), t.app.clone(), member_update(bot_user.clone(), "left", "member")).await.unwrap();
+        on_chat_member(
+            t.bot.clone(),
+            t.app.clone(),
+            member_update(bot_user.clone(), "left", "member"),
+        )
+        .await
+        .unwrap();
         assert_eq!(t.calls("banchatmember").await.len(), 1);
-        assert!(t.calls("restrictchatmember").await.is_empty(), "no probation for bots");
+        assert!(
+            t.calls("restrictchatmember").await.is_empty(),
+            "no probation for bots"
+        );
 
-        let t = TestBot::new(Settings { captcha_bots_allowed: true, ..Settings::default() }).await;
-        on_chat_member(t.bot.clone(), t.app.clone(), member_update(bot_user, "left", "member")).await.unwrap();
+        let t = TestBot::new(Settings {
+            captcha_bots_allowed: true,
+            ..Settings::default()
+        })
+        .await;
+        on_chat_member(
+            t.bot.clone(),
+            t.app.clone(),
+            member_update(bot_user, "left", "member"),
+        )
+        .await
+        .unwrap();
         assert!(t.calls("banchatmember").await.is_empty());
     }
 
     #[tokio::test]
     async fn no_captcha_when_disabled() {
-        let t = TestBot::new(Settings { captcha_enabled: false, ..Settings::default() }).await;
-        on_chat_member(t.bot.clone(), t.app.clone(), member_update(user_json(USER_ID), "left", "member")).await.unwrap();
-        assert_eq!(t.calls("restrictchatmember").await.len(), 1, "probation still applies");
+        let t = TestBot::new(Settings {
+            captcha_enabled: false,
+            ..Settings::default()
+        })
+        .await;
+        on_chat_member(
+            t.bot.clone(),
+            t.app.clone(),
+            member_update(user_json(USER_ID), "left", "member"),
+        )
+        .await
+        .unwrap();
+        assert_eq!(
+            t.calls("restrictchatmember").await.len(),
+            1,
+            "probation still applies"
+        );
         assert!(t.sent_texts().await.is_empty());
     }
 
@@ -198,8 +278,15 @@ mod tests {
         let sent = t.calls("sendmessage").await;
         assert!(sent[0]["text"].as_str().unwrap().starts_with("Welcome"));
         assert!(sent[0].get("reply_parameters").is_none());
-        assert_eq!(sent[1]["text"], md::mention(&user), "short one is a mention");
+        assert_eq!(
+            sent[1]["text"],
+            md::mention(&user),
+            "short one is a mention"
+        );
         assert_eq!(sent[1]["reply_parameters"]["message_id"], SENT_MSG_ID);
-        assert!(sent[2]["text"].as_str().unwrap().starts_with("Welcome"), "long again after enough messages");
+        assert!(
+            sent[2]["text"].as_str().unwrap().starts_with("Welcome"),
+            "long again after enough messages"
+        );
     }
 }

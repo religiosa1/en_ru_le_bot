@@ -12,7 +12,13 @@ const HOUR: u64 = 60 * MINUTE;
 pub const DAY: u64 = 24 * HOUR;
 
 /// Units in descending order, components of a duration string must follow it.
-const UNITS: [(&str, u64); 5] = [("d", DAY), ("h", HOUR), ("m", MINUTE), ("s", SECOND), ("ms", 1)];
+const UNITS: [(&str, u64); 5] = [
+    ("d", DAY),
+    ("h", HOUR),
+    ("m", MINUTE),
+    ("s", SECOND),
+    ("ms", 1),
+];
 
 /// Formats a duration with up to 3 most significant components, e.g. "1d2h3m".
 pub fn format_duration(duration: Duration) -> String {
@@ -40,8 +46,10 @@ fn format_components(duration: Duration, max_components: usize) -> String {
     result
 }
 
-static NUMBER_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^(?:\d+(?:\.\d+)?|\.\d+)$").unwrap());
-static COMPONENT_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"(\d+(?:\.\d+)?|\.\d+)(ms|d|h|m|s)").unwrap());
+static NUMBER_RE: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"^(?:\d+(?:\.\d+)?|\.\d+)$").unwrap());
+static COMPONENT_RE: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"(\d+(?:\.\d+)?|\.\d+)(ms|d|h|m|s)").unwrap());
 
 /// Parses a duration string. Bare numbers are interpreted as minutes.
 ///
@@ -76,7 +84,8 @@ pub fn parse_duration(input: &str) -> Option<Duration> {
 }
 
 fn millis_to_duration(ms: f64) -> Option<Duration> {
-    ms.is_finite().then(|| Duration::from_millis(ms.round() as u64))
+    ms.is_finite()
+        .then(|| Duration::from_millis(ms.round() as u64))
 }
 
 /// Serde adapter storing durations as human-readable strings, without precision loss.
@@ -90,7 +99,8 @@ pub mod as_str {
 
     pub fn deserialize<'de, D: Deserializer<'de>>(deserializer: D) -> Result<Duration, D::Error> {
         let value = String::deserialize(deserializer)?;
-        parse_duration(&value).ok_or_else(|| D::Error::custom(format!("invalid duration {value:?}")))
+        parse_duration(&value)
+            .ok_or_else(|| D::Error::custom(format!("invalid duration {value:?}")))
     }
 }
 
@@ -123,7 +133,10 @@ mod tests {
 
     #[test]
     fn formats_up_to_3_components() {
-        assert_eq!(format_duration(ms(DAY + 2 * HOUR + 3 * MINUTE + 4 * SECOND + 5)), "1d2h3m");
+        assert_eq!(
+            format_duration(ms(DAY + 2 * HOUR + 3 * MINUTE + 4 * SECOND + 5)),
+            "1d2h3m"
+        );
         assert_eq!(format_duration(ms(20 * SECOND + 100)), "20s100ms");
     }
 
@@ -142,7 +155,10 @@ mod tests {
     fn parses_fractions() {
         assert_eq!(parse_duration("0.5h"), Some(ms(30 * MINUTE)));
         assert_eq!(parse_duration(".5h"), Some(ms(30 * MINUTE)));
-        assert_eq!(parse_duration("0.5h.25m"), Some(ms(30 * MINUTE + 15 * SECOND)));
+        assert_eq!(
+            parse_duration("0.5h.25m"),
+            Some(ms(30 * MINUTE + 15 * SECOND))
+        );
         assert_eq!(parse_duration("1.5d"), Some(ms(36 * HOUR)));
     }
 
@@ -154,14 +170,20 @@ mod tests {
 
     #[test]
     fn rejects_malformed() {
-        for input in ["", "12q2m", "deadbeef", "10m3h", "3h 10m", "3hh", "-3h", "h"] {
+        for input in [
+            "", "12q2m", "deadbeef", "10m3h", "3h 10m", "3hh", "-3h", "h",
+        ] {
             assert_eq!(parse_duration(input), None, "{input:?}");
         }
     }
 
     #[test]
     fn format_parse_roundtrip() {
-        for value in [ms(15 * MINUTE), ms(3 * HOUR), ms(DAY + 2 * HOUR + 3 * MINUTE)] {
+        for value in [
+            ms(15 * MINUTE),
+            ms(3 * HOUR),
+            ms(DAY + 2 * HOUR + 3 * MINUTE),
+        ] {
             assert_eq!(parse_duration(&format_duration(value)), Some(value));
         }
     }

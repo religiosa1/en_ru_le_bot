@@ -168,11 +168,11 @@ Measured on 2000 random messages from 2026 (not used in training), labelled
 by an LLM reviewer that never saw any detector's verdict. Each message is checked
 as if it were sent on an English day:
 
-| Detector | English wrongly flagged as other language | Russian wrongly flagged | Real other-language messages caught |
-|---|---|---|---|
-| [tongue](https://desertant.com/models/tongue/) | 6 / 1396 (0.4%) | 3 / 552 | 4 / 10 |
-| [lingua-rs](https://github.com/pemistahl/lingua-rs) | 11 / 1396 (0.8%) | 9 / 552 | 4 / 10 |
-| **this bot's model** | **1 / 1396 (0.07%)** | **0 / 552** | **7 / 10** |
+| Detector                                            | English wrongly flagged as other language | Russian wrongly flagged | Real other-language messages caught |
+| --------------------------------------------------- | ----------------------------------------- | ----------------------- | ----------------------------------- |
+| [tongue](https://desertant.com/models/tongue/)      | 6 / 1396 (0.4%)                           | 3 / 552                 | 4 / 10                              |
+| [lingua-rs](https://github.com/pemistahl/lingua-rs) | 11 / 1396 (0.8%)                          | 9 / 552                 | 4 / 10                              |
+| **this bot's model**                                | **1 / 1396 (0.07%)**                      | **0 / 552**             | **7 / 10**                          |
 
 Of all "other language" verdicts over the whole of 2026 (61.7k checked
 messages), ~81% are right; most of the wrong ones are lone names or places.
@@ -368,4 +368,3 @@ EnRuLeBot is MIT Licensed.
 
 The `other` class of the language model is trained on
 [Tatoeba](https://tatoeba.org) sentences (CC-BY 2.0 FR).
-

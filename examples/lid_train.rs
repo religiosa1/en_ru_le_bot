@@ -64,15 +64,30 @@ fn main() -> anyhow::Result<()> {
     let mut model = FastText::train(args.clone()).map_err(|e| anyhow::anyhow!("train: {e}"))?;
     println!("trained in {:.0?}", started.elapsed());
     fs::create_dir_all("models")?;
-    model.save_model(MODEL_BIN).map_err(|e| anyhow::anyhow!("save: {e}"))?;
+    model
+        .save_model(MODEL_BIN)
+        .map_err(|e| anyhow::anyhow!("save: {e}"))?;
     println!("== full model");
     evaluate(&Lid::load(MODEL_BIN)?, &test);
 
-    let qargs = Args { cutoff: 50_000, qnorm: true, retrain: true, epoch: 3, ..args };
-    model.quantize(&qargs).map_err(|e| anyhow::anyhow!("quantize: {e}"))?;
-    model.save_model(MODEL_FTZ).map_err(|e| anyhow::anyhow!("save: {e}"))?;
+    let qargs = Args {
+        cutoff: 50_000,
+        qnorm: true,
+        retrain: true,
+        epoch: 3,
+        ..args
+    };
+    model
+        .quantize(&qargs)
+        .map_err(|e| anyhow::anyhow!("quantize: {e}"))?;
+    model
+        .save_model(MODEL_FTZ)
+        .map_err(|e| anyhow::anyhow!("save: {e}"))?;
     for path in [MODEL_BIN, MODEL_FTZ] {
-        println!("{path}: {:.1} MiB", fs::metadata(path)?.len() as f64 / 1048576.0);
+        println!(
+            "{path}: {:.1} MiB",
+            fs::metadata(path)?.len() as f64 / 1048576.0
+        );
     }
     println!("== quantized model");
     evaluate(&Lid::load(MODEL_FTZ)?, &test);
@@ -93,25 +108,46 @@ fn evaluate(lid: &Lid, test: &[Row]) {
         let label = detection.as_ref().map_or("none", |d| d.label.name());
         let counts = other_at.entry(key).or_default();
         for (i, threshold) in THRESHOLDS.iter().enumerate() {
-            if detection.as_ref().is_some_and(|d| d.label == Label::Other && d.confidence >= *threshold) {
+            if detection
+                .as_ref()
+                .is_some_and(|d| d.label == Label::Other && d.confidence >= *threshold)
+            {
                 counts[i] += 1;
             }
         }
         *confusion.entry(key).or_default().entry(label).or_default() += 1;
     }
 
-    println!("{:<10} {:<14} {:>6}  predicted / \"other\" at {THRESHOLDS:?}", "label", "source", "total");
+    println!(
+        "{:<10} {:<14} {:>6}  predicted / \"other\" at {THRESHOLDS:?}",
+        "label", "source", "total"
+    );
     for (key, predicted) in &confusion {
         let total: usize = predicted.values().sum();
-        let shares: Vec<String> =
-            predicted.iter().map(|(l, n)| format!("{l} {:.1}%", 100.0 * *n as f64 / total as f64)).collect();
-        let other: Vec<String> = other_at[key].iter().map(|n| format!("{:.2}%", 100.0 * *n as f64 / total as f64)).collect();
-        println!("{:<10} {:<14} {total:>6}  {} / {}", key.0, key.1, shares.join(", "), other.join(" "));
+        let shares: Vec<String> = predicted
+            .iter()
+            .map(|(l, n)| format!("{l} {:.1}%", 100.0 * *n as f64 / total as f64))
+            .collect();
+        let other: Vec<String> = other_at[key]
+            .iter()
+            .map(|n| format!("{:.2}%", 100.0 * *n as f64 / total as f64))
+            .collect();
+        println!(
+            "{:<10} {:<14} {total:>6}  {} / {}",
+            key.0,
+            key.1,
+            shares.join(", "),
+            other.join(" ")
+        );
     }
 }
 
 fn source_group(source: &str) -> &str {
-    if source.starts_with("tatoeba") { "tatoeba" } else { source }
+    if source.starts_with("tatoeba") {
+        "tatoeba"
+    } else {
+        source
+    }
 }
 
 fn read_rows(path: &str) -> anyhow::Result<Vec<Row>> {

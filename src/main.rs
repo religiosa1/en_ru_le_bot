@@ -25,7 +25,11 @@ impl Config {
         let chat_id = env::var("CHAT_ID").context("CHAT_ID env variable is required")?;
         Ok(Self {
             token: env::var("TOKEN").context("TOKEN env variable is required")?,
-            chat_id: ChatId(chat_id.parse().with_context(|| format!("CHAT_ID {chat_id:?} isn't a valid chat id"))?),
+            chat_id: ChatId(
+                chat_id
+                    .parse()
+                    .with_context(|| format!("CHAT_ID {chat_id:?} isn't a valid chat id"))?,
+            ),
             state_path: state_path(),
         })
     }
@@ -40,7 +44,10 @@ fn state_path() -> String {
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    if env::args().skip(1).any(|arg| arg == "--version" || arg == "-V") {
+    if env::args()
+        .skip(1)
+        .any(|arg| arg == "--version" || arg == "-V")
+    {
         println!("en_ru_le_bot {VERSION}");
         return Ok(());
     }
@@ -56,7 +63,10 @@ async fn main() -> anyhow::Result<()> {
 
     let started = Instant::now();
     let lid = Lid::embedded()?;
-    info!(duration_ms = started.elapsed().as_millis() as u64, "Language model loaded");
+    info!(
+        duration_ms = started.elapsed().as_millis() as u64,
+        "Language model loaded"
+    );
 
     let bot = Bot::new(config.token);
     let me = bot.get_me().await.context("get bot info")?;
@@ -68,7 +78,11 @@ async fn main() -> anyhow::Result<()> {
     tokio::spawn(alarm::run(bot.clone(), app.clone()));
 
     let listener = Polling::builder(bot.clone())
-        .allowed_updates(vec![AllowedUpdate::Message, AllowedUpdate::ChatMember, AllowedUpdate::MyChatMember])
+        .allowed_updates(vec![
+            AllowedUpdate::Message,
+            AllowedUpdate::ChatMember,
+            AllowedUpdate::MyChatMember,
+        ])
         // A webhook left on the token would make Telegram refuse polling
         .delete_webhook()
         .await
@@ -78,10 +92,15 @@ async fn main() -> anyhow::Result<()> {
         .branch(Update::filter_chat_member().endpoint(members::on_chat_member));
     Dispatcher::builder(bot, handler)
         .dependencies(dptree::deps![app])
-        .error_handler(Arc::new(|err: anyhow::Error| async move { error!(err = format!("{err:#}"), "Update handling failed") }))
+        .error_handler(Arc::new(|err: anyhow::Error| async move {
+            error!(err = format!("{err:#}"), "Update handling failed")
+        }))
         .enable_ctrlc_handler()
         .build()
-        .dispatch_with_listener(listener, LoggingErrorHandler::with_custom_text("Polling error"))
+        .dispatch_with_listener(
+            listener,
+            LoggingErrorHandler::with_custom_text("Polling error"),
+        )
         .await;
     Ok(())
 }
@@ -90,8 +109,16 @@ async fn main() -> anyhow::Result<()> {
 async fn set_menus(bot: &Bot, chat_id: ChatId) {
     let chat_id = Recipient::Id(chat_id);
     let menus = [
-        (commands::menu(false), BotCommandScope::Chat { chat_id: chat_id.clone() }),
-        (commands::menu(true), BotCommandScope::ChatAdministrators { chat_id }),
+        (
+            commands::menu(false),
+            BotCommandScope::Chat {
+                chat_id: chat_id.clone(),
+            },
+        ),
+        (
+            commands::menu(true),
+            BotCommandScope::ChatAdministrators { chat_id },
+        ),
     ];
     for (menu, scope) in menus {
         // Not fatal, the commands work without the menu

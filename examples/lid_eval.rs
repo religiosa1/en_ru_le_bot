@@ -10,7 +10,9 @@ use std::collections::{BTreeMap, HashMap};
 use std::fs;
 
 use anyhow::Context;
-use en_ru_le_bot::langday::{Lang, MIN_MSG_LENGTH, OtherLang, detect_other_language, strip_non_letter_or_whitespace_chars};
+use en_ru_le_bot::langday::{
+    Lang, MIN_MSG_LENGTH, OtherLang, detect_other_language, strip_non_letter_or_whitespace_chars,
+};
 use en_ru_le_bot::lid::Lid;
 use serde::{Deserialize, Serialize};
 
@@ -28,8 +30,15 @@ struct Decision {
 
 fn main() -> anyhow::Result<()> {
     let args: Vec<String> = std::env::args().skip(1).collect();
-    let flag = |name: &str| args.iter().position(|a| a == name).and_then(|i| args.get(i + 1));
-    let corpus_path = args.first().filter(|a| !a.starts_with("--")).context("corpus path is required")?;
+    let flag = |name: &str| {
+        args.iter()
+            .position(|a| a == name)
+            .and_then(|i| args.get(i + 1))
+    };
+    let corpus_path = args
+        .first()
+        .filter(|a| !a.starts_with("--"))
+        .context("corpus path is required")?;
 
     let messages: Vec<Message> = read_jsonl(corpus_path)?;
     let lid = match flag("--model") {
@@ -49,24 +58,38 @@ fn main() -> anyhow::Result<()> {
                     Some(OtherLang::Ml { confidence, .. }) => format!("ml:{confidence:.2}"),
                 }
             };
-            Decision { id: m.id.clone(), verdict }
+            Decision {
+                id: m.id.clone(),
+                verdict,
+            }
         })
         .collect();
 
     if let Some(path) = flag("--save") {
-        let lines: Vec<String> = decisions.iter().map(serde_json::to_string).collect::<Result<_, _>>()?;
+        let lines: Vec<String> = decisions
+            .iter()
+            .map(serde_json::to_string)
+            .collect::<Result<_, _>>()?;
         fs::write(path, lines.join("\n") + "\n").with_context(|| format!("write {path}"))?;
     }
 
-    println!("current: {:?}", count_categories(decisions.iter().map(|d| &d.verdict)));
+    println!(
+        "current: {:?}",
+        count_categories(decisions.iter().map(|d| &d.verdict))
+    );
     let Some(baseline_path) = flag("--baseline") else {
         return Ok(());
     };
-    let baseline: HashMap<String, String> =
-        read_jsonl::<Decision>(baseline_path)?.into_iter().map(|d| (d.id, d.verdict)).collect();
+    let baseline: HashMap<String, String> = read_jsonl::<Decision>(baseline_path)?
+        .into_iter()
+        .map(|d| (d.id, d.verdict))
+        .collect();
     println!("baseline: {:?}", count_categories(baseline.values()));
 
-    let texts: HashMap<&str, &str> = messages.iter().map(|m| (m.id.as_str(), m.text.as_str())).collect();
+    let texts: HashMap<&str, &str> = messages
+        .iter()
+        .map(|m| (m.id.as_str(), m.text.as_str()))
+        .collect();
     let mut disagreements: Vec<(&str, &str, &Decision)> = decisions
         .iter()
         .filter_map(|d| Some((baseline.get(&d.id)?.as_str(), d)))
@@ -77,8 +100,15 @@ fn main() -> anyhow::Result<()> {
 
     let mut transitions: BTreeMap<(&str, &str), usize> = BTreeMap::new();
     for (old_category, old, d) in &disagreements {
-        *transitions.entry((old_category, category(&d.verdict))).or_default() += 1;
-        println!("{}\t{old} -> {}\t{}", d.id, d.verdict, texts[d.id.as_str()].replace('\n', " "));
+        *transitions
+            .entry((old_category, category(&d.verdict)))
+            .or_default() += 1;
+        println!(
+            "{}\t{old} -> {}\t{}",
+            d.id,
+            d.verdict,
+            texts[d.id.as_str()].replace('\n', " ")
+        );
     }
     println!("\ndisagreements (baseline -> current):");
     for ((from, to), count) in transitions {

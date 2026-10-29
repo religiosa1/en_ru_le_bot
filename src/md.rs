@@ -50,21 +50,36 @@ mod tests {
     #[test]
     fn escapes_values() {
         assert_eq!(escape("john.doe!"), "john\\.doe\\!");
-        assert_eq!(escape("*bold* _italic_ ~strike~ |spoiler|"), "\\*bold\\* \\_italic\\_ \\~strike\\~ \\|spoiler\\|");
+        assert_eq!(
+            escape("*bold* _italic_ ~strike~ |spoiler|"),
+            "\\*bold\\* \\_italic\\_ \\~strike\\~ \\|spoiler\\|"
+        );
         assert_eq!(escape("3 + 4"), "3 \\+ 4");
     }
 
     #[test]
     fn escapes_templates_except_formatting() {
         assert_eq!(fill("Hi!", &[]), "Hi\\!");
-        assert_eq!(fill("[link](url) # > - = {code} Back\\slash", &[]), "\\[link\\]\\(url\\) \\# \\> \\- \\= \\{code\\} Back\\\\slash");
-        assert_eq!(fill("*bold* _italic_ ~strike~ |spoiler|", &[]), "*bold* _italic_ ~strike~ |spoiler|");
+        assert_eq!(
+            fill("[link](url) # > - = {code} Back\\slash", &[]),
+            "\\[link\\]\\(url\\) \\# \\> \\- \\= \\{code\\} Back\\\\slash"
+        );
+        assert_eq!(
+            fill("*bold* _italic_ ~strike~ |spoiler|", &[]),
+            "*bold* _italic_ ~strike~ |spoiler|"
+        );
     }
 
     #[test]
     fn fills_values_as_is() {
-        assert_eq!(fill("Hello {}! You have {} messages.", &["world", "5"]), "Hello world\\! You have 5 messages\\.");
-        assert_eq!(fill("Click {} here", &["[link](url)"]), "Click [link](url) here");
+        assert_eq!(
+            fill("Hello {}! You have {} messages.", &["world", "5"]),
+            "Hello world\\! You have 5 messages\\."
+        );
+        assert_eq!(
+            fill("Click {} here", &["[link](url)"]),
+            "Click [link](url) here"
+        );
         assert_eq!(fill("", &[]), "");
     }
 }

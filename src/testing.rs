@@ -25,8 +25,12 @@ struct FakeTelegram;
 impl Respond for FakeTelegram {
     fn respond(&self, request: &Request) -> ResponseTemplate {
         let result = match method_name(request).as_str() {
-            "sendmessage" => json!({"message_id": SENT_MSG_ID, "date": 0, "chat": chat_json(CHAT_ID), "text": "sent"}),
-            "getchatadministrators" => json!([{"status": "creator", "is_anonymous": false, "user": user_json(ADMIN_ID)}]),
+            "sendmessage" => {
+                json!({"message_id": SENT_MSG_ID, "date": 0, "chat": chat_json(CHAT_ID), "text": "sent"})
+            }
+            "getchatadministrators" => {
+                json!([{"status": "creator", "is_anonymous": false, "user": user_json(ADMIN_ID)}])
+            }
             _ => json!(true),
         };
         ResponseTemplate::new(200).set_body_json(json!({"ok": true, "result": result}))
@@ -34,7 +38,12 @@ impl Respond for FakeTelegram {
 }
 
 fn method_name(request: &Request) -> String {
-    request.url.path_segments().and_then(|mut s| s.next_back()).unwrap_or_default().to_lowercase()
+    request
+        .url
+        .path_segments()
+        .and_then(|mut s| s.next_back())
+        .unwrap_or_default()
+        .to_lowercase()
 }
 
 /// Bot and app talking to a fake Bot API, with state in a temp file.
@@ -47,11 +56,19 @@ pub struct TestBot {
 impl TestBot {
     pub async fn new(settings: Settings) -> Self {
         let server = MockServer::start().await;
-        Mock::given(any()).respond_with(FakeTelegram).mount(&server).await;
+        Mock::given(any())
+            .respond_with(FakeTelegram)
+            .mount(&server)
+            .await;
         let bot = Bot::new("123:test").set_api_url(server.uri().parse().unwrap());
         let store = Store::load(temp_state_path()).unwrap();
         store.update(|s| s.settings = settings).unwrap();
-        let app = Arc::new(App::new(store, Lid::embedded().unwrap(), ChatId(CHAT_ID), "en_ru_le_bot".into()));
+        let app = Arc::new(App::new(
+            store,
+            Lid::embedded().unwrap(),
+            ChatId(CHAT_ID),
+            "en_ru_le_bot".into(),
+        ));
         Self { bot, app, server }
     }
 
@@ -67,14 +84,19 @@ impl TestBot {
 
     /// Texts of the messages sent so far.
     pub async fn sent_texts(&self) -> Vec<String> {
-        self.calls("sendmessage").await.iter().map(|c| c["text"].as_str().unwrap_or_default().to_owned()).collect()
+        self.calls("sendmessage")
+            .await
+            .iter()
+            .map(|c| c["text"].as_str().unwrap_or_default().to_owned())
+            .collect()
     }
 }
 
 fn temp_state_path() -> String {
     static COUNTER: AtomicUsize = AtomicUsize::new(0);
     let n = COUNTER.fetch_add(1, Ordering::Relaxed);
-    let dir = std::env::temp_dir().join(format!("en_ru_le_bot_handlers_{}_{n}", std::process::id()));
+    let dir =
+        std::env::temp_dir().join(format!("en_ru_le_bot_handlers_{}_{n}", std::process::id()));
     let _ = std::fs::remove_dir_all(&dir);
     dir.join("state.json").to_string_lossy().into_owned()
 }

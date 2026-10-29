@@ -66,18 +66,36 @@ mod tests {
     #[test]
     fn announces_scheduled_days() {
         let settings = Settings::default();
-        assert_eq!(announcement(&settings, MONDAY), Some("Начался русский день."));
-        assert_eq!(announcement(&settings, TUESDAY), Some("English day has begun."));
-        assert_eq!(announcement(&settings, SUNDAY), Some("Free day has begun.\nНачался свободный день."));
+        assert_eq!(
+            announcement(&settings, MONDAY),
+            Some("Начался русский день.")
+        );
+        assert_eq!(
+            announcement(&settings, TUESDAY),
+            Some("English day has begun.")
+        );
+        assert_eq!(
+            announcement(&settings, SUNDAY),
+            Some("Free day has begun.\nНачался свободный день.")
+        );
     }
 
     #[test]
     fn stays_silent_when_nothing_changes() {
-        let forced = Settings { forced_lang: Some(Lang::En), ..Settings::default() };
+        let forced = Settings {
+            forced_lang: Some(Lang::En),
+            ..Settings::default()
+        };
         assert_eq!(announcement(&forced, MONDAY), None);
-        let disabled = Settings { langday_checks: false, ..Settings::default() };
+        let disabled = Settings {
+            langday_checks: false,
+            ..Settings::default()
+        };
         assert_eq!(announcement(&disabled, MONDAY), None);
-        let alarm_off = Settings { alarm_enabled: false, ..Settings::default() };
+        let alarm_off = Settings {
+            alarm_enabled: false,
+            ..Settings::default()
+        };
         assert_eq!(announcement(&alarm_off, MONDAY), None);
     }
 
@@ -87,7 +105,11 @@ mod tests {
         announce(&t.bot, &t.app, TUESDAY).await;
         assert_eq!(t.sent_texts().await, ["English day has begun."]);
 
-        let t = TestBot::new(Settings { alarm_enabled: false, ..Settings::default() }).await;
+        let t = TestBot::new(Settings {
+            alarm_enabled: false,
+            ..Settings::default()
+        })
+        .await;
         announce(&t.bot, &t.app, TUESDAY).await;
         assert!(t.sent_texts().await.is_empty());
     }

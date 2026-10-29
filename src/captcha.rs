@@ -29,8 +29,18 @@ pub struct Attempt {
 }
 
 /// Adds a pending captcha, keeping bot messages of a previous one (e.g. the user left and rejoined) for cleanup.
-pub fn add(state: &mut State, user: &User, question: String, answer: String, msg_id: MessageId, now: u64) {
-    let mut msg_ids = state.captchas.remove(&user.id.0).map_or_else(Vec::new, |c| c.msg_ids);
+pub fn add(
+    state: &mut State,
+    user: &User,
+    question: String,
+    answer: String,
+    msg_id: MessageId,
+    now: u64,
+) {
+    let mut msg_ids = state
+        .captchas
+        .remove(&user.id.0)
+        .map_or_else(Vec::new, |c| c.msg_ids);
     msg_ids.push(msg_id.0);
     let captcha = Captcha {
         question,
@@ -62,7 +72,12 @@ pub fn remove(state: &mut State, user: &UserRef) -> Option<Vec<i32>> {
 
 /// Users who didn't solve their captcha since `asked_before` (unix ms).
 pub fn stale(state: &State, asked_before: u64) -> Vec<u64> {
-    state.captchas.iter().filter(|(_, c)| c.asked_at < asked_before).map(|(id, _)| *id).collect()
+    state
+        .captchas
+        .iter()
+        .filter(|(_, c)| c.asked_at < asked_before)
+        .map(|(id, _)| *id)
+        .collect()
 }
 
 /// Random "a + b" question with its answer.
@@ -103,10 +118,14 @@ pub async fn on_join(bot: &Bot, app: &App, user: &User) -> anyhow::Result<()> {
     }
     let (question, answer) = question_answer();
     let msg = bot
-        .send_message(app.chat_id, message(&question, user, settings.captcha_max_age))
+        .send_message(
+            app.chat_id,
+            message(&question, user, settings.captcha_max_age),
+        )
         .parse_mode(ParseMode::MarkdownV2)
         .await?;
-    app.store.update(|s| add(s, user, question, answer, msg.id, now_ms()))?;
+    app.store
+        .update(|s| add(s, user, question, answer, msg.id, now_ms()))?;
     info!(user_id = user.id.0, "Sent captcha check for the user");
     Ok(())
 }
@@ -130,14 +149,20 @@ pub async fn on_message(bot: &Bot, app: &App, msg: &Message, user: &User) -> any
         remove_check(bot, app, &UserRef::Id(user.id.0)).await?;
         welcome(bot, app, user).await;
     } else if attempt.attempts >= MAX_ATTEMPTS {
-        info!(user_id = user.id.0, text, "Too many failed captcha attempts, banning");
+        info!(
+            user_id = user.id.0,
+            text, "Too many failed captcha attempts, banning"
+        );
         bot.ban_chat_member(app.chat_id, user.id).await?;
         remove_check(bot, app, &UserRef::Id(user.id.0)).await?;
     } else {
         info!(user_id = user.id.0, text, "Captcha verification failed");
         if attempt.attempts % REPEAT_QUESTION_EVERY == 0 {
             let reminder = message(&attempt.question, user, app.settings().captcha_max_age);
-            let sent = bot.send_message(app.chat_id, reminder).parse_mode(ParseMode::MarkdownV2).await?;
+            let sent = bot
+                .send_message(app.chat_id, reminder)
+                .parse_mode(ParseMode::MarkdownV2)
+                .await?;
             app.store.update(|s| {
                 if let Some(captcha) = s.captchas.get_mut(&user.id.0) {
                     captcha.msg_ids.push(sent.id.0);
@@ -154,7 +179,12 @@ pub async fn on_message(bot: &Bot, app: &App, msg: &Message, user: &User) -> any
 pub async fn remove_check(bot: &Bot, app: &App, user: &UserRef) -> anyhow::Result<()> {
     let msg_ids = app.store.update(|s| remove(s, user))?.unwrap_or_default();
     if !msg_ids.is_empty()
-        && let Err(err) = bot.delete_messages(app.chat_id, msg_ids.into_iter().map(MessageId).collect::<Vec<_>>()).await
+        && let Err(err) = bot
+            .delete_messages(
+                app.chat_id,
+                msg_ids.into_iter().map(MessageId).collect::<Vec<_>>(),
+            )
+            .await
     {
         error!(%err, "Failed to delete captcha messages");
     }
@@ -170,9 +200,15 @@ pub async fn sweep(bot: Bot, app: Arc<App>) {
         interval.tick().await;
         let settings = app.settings();
         let max_age = settings.captcha_max_age.as_millis() as u64;
-        let stale_ids = app.store.read(|s| stale(s, now_ms().saturating_sub(max_age)));
+        let stale_ids = app
+            .store
+            .read(|s| stale(s, now_ms().saturating_sub(max_age)));
         for user_id in stale_ids {
-            info!(user_id, ban = settings.captcha_enabled, "Stale captcha verification");
+            info!(
+                user_id,
+                ban = settings.captcha_enabled,
+                "Stale captcha verification"
+            );
             // Removing the record first, so a failing ban doesn't retry forever
             let result = async {
                 remove_check(&bot, &app, &UserRef::Id(user_id)).await?;
@@ -182,7 +218,10 @@ pub async fn sweep(bot: Bot, app: Arc<App>) {
                 anyhow::Ok(())
             };
             if let Err(err) = result.await {
-                error!(err = format!("{err:#}"), user_id, "Error while processing stale verification");
+                error!(
+                    err = format!("{err:#}"),
+                    user_id, "Error while processing stale verification"
+                );
             }
         }
     }
@@ -210,30 +249,71 @@ mod tests {
     #[test]
     fn verifies_answers() {
         let mut state = State::default();
-        add(&mut state, &user(1, Some("newbie")), "2 + 3".into(), "5".into(), MessageId(10), 0);
-        assert!(attempt(&mut state, 2, "5").is_none(), "no captcha for other users");
+        add(
+            &mut state,
+            &user(1, Some("newbie")),
+            "2 + 3".into(),
+            "5".into(),
+            MessageId(10),
+            0,
+        );
+        assert!(
+            attempt(&mut state, 2, "5").is_none(),
+            "no captcha for other users"
+        );
         let wrong = attempt(&mut state, 1, "6").unwrap();
         assert!(!wrong.correct);
         let right = attempt(&mut state, 1, " 5 ").unwrap();
         assert!(right.correct);
         assert_eq!(right.attempts, 2);
-        assert_eq!(remove(&mut state, &UserRef::Username("newbie".into())), Some(vec![10]));
+        assert_eq!(
+            remove(&mut state, &UserRef::Username("newbie".into())),
+            Some(vec![10])
+        );
         assert!(state.captchas.is_empty());
     }
 
     #[test]
     fn finds_stale_verifications() {
         let mut state = State::default();
-        add(&mut state, &user(1, None), "q".into(), "a".into(), MessageId(1), 1000);
-        add(&mut state, &user(2, None), "q".into(), "a".into(), MessageId(2), 5000);
+        add(
+            &mut state,
+            &user(1, None),
+            "q".into(),
+            "a".into(),
+            MessageId(1),
+            1000,
+        );
+        add(
+            &mut state,
+            &user(2, None),
+            "q".into(),
+            "a".into(),
+            MessageId(2),
+            5000,
+        );
         assert_eq!(stale(&state, 2000), [1]);
     }
 
     #[test]
     fn keeps_messages_of_a_previous_captcha() {
         let mut state = State::default();
-        add(&mut state, &user(1, None), "1 + 1".into(), "2".into(), MessageId(1), 0);
-        add(&mut state, &user(1, None), "2 + 2".into(), "4".into(), MessageId(2), 10);
+        add(
+            &mut state,
+            &user(1, None),
+            "1 + 1".into(),
+            "2".into(),
+            MessageId(1),
+            0,
+        );
+        add(
+            &mut state,
+            &user(1, None),
+            "2 + 2".into(),
+            "4".into(),
+            MessageId(2),
+            10,
+        );
         assert_eq!(state.captchas[&1].msg_ids, [1, 2]);
         assert_eq!(state.captchas[&1].answer, "4");
     }
@@ -251,8 +331,18 @@ mod tests {
 
     #[test]
     fn escapes_captcha_message() {
-        let text = message("2 + 3", &user(42, Some("new_user")), Duration::from_secs(20 * 60));
-        assert!(text.starts_with("2 \\+ 3\n\n[@new\\_user](tg://user?id=42), please send"), "{text}");
-        assert!(text.contains("within 20m, we'll consider you a bot\\. Thank you\\!"), "{text}");
+        let text = message(
+            "2 + 3",
+            &user(42, Some("new_user")),
+            Duration::from_secs(20 * 60),
+        );
+        assert!(
+            text.starts_with("2 \\+ 3\n\n[@new\\_user](tg://user?id=42), please send"),
+            "{text}"
+        );
+        assert!(
+            text.contains("within 20m, we'll consider you a bot\\. Thank you\\!"),
+            "{text}"
+        );
     }
 }

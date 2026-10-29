@@ -66,7 +66,6 @@ pub struct Captcha {
     pub msg_ids: Vec<i32>,
 }
 
-
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Violation {
     pub count: u32,
@@ -94,10 +93,17 @@ pub enum UserRef {
 
 impl UserRef {
     /// Finds a user id in a map of records with usernames.
-    pub fn find<T>(&self, records: &HashMap<u64, T>, username: impl Fn(&T) -> Option<&str>) -> Option<u64> {
+    pub fn find<T>(
+        &self,
+        records: &HashMap<u64, T>,
+        username: impl Fn(&T) -> Option<&str>,
+    ) -> Option<u64> {
         match self {
             UserRef::Id(id) => records.contains_key(id).then_some(*id),
-            UserRef::Username(name) => records.iter().find(|(_, r)| username(r) == Some(name.as_str())).map(|(id, _)| *id),
+            UserRef::Username(name) => records
+                .iter()
+                .find(|(_, r)| username(r) == Some(name.as_str()))
+                .map(|(id, _)| *id),
         }
     }
 }
@@ -120,11 +126,15 @@ impl Store {
     pub fn load(path: impl Into<PathBuf>) -> anyhow::Result<Self> {
         let path = path.into();
         let state = match fs::read(&path) {
-            Ok(bytes) => serde_json::from_slice(&bytes).with_context(|| format!("parse state file {path:?}"))?,
+            Ok(bytes) => serde_json::from_slice(&bytes)
+                .with_context(|| format!("parse state file {path:?}"))?,
             Err(e) if e.kind() == std::io::ErrorKind::NotFound => State::default(),
             Err(e) => return Err(e).with_context(|| format!("read state file {path:?}")),
         };
-        Ok(Self { state: Mutex::new(state), path })
+        Ok(Self {
+            state: Mutex::new(state),
+            path,
+        })
     }
 
     /// Reads current state, with expired records already removed.
@@ -150,14 +160,19 @@ impl Store {
         }
         // Write + rename, so a crash mid-write never leaves a truncated file
         let tmp = self.path.with_extension("json.tmp");
-        fs::write(&tmp, serde_json::to_vec_pretty(state)?).with_context(|| format!("write {tmp:?}"))?;
-        fs::rename(&tmp, &self.path).with_context(|| format!("rename {tmp:?} to {:?}", self.path))?;
+        fs::write(&tmp, serde_json::to_vec_pretty(state)?)
+            .with_context(|| format!("write {tmp:?}"))?;
+        fs::rename(&tmp, &self.path)
+            .with_context(|| format!("rename {tmp:?} to {:?}", self.path))?;
         Ok(())
     }
 }
 
 pub fn now_ms() -> u64 {
-    SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_millis() as u64
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap()
+        .as_millis() as u64
 }
 
 #[cfg(test)]
@@ -165,13 +180,18 @@ mod tests {
     use super::*;
 
     fn temp_path(name: &str) -> PathBuf {
-        let dir = std::env::temp_dir().join(format!("en_ru_le_bot_test_{}_{name}", std::process::id()));
+        let dir =
+            std::env::temp_dir().join(format!("en_ru_le_bot_test_{}_{name}", std::process::id()));
         let _ = fs::remove_dir_all(&dir);
         dir.join("state.json")
     }
 
     fn violation(expires_at: u64) -> Violation {
-        Violation { count: 1, username: Some("user".into()), expires_at }
+        Violation {
+            count: 1,
+            username: Some("user".into()),
+            expires_at,
+        }
     }
 
     #[test]
@@ -207,19 +227,30 @@ mod tests {
                 s.violations.insert(2, violation(now + 60_000));
             })
             .unwrap();
-        assert_eq!(store.read(|s| s.violations.keys().copied().collect::<Vec<_>>()), [2]);
+        assert_eq!(
+            store.read(|s| s.violations.keys().copied().collect::<Vec<_>>()),
+            [2]
+        );
     }
 
     #[test]
     fn missing_fields_fall_back_to_defaults() {
         let path = temp_path("partial");
         fs::create_dir_all(path.parent().unwrap()).unwrap();
-        fs::write(&path, r#"{"settings": {"cooldown": "5m", "captcha_enabled": false}}"#).unwrap();
+        fs::write(
+            &path,
+            r#"{"settings": {"cooldown": "5m", "captcha_enabled": false}}"#,
+        )
+        .unwrap();
 
         let settings = Store::load(&path).unwrap().read(|s| s.settings.clone());
         assert_eq!(
             settings,
-            Settings { cooldown: Duration::from_secs(300), captcha_enabled: false, ..Settings::default() }
+            Settings {
+                cooldown: Duration::from_secs(300),
+                captcha_enabled: false,
+                ..Settings::default()
+            }
         );
     }
 
