@@ -69,6 +69,9 @@ async fn main() -> anyhow::Result<()> {
 
     let listener = Polling::builder(bot.clone())
         .allowed_updates(vec![AllowedUpdate::Message, AllowedUpdate::ChatMember, AllowedUpdate::MyChatMember])
+        // A webhook left on the token would make Telegram refuse polling
+        .delete_webhook()
+        .await
         .build();
     let handler = dptree::entry()
         .branch(Update::filter_message().endpoint(bot::on_message))
