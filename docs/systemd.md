@@ -21,6 +21,7 @@ sudoedit /etc/en_ru_le_bot/env   # TOKEN=... and CHAT_ID=..., see env.example
 ```ini
 [Unit]
 Description=EnRuLeBot, Telegram bot for an English/Russian language exchange chat
+Documentation=https://github.com/religiosa1/en_ru_le_bot
 Wants=network-online.target
 After=network-online.target
 
