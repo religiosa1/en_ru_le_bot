@@ -29,7 +29,7 @@ struct Attempt {
     question: String,
 }
 
-/// Adds a pending captcha, keeping bot messages of a previous one (e.g. the user left and rejoined) for cleanup.
+/// Adds a pending captcha, returning bot messages of a previous one (e.g. the user left and rejoined) to clean up.
 fn add(
     state: &mut State,
     user: &User,
@@ -37,21 +37,19 @@ fn add(
     answer: String,
     msg_id: MessageId,
     now: u64,
-) {
-    let mut msg_ids = state
-        .captchas
-        .remove(&user.id.0)
-        .map_or_else(Vec::new, |c| c.msg_ids);
-    msg_ids.push(msg_id.0);
+) -> Vec<i32> {
     let captcha = Captcha {
         question,
         answer,
         username: user.username.clone(),
         asked_at: now,
         attempts: 0,
-        msg_ids,
+        msg_ids: vec![msg_id.0],
     };
-    state.captchas.insert(user.id.0, captcha);
+    state
+        .captchas
+        .insert(user.id.0, captcha)
+        .map_or_else(Vec::new, |c| c.msg_ids)
 }
 
 /// Registers an answer attempt, None if the user has no pending captcha.
@@ -137,9 +135,11 @@ pub async fn on_join(bot: &Bot, app: &App, user: &User) -> anyhow::Result<()> {
         )
         .parse_mode(ParseMode::MarkdownV2)
         .await?;
-    app.store
+    let previous_prompts = app
+        .store
         .update(|s| add(s, user, question.clone(), answer, msg.id, now_ms()))?;
     info!(question, "Captcha sent");
+    delete_messages(bot, app, previous_prompts).await;
     Ok(())
 }
 
@@ -327,9 +327,9 @@ mod tests {
     }
 
     #[test]
-    fn keeps_messages_of_a_previous_captcha() {
+    fn replaces_a_previous_captcha() {
         let mut state = State::default();
-        add(
+        let previous = add(
             &mut state,
             &user(1, None),
             "1 + 1".into(),
@@ -337,7 +337,8 @@ mod tests {
             MessageId(1),
             0,
         );
-        add(
+        assert!(previous.is_empty());
+        let previous = add(
             &mut state,
             &user(1, None),
             "2 + 2".into(),
@@ -345,7 +346,8 @@ mod tests {
             MessageId(2),
             10,
         );
-        assert_eq!(state.captchas[&1].msg_ids, [1, 2]);
+        assert_eq!(previous, [1]);
+        assert_eq!(state.captchas[&1].msg_ids, [2]);
         assert_eq!(state.captchas[&1].answer, "4");
     }
 
