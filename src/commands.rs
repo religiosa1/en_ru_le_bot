@@ -300,6 +300,7 @@ async fn run(
             let (question, _) = captcha::question_answer();
             for text in [
                 captcha::message(&question, user, app.settings().captcha_max_age),
+                captcha::retry_message(&question, user, app.settings().captcha_max_age),
                 members::welcome_message(user),
             ] {
                 bot.send_message(msg.chat.id, text)

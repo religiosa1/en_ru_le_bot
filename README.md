@@ -303,11 +303,13 @@ new members must solve a simple arithmetic question to prove they're human.
 - **Message Deletion**: All messages from unverified users are automatically deleted
 - **Answer Checking**: User messages are checked against the expected answer
 - **Attempt Tracking**: Failed attempts are counted (max 7 attempts)
-- **Progressive Warnings**: Every 3rd failed attempt repeats the same question,
-  in case user missed the original one.
+- **Wrong Answers**: Each failed attempt asks the same question again,
+  replacing the previous prompt, so only one stays in the chat
 - **Timeout/Ban**: Users who exceed max attempts are banned, users who don't
   respond in time are banned for a week (they may be slow humans)
 - **Success**: Correct answers immediately remove verification requirement
+- **Cleanup**: Captcha prompts are deleted once the user passes, gets banned,
+  runs out of time or is trusted with `/trust`
 
 Captcha checks are on by default, `/captcha` toggles them. The probation
 system is always active for new members.

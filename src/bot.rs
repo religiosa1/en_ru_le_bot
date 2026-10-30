@@ -170,7 +170,7 @@ mod tests {
     use crate::VERSION;
     use crate::langday::Lang;
     use crate::state::Captcha;
-    use crate::testing::{ADMIN_ID, CHAT_ID, TestBot, USER_ID, message, message_at};
+    use crate::testing::{ADMIN_ID, CHAT_ID, SENT_MSG_ID, TestBot, USER_ID, message, message_at};
 
     const EN_TEXT: &str = "something in english here";
 
@@ -304,15 +304,22 @@ mod tests {
             1,
             "unverified user's message is deleted"
         );
-        assert!(t.sent_texts().await.is_empty(), "no language warning");
+        let sent = t.sent_texts().await;
+        assert_eq!(sent.len(), 1, "no language warning");
+        assert!(sent[0].starts_with("Wrong answer"), "{}", sent[0]);
+        assert_eq!(
+            t.calls("deletemessages").await[0]["message_ids"],
+            serde_json::json!([7]),
+            "previous prompt is replaced"
+        );
 
         send(&t, message(USER_ID, CHAT_ID, "5")).await;
         assert!(t.app.store.read(|s| s.captchas.is_empty()));
         assert_eq!(
-            t.calls("deletemessages").await[0]["message_ids"],
-            serde_json::json!([7])
+            t.calls("deletemessages").await[1]["message_ids"],
+            serde_json::json!([SENT_MSG_ID])
         );
-        assert!(t.sent_texts().await[0].starts_with("Welcome"));
+        assert!(t.sent_texts().await[1].starts_with("Welcome"));
     }
 
     #[tokio::test]
@@ -341,6 +348,8 @@ mod tests {
 
         send(&t, message(USER_ID, CHAT_ID, "/help https://spam.example")).await;
         assert_eq!(t.calls("deletemessage").await.len(), 1);
-        assert!(t.sent_texts().await.is_empty());
+        let sent = t.sent_texts().await;
+        assert_eq!(sent.len(), 1, "no help");
+        assert!(sent[0].starts_with("Wrong answer"), "{}", sent[0]);
     }
 }

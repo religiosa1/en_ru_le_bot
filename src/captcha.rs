@@ -19,8 +19,6 @@ use crate::state::{Captcha, State, UserRef, now_ms};
 
 /// Failed answers before a ban
 const MAX_ATTEMPTS: u32 = 7;
-/// The question is repeated every this many failed attempts
-const REPEAT_QUESTION_EVERY: u32 = 3;
 const SWEEP_INTERVAL: Duration = dur::minutes(1);
 /// Users who didn't solve the captcha in time may be slow humans, so they can retry later
 const STALE_BAN_DURATION: Duration = dur::days(7);
@@ -106,6 +104,16 @@ If you don't do it within {}, we'll consider you a bot. Thank you!
     )
 }
 
+/// Asks the question again after a wrong answer.
+pub fn retry_message(question: &str, user: &User, time_to_solve: Duration) -> String {
+    md::fill(
+        "Wrong answer, try again! / Неверный ответ, попробуй ещё раз!
+
+{}",
+        &[&message(question, user, time_to_solve)],
+    )
+}
+
 /// Asks a newcomer to solve a captcha; bots are banned instead, unless allowed.
 pub async fn on_join(bot: &Bot, app: &App, user: &User) -> anyhow::Result<()> {
     let settings = app.settings();
@@ -165,18 +173,20 @@ pub async fn on_message(bot: &Bot, app: &App, msg: &Message, user: &User) -> any
             question = attempt.question,
             "Wrong captcha answer"
         );
-        if attempts % REPEAT_QUESTION_EVERY == 0 {
-            let reminder = message(&attempt.question, user, app.settings().captcha_max_age);
-            let sent = bot
-                .send_message(app.chat_id, reminder)
-                .parse_mode(ParseMode::MarkdownV2)
-                .await?;
-            app.store.update(|s| {
-                if let Some(captcha) = s.captchas.get_mut(&user.id.0) {
-                    captcha.msg_ids.push(sent.id.0);
-                }
-            })?;
-        }
+        let retry = retry_message(&attempt.question, user, app.settings().captcha_max_age);
+        let sent = bot
+            .send_message(app.chat_id, retry)
+            .parse_mode(ParseMode::MarkdownV2)
+            .await?;
+        // Only the latest prompt stays in the chat
+        let previous = app
+            .store
+            .update(|s| {
+                let captcha = s.captchas.get_mut(&user.id.0)?;
+                Some(std::mem::replace(&mut captcha.msg_ids, vec![sent.id.0]))
+            })?
+            .unwrap_or_default();
+        delete_messages(bot, app, previous).await;
     }
     Ok(true)
 }
@@ -186,6 +196,12 @@ pub async fn on_message(bot: &Bot, app: &App, msg: &Message, user: &User) -> any
 /// Deleting the messages is best-effort, so a failure doesn't stop what follows, e.g. a ban.
 pub async fn remove_check(bot: &Bot, app: &App, user: &UserRef) -> anyhow::Result<()> {
     let msg_ids = app.store.update(|s| remove(s, user))?.unwrap_or_default();
+    delete_messages(bot, app, msg_ids).await;
+    Ok(())
+}
+
+/// Deletes bot's captcha messages, best-effort.
+async fn delete_messages(bot: &Bot, app: &App, msg_ids: Vec<i32>) {
     if !msg_ids.is_empty()
         && let Err(err) = bot
             .delete_messages(
@@ -196,7 +212,6 @@ pub async fn remove_check(bot: &Bot, app: &App, user: &UserRef) -> anyhow::Resul
     {
         error!(%err, "Failed to delete captcha messages");
     }
-    Ok(())
 }
 
 /// Bans users who didn't solve their captcha in time, for [STALE_BAN_DURATION]. Runs forever.
@@ -353,6 +368,17 @@ mod tests {
         );
         assert!(
             text.contains("within 20m, we'll consider you a bot\\. Thank you\\!"),
+            "{text}"
+        );
+    }
+
+    #[test]
+    fn retry_repeats_the_question() {
+        let text = retry_message("2 + 3", &user(42, Some("new_user")), dur::minutes(20));
+        assert!(
+            text.starts_with(
+                "Wrong answer, try again\\! / Неверный ответ, попробуй ещё раз\\!\n\n2 \\+ 3\n\n"
+            ),
             "{text}"
         );
     }
