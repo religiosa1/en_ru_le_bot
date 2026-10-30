@@ -362,8 +362,15 @@ Environment variables (see [env.example](env.example)):
 - `CHAT_ID` id of your chat/supergroup
 - `STATE_PATH` state file, defaults to `$STATE_DIRECTORY/state.json` when run
   with systemd's `StateDirectory=`, and to `data/state.json` otherwise
-- `LOG_LEVEL` log filter, `info` by default (e.g. `debug`, or
-  `en_ru_le_bot=debug,warn`); logs are JSON lines on stdout
+- `LOG_LEVEL` log filter, `info` by default (e.g. `en_ru_le_bot=debug,warn`);
+- `LOG_FORMAT` `text` (default) or `json`, logs go to stdout
+
+> [!NOTE]  
+> Setting `LOG_LEVEL` just to `debug` would result in the dependencies also
+> logging at debug level. teloxide is polling the Telegram API and in debug
+> logging it would generate an incredible amount of noise. Most likely you want
+> `en_ru_le_bot=debug,warn`, which would enable debug print for the bot itself,
+> but only warn-level logging for dependencies.
 
 ## License
 

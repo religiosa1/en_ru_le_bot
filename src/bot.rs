@@ -5,7 +5,7 @@ use std::time::{Duration, Instant};
 
 use chrono::Utc;
 use teloxide::prelude::*;
-use tracing::{debug, info};
+use tracing::{debug, error, info, instrument};
 
 use crate::duration as dur;
 use crate::langday::{check_message, weekday_utc};
@@ -111,25 +111,42 @@ impl App {
     }
 }
 
+/// Logs an update handling error, so it gets the update's span fields.
+pub fn log_error(err: &anyhow::Error) {
+    error!(err = format!("{err:#}"), "Update handling failed");
+}
+
+#[instrument(name = "message", skip_all, fields(
+    chat_id = msg.chat.id.0,
+    msg_id = msg.id.0,
+    user_id = msg.from.as_ref().map(|u| u.id.0),
+    username = msg.from.as_ref().and_then(|u| u.username.as_deref()),
+))]
 pub async fn on_message(bot: Bot, app: Arc<App>, msg: Message) -> anyhow::Result<()> {
+    handle_message(&bot, &app, &msg)
+        .await
+        .inspect_err(log_error)
+}
+
+async fn handle_message(bot: &Bot, app: &App, msg: &Message) -> anyhow::Result<()> {
     let (Some(text), Some(user)) = (msg.text(), msg.from.as_ref()) else {
         return Ok(());
     };
     let in_chat = msg.chat.id == app.chat_id;
     // Before commands, so unverified users can't post e.g. "/help <spam link>"
-    if in_chat && captcha::on_message(&bot, &app, &msg, user).await? {
+    if in_chat && captcha::on_message(bot, app, msg, user).await? {
         return Ok(());
     }
     if let Some(command) = commands::parse(text, &app.bot_username) {
-        return commands::handle(&bot, &app, &msg, user, command).await;
+        return commands::handle(bot, app, msg, user, command).await;
     }
     if !in_chat {
         return Ok(());
     }
-    members::count_message(&app);
+    members::count_message(app);
 
     if Utc::now() - msg.date > MESSAGE_AGE_THRESHOLD {
-        info!(date = %msg.date, "Message is too old, not checking it");
+        debug!(date = %msg.date, "Message is too old, not checking it");
         return Ok(());
     }
     let Some(violation) = check_message(&app.lid, &app.settings(), text, weekday_utc(now_ms()))
@@ -137,14 +154,14 @@ pub async fn on_message(bot: Bot, app: Arc<App>, msg: Message) -> anyhow::Result
         return Ok(());
     };
     // After the check, so the admins list is only fetched for violations
-    if app.is_admin(&bot, user.id).await? {
-        debug!("User is an admin, no warning");
+    if app.is_admin(bot, user.id).await? {
+        info!("User is an admin, no warning");
         return Ok(());
     }
     if !app.start_cooldown() {
         return Ok(());
     }
-    violations::punish(&bot, &app, &msg, user, &violation).await
+    violations::punish(bot, app, msg, user, &violation).await
 }
 
 #[cfg(test)]

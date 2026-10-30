@@ -66,6 +66,7 @@ pub async fn punish(
     let settings = app.settings();
     if !settings.mute_enabled {
         reply(warning.into()).await?;
+        info!("Warned user, mutes are disabled");
         return Ok(());
     }
 
@@ -79,6 +80,7 @@ pub async fn punish(
             count_message(violation.day, count, max - count)
         ))
         .await?;
+        info!(count, max, "Warned user");
         return Ok(());
     }
 
@@ -87,22 +89,24 @@ pub async fn punish(
         .restrict_chat_member(app.chat_id, user.id, ChatPermissions::INVITE_USERS)
         .until_date(until)
         .await;
-    let text = match (muted, violation.day) {
-        (Ok(_), Some(Lang::En)) => "Ты временно замьючен за неоднократные нарушения.",
-        (Ok(_), _) => "You're temporarily muted for repeated violations.",
-        (Err(err), day) => {
-            error!(%err, user_id = user.id.0, "Error while restricting a member");
-            if day == Some(Lang::En) {
+    let text = match muted {
+        Ok(_) => {
+            info!(count, max, %until, "Muted user");
+            if violation.day == Some(Lang::En) {
+                "Ты временно замьючен за неоднократные нарушения."
+            } else {
+                "You're temporarily muted for repeated violations."
+            }
+        }
+        Err(err) => {
+            error!(%err, count, max, "Error while muting user");
+            if violation.day == Some(Lang::En) {
                 "Ничего, в следующий раз тебя ещё достану."
             } else {
                 "You're in luck, pal. I'll get to you next time."
             }
         }
     };
-    info!(
-        user_id = user.id.0,
-        count, max, "Temporarily restricting member"
-    );
     reply(text.into()).await?;
     Ok(())
 }

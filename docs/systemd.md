@@ -58,7 +58,7 @@ WantedBy=multi-user.target
 ```sh
 sudo systemctl daemon-reload
 sudo systemctl enable --now en_ru_le_bot
-journalctl -u en_ru_le_bot -f   # JSON logs, LOG_LEVEL=debug in the env file for more
+journalctl -u en_ru_le_bot -f   # LOG_LEVEL=en_ru_le_bot=debug,warn in the env file for more
 ```
 
 ## Notes

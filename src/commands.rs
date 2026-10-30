@@ -136,17 +136,9 @@ pub async fn handle(
 ) -> anyhow::Result<()> {
     let Command { kind, args } = command;
     let (name, _, access) = kind.spec();
-    info!(
-        command = name,
-        args,
-        user_id = user.id.0,
-        "Command received"
-    );
+    info!(command = name, args, "Command received");
     if access != Access::Member && !app.is_admin(bot, user.id).await? {
-        info!(
-            user_id = user.id.0,
-            "User not authorized to perform this request"
-        );
+        info!("User not authorized to perform this request");
         return not_allowed(bot, app, msg, user).await;
     }
     if let Some(text) = run(bot, app, msg, user, kind, args).await? {
@@ -490,7 +482,7 @@ async fn restore_permissions(bot: &Bot, app: &App, user_id: u64) {
         .restrict_chat_member(app.chat_id, UserId(user_id), ChatPermissions::all())
         .await
     {
-        warn!(%err, user_id, "Error restoring chat permissions, but warnings successfully removed");
+        warn!(%err, target_user_id = user_id, "Error restoring chat permissions, but warnings successfully removed");
     }
 }
 

@@ -194,13 +194,16 @@ pub fn check_message(
         return None;
     };
     let Some(msg) = detect_en_ru(&cleaned) else {
-        info!("Seems to be a mixed language message, not issuing a warning");
+        info!(
+            text,
+            "Seems to be a mixed language message, not issuing a warning"
+        );
         return None;
     };
     if msg == day {
         return None;
     }
-    info!(?msg, ?day, "Language mismatch");
+    info!(text, ?msg, ?day, "Language mismatch");
     Some(LangViolation {
         day: Some(day),
         msg: Some(msg),
@@ -239,7 +242,7 @@ pub fn detect_other_language(
     }
 
     if text.chars().count() < ML_MIN_LENGTH {
-        info!(text, "Text too short for ML recognition");
+        debug!(text, "Text too short for ML recognition");
         return None;
     }
 
@@ -249,7 +252,7 @@ pub fn detect_other_language(
     }
 
     let Some(detection) = lid.detect(raw_text) else {
-        info!(text, "Couldn't determine the language with ML, aborting");
+        debug!(text, "Couldn't determine the language with ML, aborting");
         return None;
     };
     if detection.label != Label::Other {
@@ -257,7 +260,7 @@ pub fn detect_other_language(
         return None;
     }
     if detection.confidence < ML_TARGET_CONFIDENCE {
-        info!(
+        debug!(
             ?detection,
             "Language detected as NOT Russian or English, but confidence level is too low"
         );

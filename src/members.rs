@@ -8,9 +8,9 @@ use teloxide::prelude::*;
 use teloxide::types::{
     ChatMemberUpdated, ChatPermissions, MessageId, ParseMode, ReplyParameters, User,
 };
-use tracing::{debug, error, info};
+use tracing::{debug, error, info, instrument};
 
-use crate::bot::App;
+use crate::bot::{self, App};
 use crate::state::lock;
 use crate::{captcha, md};
 
@@ -26,28 +26,39 @@ pub struct WelcomeState {
     last_long_welcome: Option<MessageId>,
 }
 
+#[instrument(name = "member", skip_all, fields(
+    chat_id = update.chat.id.0,
+    user_id = update.new_chat_member.user.id.0,
+    username = update.new_chat_member.user.username.as_deref(),
+))]
 pub async fn on_chat_member(
     bot: Bot,
     app: Arc<App>,
     update: ChatMemberUpdated,
 ) -> anyhow::Result<()> {
+    handle_chat_member(&bot, &app, &update)
+        .await
+        .inspect_err(bot::log_error)
+}
+
+async fn handle_chat_member(
+    bot: &Bot,
+    app: &App,
+    update: &ChatMemberUpdated,
+) -> anyhow::Result<()> {
     if update.chat.id != app.chat_id {
         return Ok(());
     }
-    let Some(user) = joined_user(&update) else {
+    let Some(user) = joined_user(update) else {
         return Ok(());
     };
-    info!(
-        user_id = user.id.0,
-        username = user.username,
-        "New member joined"
-    );
+    info!(is_bot = user.is_bot, "New member joined");
     if !user.is_bot
-        && let Err(err) = probation(&bot, &app, user).await
+        && let Err(err) = probation(bot, app, user).await
     {
-        error!(%err, user_id = user.id.0, "Error restricting user for probation period");
+        error!(%err, "Error restricting user for probation period");
     }
-    captcha::on_join(&bot, &app, user).await
+    captcha::on_join(bot, app, user).await
 }
 
 /// User who just joined the chat, as opposed to other member status changes.
@@ -59,10 +70,7 @@ fn joined_user(update: &ChatMemberUpdated) -> Option<&User> {
 }
 
 async fn probation(bot: &Bot, app: &App, user: &User) -> anyhow::Result<()> {
-    info!(
-        user_id = user.id.0,
-        "Restricting user for probation, so they only can send text messages"
-    );
+    info!("Restricting user for probation, so they only can send text messages");
     bot.restrict_chat_member(
         app.chat_id,
         user.id,
@@ -86,7 +94,7 @@ pub async fn welcome(bot: &Bot, app: &App, user: &User) {
         let state = lock(&app.welcome);
         (state.messages_to_long_welcome == 0, state.last_long_welcome)
     };
-    debug!(user_id = user.id.0, is_long, "Sending welcome");
+    debug!(is_long, "Sending welcome");
     let mut request = bot
         .send_message(
             app.chat_id,

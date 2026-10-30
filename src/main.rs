@@ -1,8 +1,10 @@
 use std::env;
+use std::io::{IsTerminal, stdout};
 use std::sync::Arc;
 use std::time::Instant;
 
-use anyhow::Context;
+use anyhow::{Context, bail};
+use teloxide::error_handlers::IgnoringErrorHandler;
 use teloxide::payloads::setters::*;
 use teloxide::prelude::*;
 use teloxide::types::{AllowedUpdate, BotCommandScope, Recipient};
@@ -52,10 +54,13 @@ async fn main() -> anyhow::Result<()> {
         return Ok(());
     }
 
-    tracing_subscriber::fmt()
-        .json()
-        .with_env_filter(env::var("LOG_LEVEL").unwrap_or_else(|_| "info".into()))
-        .init();
+    let logs = tracing_subscriber::fmt()
+        .with_env_filter(env::var("LOG_LEVEL").unwrap_or_else(|_| "info".into()));
+    match env::var("LOG_FORMAT").as_deref() {
+        Err(_) | Ok("text") => logs.with_ansi(stdout().is_terminal()).init(),
+        Ok("json") => logs.json().with_span_list(false).init(),
+        Ok(other) => bail!("LOG_FORMAT {other:?} must be either text or json"),
+    }
 
     info!(version = VERSION, "Starting");
     let config = Config::from_env()?;
@@ -88,9 +93,8 @@ async fn main() -> anyhow::Result<()> {
         .branch(Update::filter_chat_member().endpoint(members::on_chat_member));
     Dispatcher::builder(bot, handler)
         .dependencies(dptree::deps![app])
-        .error_handler(Arc::new(|err: anyhow::Error| async move {
-            error!(err = format!("{err:#}"), "Update handling failed")
-        }))
+        // Handlers log errors inside the update's span, the default handler would log them twice
+        .error_handler(IgnoringErrorHandler::new())
         .enable_ctrlc_handler()
         .build()
         .dispatch_with_listener(

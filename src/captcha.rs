@@ -73,13 +73,13 @@ fn remove(state: &mut State, user: &UserRef) -> Option<Vec<i32>> {
     state.captchas.remove(&id).map(|c| c.msg_ids)
 }
 
-/// Users who didn't solve their captcha since `asked_before` (unix ms).
-fn stale(state: &State, asked_before: u64) -> Vec<u64> {
+/// Users who didn't solve their captcha since `asked_before` (unix ms), with their usernames.
+fn stale(state: &State, asked_before: u64) -> Vec<(u64, Option<String>)> {
     state
         .captchas
         .iter()
         .filter(|(_, c)| c.asked_at < asked_before)
-        .map(|(id, _)| *id)
+        .map(|(id, c)| (*id, c.username.clone()))
         .collect()
 }
 
@@ -113,9 +113,11 @@ pub async fn on_join(bot: &Bot, app: &App, user: &User) -> anyhow::Result<()> {
         return Ok(());
     }
     if user.is_bot {
-        info!(user_id = user.id.0, "New joined user is a bot");
-        if !settings.captcha_bots_allowed {
+        if settings.captcha_bots_allowed {
+            info!("Bots are allowed, no captcha for a joined bot");
+        } else {
             bot.ban_chat_member(app.chat_id, user.id).await?;
+            info!("Banned joined bot");
         }
         return Ok(());
     }
@@ -128,8 +130,8 @@ pub async fn on_join(bot: &Bot, app: &App, user: &User) -> anyhow::Result<()> {
         .parse_mode(ParseMode::MarkdownV2)
         .await?;
     app.store
-        .update(|s| add(s, user, question, answer, msg.id, now_ms()))?;
-    info!(user_id = user.id.0, "Sent captcha check for the user");
+        .update(|s| add(s, user, question.clone(), answer, msg.id, now_ms()))?;
+    info!(question, "Captcha sent");
     Ok(())
 }
 
@@ -147,20 +149,23 @@ pub async fn on_message(bot: &Bot, app: &App, msg: &Message, user: &User) -> any
         error!(%err, "Failed to remove non-verified user's message");
     }
 
+    let attempts = attempt.attempts;
     if attempt.correct {
-        info!(user_id = user.id.0, "Captcha verification passed");
+        info!(attempts, "Captcha passed");
         remove_check(bot, app, &UserRef::Id(user.id.0)).await?;
         welcome(bot, app, user).await;
-    } else if attempt.attempts >= MAX_ATTEMPTS {
-        info!(
-            user_id = user.id.0,
-            text, "Too many failed captcha attempts, banning"
-        );
+    } else if attempts >= MAX_ATTEMPTS {
+        info!(attempts, text, "Captcha failed too many times, banning");
         bot.ban_chat_member(app.chat_id, user.id).await?;
         remove_check(bot, app, &UserRef::Id(user.id.0)).await?;
     } else {
-        info!(user_id = user.id.0, text, "Captcha verification failed");
-        if attempt.attempts % REPEAT_QUESTION_EVERY == 0 {
+        info!(
+            attempts,
+            text,
+            question = attempt.question,
+            "Wrong captcha answer"
+        );
+        if attempts % REPEAT_QUESTION_EVERY == 0 {
             let reminder = message(&attempt.question, user, app.settings().captcha_max_age);
             let sent = bot
                 .send_message(app.chat_id, reminder)
@@ -206,12 +211,7 @@ pub async fn sweep(bot: Bot, app: Arc<App>) {
         let stale_ids = app
             .store
             .read(|s| stale(s, now_ms().saturating_sub(max_age)));
-        for user_id in stale_ids {
-            info!(
-                user_id,
-                ban = settings.captcha_enabled,
-                "Stale captcha verification"
-            );
+        for (user_id, username) in stale_ids {
             // Removing the record first, so a failing ban doesn't retry forever
             let result = async {
                 remove_check(&bot, &app, &UserRef::Id(user_id)).await?;
@@ -222,11 +222,21 @@ pub async fn sweep(bot: Bot, app: Arc<App>) {
                 }
                 anyhow::Ok(())
             };
-            if let Err(err) = result.await {
-                error!(
+            match result.await {
+                Ok(()) if settings.captcha_enabled => info!(
+                    user_id,
+                    username,
+                    ban_for = format_duration(STALE_BAN_DURATION),
+                    "Captcha not solved in time, banned"
+                ),
+                Ok(()) => info!(
+                    user_id,
+                    username, "Captcha not solved in time, dropped as captcha is disabled"
+                ),
+                Err(err) => error!(
                     err = format!("{err:#}"),
-                    user_id, "Error while processing stale verification"
-                );
+                    user_id, username, "Error while processing stale captcha"
+                ),
             }
         }
     }
@@ -297,7 +307,7 @@ mod tests {
             MessageId(2),
             5000,
         );
-        assert_eq!(stale(&state, 2000), [1]);
+        assert_eq!(stale(&state, 2000), [(1, None)]);
     }
 
     #[test]
