@@ -178,15 +178,16 @@ pub async fn on_message(bot: &Bot, app: &App, msg: &Message, user: &User) -> any
             .send_message(app.chat_id, retry)
             .parse_mode(ParseMode::MarkdownV2)
             .await?;
-        // Only the latest prompt stays in the chat
-        let previous = app
+        // Only the latest prompt stays in the chat. If the captcha was removed meanwhile
+        // (sweep, /trust), nothing tracks the new prompt anymore, so it goes too.
+        let stale_prompts = app
             .store
             .update(|s| {
                 let captcha = s.captchas.get_mut(&user.id.0)?;
                 Some(std::mem::replace(&mut captcha.msg_ids, vec![sent.id.0]))
             })?
-            .unwrap_or_default();
-        delete_messages(bot, app, previous).await;
+            .unwrap_or_else(|| vec![sent.id.0]);
+        delete_messages(bot, app, stale_prompts).await;
     }
     Ok(true)
 }
